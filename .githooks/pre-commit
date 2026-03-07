@@ -1,0 +1,11 @@
+#!/bin/bash
+# Pre-commit hook: draait ruff format check als ruff beschikbaar is
+
+if command -v ruff &> /dev/null; then
+  echo "Running ruff format check..."
+  ruff format --check . || {
+    echo ""
+    echo "Format issues gevonden. Fix met: ruff format ."
+    exit 1
+  }
+fi

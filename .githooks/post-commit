@@ -1,0 +1,8 @@
+#!/bin/bash
+# Post-commit hook: log gewerkte uren
+
+SCRIPT="scripts/log-hours.sh"
+
+if [ -f "$SCRIPT" ]; then
+  bash "$SCRIPT"
+fi
