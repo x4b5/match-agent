@@ -1,4 +1,4 @@
-# Match Agent — Agent Kompas
+# PaperStrip — Agent Kompas
 
 ## Doel
 
@@ -19,7 +19,7 @@ Match kandidaten uit een kandidatenpool met werkgeversvragen, 100% lokaal via Ol
 ## Repo map
 
 ```
-match_agent.py     # CLI Runner voor de matching engine
+paper_agent.py     # CLI Runner voor de matching engine
 app.py             # Streamlit frontend (streamlit run app.py)
 config.py          # Configuratie: paden, modellen, AI-prompts
 profiel_agent.py   # Extractie van gestructureerde JSON profielen
@@ -45,7 +45,7 @@ streamlit run app.py
 Voor CLI matching:
 
 ```bash
-python3 match_agent.py
+python3 paper_agent.py
 ```
 
 ## Conventies

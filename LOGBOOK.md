@@ -1,6 +1,6 @@
-# Urenregistratie — Match Agent
+# Urenregistratie — PaperStrip
 
-| Datum      | Uren | Omschrijving                    |
-|------------|------|---------------------------------|
-| 2026-03-07 | 0   | Initial commit: Match Agent with project scaffolding |
-|            |      |                                 |
+| Datum      | Uren | Omschrijving                                 |
+| ---------- | ---- | -------------------------------------------- |
+| 2026-03-07 | 2.9  | Add and update match-agent app functionality |
+|            |      |                                              |

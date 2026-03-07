@@ -9,6 +9,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
+import hashlib
 
 from config import (
     KANDIDATEN_DIR,
@@ -19,6 +20,7 @@ from config import (
     RAPPORT_DIR,
     SYSTEM_PROMPT,
     WERKGEVERSVRAGEN_DIR,
+    CACHE_DIR,
 )
 from profiel_agent import laad_profiel_uit_map
 
@@ -67,16 +69,58 @@ def _fout_resultaat(reden: str) -> dict:
     }
 
 
-def _verkort_tekst(tekst: str, max_lengte: int) -> str:
-    """Verkort tekst tot max_lengte karakters, knip op hele regels."""
+def _valideer_resultaat(data: dict) -> bool:
+    """Valideer of het match-resultaat een geldig schema heeft."""
+    if not isinstance(data, dict):
+        return False
+    pct = data.get("match_percentage")
+    if not isinstance(pct, (int, float)) or pct < 0 or pct > 100:
+        return False
+    if not isinstance(data.get("matchende_punten"), list):
+        return False
+    if not isinstance(data.get("ontbrekende_punten"), list):
+        return False
+    return True
+
+
+def _parse_json_antwoord(antwoord: str) -> dict | None:
+    """Probeer JSON te parsen: eerst direct, dan regex fallback."""
+    # Probeer direct parsen
+    try:
+        return json.loads(antwoord)
+    except (json.JSONDecodeError, ValueError):
+        pass
+    # Regex fallback: zoek het grootste JSON-blok
+    json_match = re.search(r"\{.*\}", antwoord, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group())
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
+def _verkort_tekst(tekst: str, max_lengte: int) -> tuple[str, bool]:
+    """Compact JSON-tekst en geef aan of de tekst nog steeds te lang is.
+
+    Retourneert (tekst, is_afgekapt). Als is_afgekapt=True is de tekst te lang
+    zelfs na compact maken en wordt de originele compacte tekst onverkort teruggegeven
+    zodat de aanroeper kan beslissen wat te doen (bijv. waarschuwing tonen).
+    """
     if len(tekst) <= max_lengte:
-        return tekst
-    afgekapt = tekst[:max_lengte]
-    # Knip op laatste volledige regel
-    laatste_newline = afgekapt.rfind("\n")
-    if laatste_newline > max_lengte // 2:
-        afgekapt = afgekapt[:laatste_newline]
-    return afgekapt
+        return tekst, False
+    # Probeer JSON compact te maken — scheelt ~40-60% ruimte bij indent=2
+    try:
+        data = json.loads(tekst)
+        compact = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        if len(compact) <= max_lengte:
+            return compact, False
+        # Nog steeds te lang na compact maken — geef volledige compacte tekst terug
+        return compact, True
+    except (json.JSONDecodeError, ValueError):
+        pass
+    # Geen JSON: geef originele tekst terug en markeer als te lang
+    return tekst, True
 
 
 def _modus_params(modus: str | None) -> dict:
@@ -89,75 +133,109 @@ def _modus_params(modus: str | None) -> dict:
         "num_ctx": modi.get("num_ctx", 8192) if modi else 8192,
         "model_override": modi.get("model_override") if modi else None,
         "max_tekst_lengte": modi.get("max_tekst_lengte") if modi else None,
+        "think": modi.get("think", False) if modi else False,
     }
 
 
-def vraag_ollama(cv_tekst: str, vacature_tekst: str, modus: str | None = None) -> dict:
-    """Stuur een prompt naar Ollama en parse het JSON-antwoord."""
+def vraag_ollama(cv_tekst: str, vacature_tekst: str, modus: str | None = None, max_retries: int = 1) -> dict:
+    """Stuur een prompt naar Ollama en parse het JSON-antwoord. Automatische retry bij ongeldig resultaat."""
     params = _modus_params(modus)
+    model = params["model_override"] or OLLAMA_MODEL
+    
+    # Caching check
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    cache_key = hashlib.md5(f"{cv_tekst}{vacature_tekst}{modus}{model}{SYSTEM_PROMPT}".encode()).hexdigest()
+    cache_pad = os.path.join(CACHE_DIR, f"{cache_key}.json")
+    
+    if os.path.exists(cache_pad):
+        try:
+            with open(cache_pad, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
     if params["max_tekst_lengte"]:
-        cv_tekst = _verkort_tekst(cv_tekst, params["max_tekst_lengte"])
-        vacature_tekst = _verkort_tekst(vacature_tekst, params["max_tekst_lengte"])
+        cv_tekst, cv_afgekapt = _verkort_tekst(cv_tekst, params["max_tekst_lengte"])
+        vacature_tekst, vac_afgekapt = _verkort_tekst(vacature_tekst, params["max_tekst_lengte"])
+        if cv_afgekapt or vac_afgekapt:
+            print(f"  ⚠ Profiel te lang voor quick scan — gebruik 'diepte-analyse' voor volledige context", file=sys.stderr)
     model = params["model_override"] or OLLAMA_MODEL
     prompt = params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst)
 
-    try:
-        response = requests.post(
-            OLLAMA_URL,
-            json={
-                "model": model,
-                "prompt": prompt,
-                "system": SYSTEM_PROMPT,
-                "stream": False,
-                "format": "json",
-                "options": {
-                    "temperature": params["temperature"],
-                    "num_predict": params["num_predict"],
-                    "num_ctx": params["num_ctx"],
+    for poging in range(max_retries + 1):
+        try:
+            response = requests.post(
+                OLLAMA_URL,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "system": SYSTEM_PROMPT,
+                    "stream": False,
+                    "format": "json",
+                    "options": {
+                        "temperature": params["temperature"],
+                        "num_predict": params["num_predict"],
+                        "num_ctx": params["num_ctx"],
+                    },
+                    "think": params["think"],
                 },
-                "think": False,
-            },
-            timeout=600,
-        )
-        response.raise_for_status()
-    except requests.exceptions.ConnectionError:
-        print("  ⚠ Kan geen verbinding maken met Ollama. Draait het? (ollama serve)", file=sys.stderr)
-        return _fout_resultaat("Ollama niet bereikbaar")
-    except requests.exceptions.Timeout:
-        print("  ⚠ Timeout bij Ollama (>10min). Model te langzaam?", file=sys.stderr)
-        return _fout_resultaat("Timeout bij analyse")
+                timeout=600,
+            )
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError:
+            print("  ⚠ Kan geen verbinding maken met Ollama. Draait het? (ollama serve)", file=sys.stderr)
+            return _fout_resultaat("Ollama niet bereikbaar")
+        except requests.exceptions.Timeout:
+            print("  ⚠ Timeout bij Ollama (>10min). Model te langzaam?", file=sys.stderr)
+            return _fout_resultaat("Timeout bij analyse")
 
-    antwoord = response.json().get("response", "")
+        antwoord = response.json().get("response", "")
+        resultaat = _parse_json_antwoord(antwoord)
 
-    # Probeer JSON te extracten uit het antwoord
-    json_match = re.search(r"\{.*\}", antwoord, re.DOTALL)
-    if not json_match:
-        print(f"  ⚠ Kon geen JSON parsen uit model-antwoord", file=sys.stderr)
-        return {
-            "match_percentage": 0,
-            "matchende_punten": [],
-            "ontbrekende_punten": ["Analyse mislukt"],
-            "onderbouwing": "Model gaf geen geldig JSON-antwoord.",
-        }
+        if resultaat and _valideer_resultaat(resultaat):
+            # Zorg dat match_percentage een integer is
+            resultaat["match_percentage"] = int(round(resultaat["match_percentage"]))
+            # Bewaar in cache voor resultaten van vraag_ollama (CLI / Batch)
+            try:
+                with open(cache_pad, "w", encoding="utf-8") as f:
+                    json.dump(resultaat, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+            return resultaat
 
-    try:
-        return json.loads(json_match.group())
-    except json.JSONDecodeError:
-        print(f"  ⚠ Ongeldig JSON in model-antwoord", file=sys.stderr)
-        return {
-            "match_percentage": 0,
-            "matchende_punten": [],
-            "ontbrekende_punten": ["Analyse mislukt"],
-            "onderbouwing": "Model gaf ongeldig JSON-antwoord.",
-        }
+        if poging < max_retries:
+            print(f"  ⚠ Ongeldig resultaat, retry ({poging + 1}/{max_retries})...", file=sys.stderr)
+            continue
+
+    print(f"  ⚠ Kon geen geldig JSON-resultaat krijgen na {max_retries + 1} pogingen", file=sys.stderr)
+    return _fout_resultaat("Model gaf geen geldig JSON-antwoord na meerdere pogingen.")
 
 
 def vraag_ollama_stream(cv_tekst: str, vacature_tekst: str, url: str = OLLAMA_URL, model: str = OLLAMA_MODEL, temperature: float = 0.3, modus: str | None = None):
     """Streaming-variant van vraag_ollama. Yieldt tekstfragmenten, retourneert uiteindelijk het parsed JSON-resultaat."""
     params = _modus_params(modus)
+    model = params["model_override"] or model
+    
+    # Caching check voor stream
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    cache_key = hashlib.md5(f"{cv_tekst}{vacature_tekst}{modus}{model}{SYSTEM_PROMPT}".encode()).hexdigest()
+    cache_pad = os.path.join(CACHE_DIR, f"{cache_key}.json")
+    
+    if os.path.exists(cache_pad):
+        try:
+            with open(cache_pad, "r", encoding="utf-8") as f:
+                resultaat = json.load(f)
+                yield {"type": "token", "data": "(geladen uit cache)"}
+                yield {"type": "result", "data": resultaat}
+                return
+        except Exception:
+            pass
+
     if params["max_tekst_lengte"]:
-        cv_tekst = _verkort_tekst(cv_tekst, params["max_tekst_lengte"])
-        vacature_tekst = _verkort_tekst(vacature_tekst, params["max_tekst_lengte"])
+        cv_tekst, cv_afgekapt = _verkort_tekst(cv_tekst, params["max_tekst_lengte"])
+        vacature_tekst, vac_afgekapt = _verkort_tekst(vacature_tekst, params["max_tekst_lengte"])
+        if cv_afgekapt or vac_afgekapt:
+            yield {"type": "warning", "data": "Profiel te lang voor quick scan modus — resultaat kan onvolledig zijn. Gebruik 'diepte-analyse' voor volledige context."}
     # Modus overschrijft model en temperature als die zijn ingesteld
     model = params["model_override"] or model
     temperature = params["temperature"]
@@ -177,7 +255,7 @@ def vraag_ollama_stream(cv_tekst: str, vacature_tekst: str, url: str = OLLAMA_UR
                     "num_predict": params["num_predict"],
                     "num_ctx": params["num_ctx"],
                 },
-                "think": False,
+                "think": params["think"],
             },
             timeout=600,
             stream=True,
@@ -205,16 +283,28 @@ def vraag_ollama_stream(cv_tekst: str, vacature_tekst: str, url: str = OLLAMA_UR
         if chunk.get("done"):
             break
 
-    # Parse het volledige antwoord als JSON
-    json_match = re.search(r"\{.*\}", volledig_antwoord, re.DOTALL)
-    if not json_match:
+    # Parse en valideer het volledige antwoord als JSON
+    resultaat = _parse_json_antwoord(volledig_antwoord)
+    if resultaat and _valideer_resultaat(resultaat):
+        resultaat["match_percentage"] = int(round(resultaat["match_percentage"]))
+        # Bewaar in cache
+        try:
+            with open(cache_pad, "w", encoding="utf-8") as f:
+                json.dump(resultaat, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+        yield {"type": "result", "data": resultaat}
+    elif resultaat:
+        # JSON geparsed maar schema klopt niet — laat zien wat we kregen
+        pct = resultaat.get("match_percentage")
+        reden = f"Ongeldig schema: match_percentage={pct!r}, keys={list(resultaat.keys())}"
+        yield {"type": "warning", "data": f"LLM gaf ongeldig antwoord: {reden}"}
+        yield {"type": "result", "data": _fout_resultaat(reden)}
+    else:
+        # Kon helemaal geen JSON parsen
+        preview = volledig_antwoord[:300] if volledig_antwoord else "(leeg antwoord)"
+        yield {"type": "warning", "data": f"Kon geen JSON parsen uit LLM-antwoord: {preview}"}
         yield {"type": "result", "data": _fout_resultaat("Model gaf geen geldig JSON-antwoord.")}
-        return
-
-    try:
-        yield {"type": "result", "data": json.loads(json_match.group())}
-    except json.JSONDecodeError:
-        yield {"type": "result", "data": _fout_resultaat("Model gaf ongeldig JSON-antwoord.")}
 
 
 def maak_balk(percentage: int, breedte: int = 10) -> str:
@@ -243,8 +333,31 @@ def genereer_rapport(naam: str, matches: list[dict]) -> str:
             lijnen.append(f"   ✓ {punt}")
         for punt in m.get("ontbrekende_punten", []):
             lijnen.append(f"   ✗ {punt}")
+        
+        if m.get("verrassings_element"):
+            lijnen.append(f"   💡 Verrassend: {m['verrassings_element']}")
+        if m.get("cultuur_fit"):
+            lijnen.append(f"   🌟 Cultuur fit: {m['cultuur_fit']}")
+        if m.get("groeipotentieel"):
+            lijnen.append(f"   🌱 Groeipotentieel: {m['groeipotentieel']}")
+        if m.get("risico_mitigatie"):
+            lijnen.append(f"   🛡️ Risico-mitigatie: {m['risico_mitigatie']}")
+        if m.get("aandachtspunten"):
+            lijnen.append(f"   ⚠️ Aandachtspunten: {m['aandachtspunten']}")
+        if m.get("gedeelde_waarden"):
+            lijnen.append("   🤝 Gedeelde waarden:")
+            for w in m["gedeelde_waarden"]:
+                lijnen.append(f"      - {w}")
+        if m.get("gespreksstarters"):
+            lijnen.append("   🎤 Gespreksstarters:")
+            for idx, vraag in enumerate(m["gespreksstarters"], 1):
+                lijnen.append(f"      {idx}. {vraag}")
+        if m.get("boodschap_aan_kandidaat"):
+            lijnen.append(f"   💬 Boodschap aan kandidaat: {m['boodschap_aan_kandidaat']}")
+                
         if m.get("onderbouwing"):
-            lijnen.append(f"   → {m['onderbouwing']}")
+            lijnen.append(f"   → Onderbouwing: {m['onderbouwing']}")
+            
         lijnen.append("")
 
     return "\n".join(lijnen)

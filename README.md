@@ -1,10 +1,10 @@
-# 🎯 Match Agent
+# 🎯 PaperStrip
 
 Een slimme, 100% lokale pre-selectie en match-tool aangedreven door Ollama (Qwen-modellen) en Python/Streamlit.
 
 ## Visie
 
-De _Match Agent_ is geen traditionele vacaturebank die CV's simpelweg naast een eisenlijstje legt. Deze applicatie is gebouwd om **potentieel, persoonlijkheid en drijfveren** te matchen aan bedrijfscultuur en gezochte kwaliteiten. Het doel is om _out-of-the-box_ associaties te maken en recruiters en werkgevers te inspireren met kandidaten die ze in eerste instantie misschien over het hoofd hadden gezien.
+De _PaperStrip_ is geen traditionele vacaturebank die CV's simpelweg naast een eisenlijstje legt. Deze applicatie is gebouwd om **potentieel, persoonlijkheid en drijfveren** te matchen aan bedrijfscultuur en gezochte kwaliteiten. Het doel is om _out-of-the-box_ associaties te maken en recruiters en werkgevers te inspireren met kandidaten die ze in eerste instantie misschien over het hoofd hadden gezien.
 
 ## Features
 
@@ -34,7 +34,7 @@ pip install -r requirements.txt
 
 ### Start de app (Interface)
 
-De Streamlit frontend is de eenvoudigste manier om Match Agent te bedienen.
+De Streamlit frontend is de eenvoudigste manier om PaperStrip te bedienen.
 
 ```bash
 streamlit run app.py

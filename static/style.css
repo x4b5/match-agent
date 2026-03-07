@@ -1,0 +1,1000 @@
+/* ═══════════════════════════════════════════════════════════
+   PAPERSTRIP — ULTRA PREMIUM UI
+   Futuristic dark interface · Neon accents · Floating orbs
+   ═══════════════════════════════════════════════════════════ */
+
+/* Import Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+/* ─── CSS Custom Properties ─── */
+:root {
+  --neon-cyan: #00e5ff;
+  --neon-blue: #2979ff;
+  --neon-purple: #7c4dff;
+  --neon-pink: #ff4081;
+  --neon-green: #00e676;
+  --neon-gold: #ffd740;
+  --surface-0: rgba(8, 10, 16, 0.97);
+  --surface-1: rgba(14, 17, 23, 0.88);
+  --surface-2: rgba(22, 27, 35, 0.7);
+  --surface-3: rgba(30, 36, 46, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(0, 229, 255, 0.4);
+  --text-primary: #f0f2f5;
+  --text-secondary: rgba(240, 242, 245, 0.55);
+  --glow-sm: 0 0 15px rgba(0, 229, 255, 0.15);
+  --glow-md: 0 0 30px rgba(0, 229, 255, 0.25);
+  --glow-lg: 0 4px 40px rgba(0, 229, 255, 0.3), 0 0 80px rgba(0, 229, 255, 0.1);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --transition-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ─── Global Font Override ─── */
+html,
+body,
+[class*="css"] {
+  font-family:
+    "Space Grotesk",
+    -apple-system,
+    sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── 1. BACKGROUND: Animated Gradient + Constellation Grid ─── */
+.stApp {
+  background: linear-gradient(
+    -45deg,
+    #060810,
+    #0c0f1a,
+    #0a0e1f,
+    #080b14,
+    #060810
+  );
+  background-size: 400% 400%;
+  background-clip: padding-box;
+  animation: gradientBG 20s ease infinite;
+  position: relative;
+}
+
+.stApp::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Rugged Noise Texture */
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"),
+    radial-gradient(
+      1.5px 1.5px at 10% 20%,
+      rgba(0, 229, 255, 0.2) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      1px 1px at 30% 60%,
+      rgba(41, 121, 255, 0.15) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 50% 10%,
+      rgba(124, 77, 255, 0.12) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      1px 1px at 70% 80%,
+      rgba(0, 229, 255, 0.1) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 90% 40%,
+      rgba(41, 121, 255, 0.15) 0%,
+      transparent 100%
+    );
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: -1;
+  animation: starTwinkle 8s ease-in-out infinite alternate;
+}
+
+@keyframes starTwinkle {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes gradientBG {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 50% 0%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  75% {
+    background-position: 50% 100%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ─── Top Accent Neon Line ─── */
+.stApp::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--neon-cyan),
+    var(--neon-blue),
+    var(--neon-purple),
+    var(--neon-pink),
+    var(--neon-cyan)
+  );
+  background-size: 300% 100%;
+  animation: neonLine 4s linear infinite;
+  z-index: 9999;
+  box-shadow:
+    0 0 15px rgba(0, 229, 255, 0.6),
+    0 0 30px rgba(0, 229, 255, 0.3);
+}
+@keyframes neonLine {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+/* ─── Z-INDEX FIX: content boven particles ─── */
+[data-testid="stAppViewContainer"],
+[data-testid="stSidebar"],
+header[data-testid="stHeader"] {
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── 2. HIDE DEFAULT STREAMLIT CHROME ─── */
+header {
+  visibility: hidden !important;
+}
+footer {
+  visibility: hidden !important;
+}
+#MainMenu {
+  visibility: hidden !important;
+}
+[data-testid="stToolbar"] {
+  right: 2rem;
+  top: 1rem;
+  opacity: 0;
+  transition: opacity 0.3s var(--transition-smooth);
+  visibility: visible !important;
+}
+[data-testid="stToolbar"]:hover {
+  opacity: 0.7;
+}
+
+/* ─── 3. SIDEBAR: Deep Glass + Branding ─── */
+[data-testid="stSidebar"] {
+  background: var(--surface-0) !important;
+  backdrop-filter: blur(30px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(160%) !important;
+  border-right: 1px solid var(--glass-border) !important;
+  box-shadow:
+    4px 0 40px rgba(0, 0, 0, 0.6),
+    inset -1px 0 0 rgba(0, 229, 255, 0.05);
+}
+
+/* Content dichter bij sidebar */
+.main .block-container {
+  padding-left: 2rem !important;
+  max-width: none !important;
+}
+
+/* Sidebar section headers */
+[data-testid="stSidebarNav"] h2,
+[data-testid="stSidebar"] [data-testid="stSidebarNavSeparator"],
+[data-testid="stSidebar"] span[data-testid="stSidebarNavSectionHeader"],
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+  color: var(--text-secondary) !important;
+  font-size: 0.65rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 3px !important;
+  padding-left: 20px !important;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+/* Sidebar inner content padding */
+[data-testid="stSidebar"] > div:first-child {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+/* Sidebar nav links glow on hover */
+[data-testid="stSidebarNav"] a {
+  transition: all 0.3s var(--transition-smooth) !important;
+  border-radius: var(--radius-sm) !important;
+  margin: 3px 12px !important;
+  padding-left: 8px !important;
+  position: relative;
+}
+[data-testid="stSidebarNav"] a:hover {
+  background: rgba(0, 229, 255, 0.06) !important;
+  box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.05);
+}
+[data-testid="stSidebarNav"] a[aria-selected="true"] {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 229, 255, 0.1),
+    rgba(41, 121, 255, 0.08)
+  ) !important;
+  border: 1px solid rgba(0, 229, 255, 0.2) !important;
+  box-shadow:
+    var(--glow-sm),
+    inset 0 0 15px rgba(0, 229, 255, 0.05);
+}
+/* Active nav indicator line */
+[data-testid="stSidebarNav"] a[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: linear-gradient(180deg, var(--neon-cyan), var(--neon-blue));
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 10px var(--neon-cyan);
+}
+
+/* ─── 4. GLASSMORPHIC CARDS ─── */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+  background: var(--surface-2) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition:
+    transform 0.5s var(--transition-bounce),
+    box-shadow 0.5s var(--transition-smooth),
+    border-color 0.5s var(--transition-smooth);
+  padding: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Rotating gradient border on hover */
+div[data-testid="stVerticalBlockBorderWrapper"]::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    rgba(0, 229, 255, 0.06) 10%,
+    transparent 20%,
+    rgba(41, 121, 255, 0.05) 30%,
+    transparent 40%,
+    rgba(124, 77, 255, 0.04) 50%,
+    transparent 60%,
+    rgba(255, 64, 129, 0.03) 70%,
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.6s var(--transition-smooth);
+  animation: auroraRotate 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes auroraRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15), 0 0 0 1px rgba(0, 229, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: var(--glass-border-hover) !important;
+  z-index: 10;
+}
+div[data-testid="stVerticalBlockBorderWrapper"]:hover::before {
+  opacity: 1;
+}
+
+/* ─── 5. PRIMARY BUTTON — Neon Glow Machine ─── */
+button[kind="primary"] {
+  background: linear-gradient(
+    135deg,
+    var(--neon-cyan) 0%,
+    var(--neon-blue) 100%
+  ) !important;
+  border: none !important;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 1.5px !important;
+  color: #0a0e18 !important;
+  text-transform: uppercase !important;
+  padding: 0.65rem 2rem !important;
+  transition: all 0.35s var(--transition-smooth) !important;
+  box-shadow:
+    0 4px 20px rgba(0, 229, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shine sweep animation on buttons */
+button[kind="primary"]::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -70%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: rotate(25deg);
+  transition: all 0.7s var(--transition-smooth);
+}
+button[kind="primary"]:hover::after {
+  left: 130%;
+}
+button[kind="primary"]:hover {
+  box-shadow:
+    0 0 50px rgba(0, 229, 255, 0.6),
+    0 0 100px rgba(0, 229, 255, 0.25),
+    0 8px 35px rgba(0, 229, 255, 0.45) !important;
+  transform: translateY(-4px) scale(1.05) !important;
+  background: linear-gradient(135deg, #44f0ff 0%, #5599ff 100%) !important;
+  animation: buttonPulse 1.5s infinite alternate ease-in-out;
+}
+@keyframes buttonPulse {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.3) contrast(1.1);
+  }
+}
+button[kind="primary"]:active {
+  transform: translateY(0) scale(0.96) !important;
+  box-shadow:
+    0 0 30px rgba(0, 229, 255, 0.4),
+    0 2px 15px rgba(0, 229, 255, 0.3) !important;
+}
+
+/* ─── SECONDARY BUTTON ─── */
+button[kind="secondary"] {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-secondary) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.3s var(--transition-smooth) !important;
+}
+button[kind="secondary"]:hover {
+  background: rgba(0, 229, 255, 0.06) !important;
+  border-color: rgba(0, 229, 255, 0.3) !important;
+  color: var(--neon-cyan) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--glow-sm) !important;
+}
+
+/* ─── 6. TEXT INPUTS & SELECTS ─── */
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox div[data-baseweb="select"] > div {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-primary) !important;
+  backdrop-filter: blur(8px);
+  transition: all 0.35s var(--transition-smooth) !important;
+  font-family: "Space Grotesk", sans-serif !important;
+}
+.stTextInput input:focus,
+.stTextArea textarea:focus {
+  border-color: var(--neon-cyan) !important;
+  box-shadow:
+    0 0 20px rgba(0, 229, 255, 0.15),
+    0 0 0 1px rgba(0, 229, 255, 0.1) !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+.stSelectbox div[data-baseweb="select"]:hover {
+  border-color: rgba(0, 229, 255, 0.3) !important;
+}
+
+/* ─── 7. METRICS — Animated Gradient + Badge Glow ─── */
+[data-testid="stMetricValue"] {
+  font-weight: 800 !important;
+  font-size: 2.8rem !important;
+  background: linear-gradient(
+    135deg,
+    var(--neon-cyan),
+    #80deea,
+    var(--neon-blue),
+    var(--neon-purple),
+    var(--neon-cyan)
+  );
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: metricShine 5s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.5));
+}
+@keyframes metricShine {
+  to {
+    background-position: 300% center;
+  }
+}
+
+[data-testid="stMetricDelta"] {
+  font-weight: 500 !important;
+  letter-spacing: 0.5px !important;
+}
+
+[data-testid="stMetricLabel"] {
+  font-size: 0.8rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.5px !important;
+  color: var(--text-secondary) !important;
+  font-weight: 500 !important;
+}
+
+/* ─── 8. TABS ─── */
+button[data-baseweb="tab"] {
+  background-color: transparent !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.5px !important;
+  font-size: 0.8rem !important;
+  transition: all 0.3s var(--transition-smooth) !important;
+  padding: 12px 20px !important;
+}
+button[data-baseweb="tab"]:hover {
+  color: var(--neon-cyan) !important;
+  text-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+}
+div[data-baseweb="tab-highlight"] {
+  background: linear-gradient(
+    90deg,
+    var(--neon-cyan),
+    var(--neon-blue)
+  ) !important;
+  box-shadow:
+    0 0 15px rgba(0, 229, 255, 0.6),
+    0 0 30px rgba(0, 229, 255, 0.2);
+  height: 3px !important;
+  border-radius: 3px 3px 0 0;
+}
+
+/* ─── 9. PROGRESS BARS ─── */
+.stProgress > div > div > div > div {
+  background: linear-gradient(
+    90deg,
+    var(--neon-cyan),
+    var(--neon-blue),
+    var(--neon-purple)
+  ) !important;
+  background-size: 200% 100%;
+  animation: progressPulse 2s ease infinite;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+@keyframes progressPulse {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ─── 10. DATAFRAMES ─── */
+[data-testid="stDataFrame"] {
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── 11. EXPANDERS ─── */
+details {
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--surface-3) !important;
+  transition: all 0.3s var(--transition-smooth) !important;
+}
+details:hover {
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+details[open] {
+  border-color: rgba(0, 229, 255, 0.2) !important;
+  box-shadow: var(--glow-sm);
+}
+
+/* ─── 12. DIVIDERS ─── */
+hr {
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 229, 255, 0.15),
+    rgba(41, 121, 255, 0.1),
+    transparent
+  ) !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* ─── 13. TOAST NOTIFICATIONS ─── */
+[data-testid="stToast"] {
+  background: var(--surface-1) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(0, 229, 255, 0.2) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--glow-md) !important;
+  animation: toastSlideIn 0.4s var(--transition-bounce);
+}
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ─── 14. STATUS / SPINNER ─── */
+[data-testid="stStatusWidget"] {
+  background: var(--surface-2) !important;
+  border: 1px solid rgba(0, 229, 255, 0.15) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* ─── 15. MULTISELECT TAGS ─── */
+span[data-baseweb="tag"] {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 229, 255, 0.15),
+    rgba(41, 121, 255, 0.1)
+  ) !important;
+  border: 1px solid rgba(0, 229, 255, 0.2) !important;
+  border-radius: 20px !important;
+  font-weight: 500 !important;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease !important;
+}
+span[data-baseweb="tag"]:hover {
+  border-color: rgba(0, 229, 255, 0.5) !important;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+}
+
+/* ─── 16. RADIO BUTTONS ─── */
+[data-testid="stRadio"] label {
+  transition: all 0.3s var(--transition-smooth) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 4px 8px !important;
+  cursor: pointer;
+}
+[data-testid="stRadio"] label:hover {
+  background: rgba(0, 229, 255, 0.04) !important;
+}
+
+/* ─── 17. SCROLLBAR ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--neon-cyan), var(--neon-blue));
+  border-radius: 3px;
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.3);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #33ecff, #448aff);
+}
+
+/* ─── 18. STAGGERED CASCADE ANIMATIONS ─── */
+.element-container {
+  animation: cascadeFadeIn 0.7s var(--transition-smooth) both;
+}
+.element-container:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.element-container:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.element-container:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.element-container:nth-child(4) {
+  animation-delay: 0.14s;
+}
+.element-container:nth-child(5) {
+  animation-delay: 0.18s;
+}
+.element-container:nth-child(6) {
+  animation-delay: 0.22s;
+}
+.element-container:nth-child(7) {
+  animation-delay: 0.26s;
+}
+.element-container:nth-child(8) {
+  animation-delay: 0.3s;
+}
+.element-container:nth-child(9) {
+  animation-delay: 0.34s;
+}
+.element-container:nth-child(10) {
+  animation-delay: 0.38s;
+}
+
+@keyframes cascadeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* ─── 19. POPOVER ─── */
+[data-testid="stPopover"] {
+  backdrop-filter: blur(20px) !important;
+}
+
+/* ─── 20. FILE UPLOADER ─── */
+[data-testid="stFileUploader"] {
+  border: 2px dashed rgba(0, 229, 255, 0.15) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all 0.3s var(--transition-smooth);
+  padding: 10px !important;
+}
+[data-testid="stFileUploader"]:hover {
+  border-color: rgba(0, 229, 255, 0.4) !important;
+  box-shadow: inset 0 0 30px rgba(0, 229, 255, 0.05);
+}
+
+/* ─── 21. SLIDER ─── */
+[data-testid="stSlider"] [role="slider"] {
+  background: var(--neon-cyan) !important;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.5) !important;
+}
+
+/* ─── 22. SELECTBOX DROPDOWN ─── */
+ul[data-baseweb="menu"] {
+  background: var(--surface-1) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--glow-md) !important;
+}
+
+/* ─── 23. JSON VIEWER ─── */
+.stJson {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: "JetBrains Mono", monospace !important;
+}
+
+/* ─── 24. ALERTS / INFO / WARNING / ERROR ─── */
+[data-testid="stAlert"] {
+  border-radius: var(--radius-sm) !important;
+  backdrop-filter: blur(8px) !important;
+  border-left-width: 3px !important;
+}
+
+/* ─── 25. DIALOG ─── */
+[data-testid="stDialog"] > div {
+  background: var(--surface-1) !important;
+  backdrop-filter: blur(30px) !important;
+  border: 1px solid rgba(0, 229, 255, 0.15) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow:
+    var(--glow-lg),
+    0 25px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* ─── 26. STATUS DOT PULSE ─── */
+@keyframes statusPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.4);
+  }
+}
+
+/* ─── 27. METRIC CARDS — Better padding & overflow ─── */
+[data-testid="stMetricValue"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.4rem, 3vw, 2.8rem) !important;
+  padding: 4px 0;
+}
+div[data-testid="stVerticalBlockBorderWrapper"] > div {
+  padding: 12px 16px !important;
+}
+
+/* ─── 28. DATAFRAME TABLES — Premium styling ─── */
+[data-testid="stDataFrame"] table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+[data-testid="stDataFrame"] thead th {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 229, 255, 0.08),
+    rgba(41, 121, 255, 0.06)
+  ) !important;
+  color: var(--neon-cyan) !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.2px !important;
+  padding: 10px 12px !important;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.15) !important;
+}
+[data-testid="stDataFrame"] tbody td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+  transition: background 0.2s ease !important;
+  font-size: 0.85rem !important;
+}
+[data-testid="stDataFrame"] tbody tr:hover td {
+  background: rgba(0, 229, 255, 0.04) !important;
+}
+
+/* ─── 29. LOADING SKELETON ─── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.loading-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(0, 229, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  height: 20px;
+  margin: 8px 0;
+}
+
+/* ─── 30. TOOLTIP ENHANCEMENT ─── */
+[data-testid="stTooltipIcon"] {
+  color: var(--neon-cyan) !important;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+[data-testid="stTooltipIcon"]:hover {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.5));
+}
+div[data-baseweb="tooltip"] {
+  background: var(--surface-1) !important;
+  border: 1px solid rgba(0, 229, 255, 0.2) !important;
+  border-radius: var(--radius-sm) !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow: var(--glow-sm) !important;
+  font-size: 0.8rem !important;
+  padding: 8px 12px !important;
+}
+
+/* ─── 31. KEYBOARD SHORTCUTS BAR ─── */
+.kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 16px;
+  font-size: 0.7rem;
+  color: rgba(240, 242, 245, 0.3);
+}
+.kbd-hint kbd {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  color: rgba(240, 242, 245, 0.5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ─── 32. STSPINNER — Neon glow ─── */
+[data-testid="stSpinner"] {
+  color: var(--neon-cyan) !important;
+}
+[data-testid="stSpinner"] svg circle {
+  stroke: var(--neon-cyan) !important;
+}
+
+/* ─── 33. SVG SCORE RING ─── */
+.score-ring-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.score-ring-container svg {
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 0 8px var(--ring-glow, rgba(0, 229, 255, 0.4)));
+}
+.score-ring-label {
+  position: absolute;
+  text-align: center;
+}
+.score-ring-label .score-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.score-ring-label .score-unit {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(240, 242, 245, 0.4);
+  font-weight: 600;
+}
+
+/* ─── 34. MATCH CARD ENHANCEMENTS ─── */
+.match-card-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 0;
+}
+.match-card-title {
+  flex: 1;
+}
+.match-card-title h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.match-card-title .match-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+/* ─── 35. HERO / PAGE HEADER GLOW ─── */
+.page-hero {
+  position: relative;
+  margin-bottom: 2rem;
+  padding: 0.5rem 0;
+}
+.page-hero::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--neon-cyan), transparent);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--neon-cyan);
+}
+.page-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #00e5ff 0%, #2979ff 40%, #7c4dff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 4px;
+  line-height: 1.2;
+  filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.3));
+  display: flex;
+  align-items: center;
+}
+.page-hero p {
+  color: rgba(240, 242, 245, 0.45);
+  font-size: 0.9rem;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+/* ─── 36. GLITCH TEXT EFFECT ─── */
+/* ─── 36. BRANDING TEXT EFFECT ─── */
+.branding-text {
+    position: relative;
+    display: inline-block;
+    background: linear-gradient(135deg, #00E5FF 0%, #2979FF 40%, #7C4DFF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.4));
+}
+
+
+/* ─── 38. MATCH RESULT BADGE ─── */
+.match-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.match-badge.high {
+  background: rgba(0, 230, 118, 0.12);
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.3);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.15);
+}
+.match-badge.medium {
+  background: rgba(255, 215, 64, 0.12);
+  color: #ffd740;
+  border: 1px solid rgba(255, 215, 64, 0.3);
+  box-shadow: 0 0 12px rgba(255, 215, 64, 0.15);
+}
+.match-badge.low {
+  background: rgba(124, 77, 255, 0.12);
+  color: #b388ff;
+  border: 1px solid rgba(124, 77, 255, 0.3);
+  box-shadow: 0 0 12px rgba(124, 77, 255, 0.15);
+}

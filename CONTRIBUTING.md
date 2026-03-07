@@ -5,7 +5,7 @@
 ```bash
 # Clone de repo
 git clone <repo-url>
-cd match-agent
+cd paperstrip
 
 # Maak een virtual environment
 python3 -m venv venv
@@ -29,7 +29,7 @@ ollama pull qwen3.5:27b
 bash start-day.sh
 
 # Draai het script
-python3 match_agent.py --cv cv_sarah_de_vries.txt
+python3 paper_agent.py --cv cv_sarah_de_vries.txt
 
 # Format code (optioneel, vereist ruff)
 ruff format .
@@ -42,6 +42,7 @@ git commit -m "beschrijving van wijziging"
 ## Git hooks
 
 De repo gebruikt custom git hooks in `.githooks/`. Deze worden automatisch actief via:
+
 ```bash
 git config core.hooksPath .githooks
 ```
