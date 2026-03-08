@@ -69,25 +69,34 @@
       De Architectuur
     </h2>
     <p>
-      De overstap naar een asynchrone FastAPI + SvelteKit architectuur
-      garandeert een schaalbare flow. Modellen verwerken data efficiënt via
-      queues om blokkades te minimaliseren. Tegelijkertijd streamt de frontend
-      realtime de gegenereerde kandidaatprofielen terug naar je scherm.
+      De asynchrone FastAPI + SvelteKit architectuur garandeert een schaalbare
+      flow. Achtergrondtaken (profielgeneratie, batch matching) worden
+      bijgehouden via een task-tracking systeem met realtime status-updates.
+      De frontend streamt resultaten live via Server-Sent Events terug naar
+      je scherm.
     </p>
     <ul
       style="color: var(--text-secondary); line-height: 1.8; margin-top: 1rem;"
     >
       <li>
-        <strong>Frontend:</strong> Svelte 5 (Vite) voor een interactieve UI zonder
-        haperingen.
+        <strong>Frontend:</strong> SvelteKit (Svelte 5) voor een interactieve UI
+        met realtime streaming.
       </li>
       <li>
-        <strong>Backend API:</strong> Python FastAPI met aiosqlite en sse-starlette
-        voor server-sent-events.
+        <strong>Backend API:</strong> Python FastAPI met aiosqlite, SSE-streaming
+        en in-memory task tracking.
       </li>
       <li>
-        <strong>Intelligentie:</strong> Ollama API in de achtergrond voor het aansturen
-        van open-source LLMs.
+        <strong>Matching:</strong> Embedding pre-filter (cosine similarity) gevolgd
+        door LLM-analyse. Batch matching en caching ingebouwd.
+      </li>
+      <li>
+        <strong>Intelligentie:</strong> Ollama API voor het lokaal aansturen van
+        open-source LLMs (profielen, matching, embeddings).
+      </li>
+      <li>
+        <strong>Opslag:</strong> SQLite als primaire bron voor profielen en matches,
+        filesystem voor ruwe documenten.
       </li>
     </ul>
   </div>
