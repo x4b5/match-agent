@@ -132,7 +132,7 @@ MATCH_MODI = {
     "quick_scan": {
         "label": "Quick scan",
         "beschrijving": "Snel overzicht met globale match (verkort input, sneller model)",
-        "num_predict": 512,
+        "num_predict": 1024,
         "num_ctx": 8192,
         "temperature": 0.4,
         "model_override": QUICK_SCAN_MODEL,  # qwen3:8b — ~3-4x sneller
@@ -169,7 +169,7 @@ JSON:
     "diepte_analyse": {
         "label": "Diepte-analyse",
         "beschrijving": "Uitgebreide analyse met gedetailleerde onderbouwing (denkmodus aan)",
-        "num_predict": 1536,
+        "num_predict": 2048,
         "num_ctx": 8192,
         "temperature": 0.2,
         "model_override": None,

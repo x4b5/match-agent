@@ -129,7 +129,7 @@ def _modus_params(modus: str | None) -> dict:
     return {
         "prompt_template": modi["prompt"] if modi else MATCH_PROMPT,
         "temperature": modi["temperature"] if modi else 0.3,
-        "num_predict": modi["num_predict"] if modi else 512,
+        "num_predict": modi["num_predict"] if modi else 1024,
         "num_ctx": modi.get("num_ctx", 8192) if modi else 8192,
         "model_override": modi.get("model_override") if modi else None,
         "max_tekst_lengte": modi.get("max_tekst_lengte") if modi else None,
