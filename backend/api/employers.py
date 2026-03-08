@@ -1,7 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, BackgroundTasks
 import os
 import shutil
-import asyncio
 
 from backend.config import WERKGEVERSVRAGEN_DIR
 from backend.utils import formatteer_directory_response, opslaan_profiel, zorg_voor_uuid
@@ -54,21 +53,15 @@ async def delete_document(name: str, filename: str):
     os.remove(pad)
     return {"message": "Verwijderd"}
 
-def _generate_profile_task(map_pad: str):
+async def _generate_profile_task(map_pad: str):
     gecombineerde_tekst, waarschuwingen = extract_text_sync(map_pad)
     if not gecombineerde_tekst.strip():
         return
-        
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        resultaat = loop.run_until_complete(profileer_werkgeversvraag(gecombineerde_tekst))
-        if isinstance(resultaat, dict):
-            if waarschuwingen:
-                resultaat["_waarschuwingen"] = waarschuwingen
-            opslaan_profiel(map_pad, resultaat)
-    finally:
-        loop.close()
+    resultaat = await profileer_werkgeversvraag(gecombineerde_tekst)
+    if isinstance(resultaat, dict):
+        if waarschuwingen:
+            resultaat["_waarschuwingen"] = waarschuwingen
+        opslaan_profiel(map_pad, resultaat)
 
 @router.post("/{name}/generate-profile")
 async def generate_profile(name: str, background_tasks: BackgroundTasks):
