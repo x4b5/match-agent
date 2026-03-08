@@ -34,10 +34,10 @@ pip install -r requirements.txt
 
 ### Start de app (Interface)
 
-De Streamlit frontend is de eenvoudigste manier om PaperStrip te bedienen.
+De eenvoudigste manier om PaperStrip te starten is via het start-script:
 
 ```bash
-streamlit run app.py
+./start.sh
 ```
 
 ## Configuratie (`config.py`)

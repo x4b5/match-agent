@@ -113,7 +113,9 @@ Belangrijke instructies:
     "must_have_skills": ["lijst", "van", "echt onmisbare skills"],
     "nice_to_have_skills": ["lijst", "van", "mooi meegenomen, maar trainbare skills"],
     "werktijden_en_omstandigheden": "Praktische zaken t.a.v. werktijden of fysieke omstandigheden",
-    "belangrijkste_taak": "Wat deze persoon vooral gaat doen"
+    "belangrijkste_taak": "Wat deze persoon vooral gaat doen",
+    "profiel_betrouwbaarheid": 0,
+    "vervolgvragen": ["vraag 1", "vraag 2"]
 }}
 
 WERKGEVERSVRAAG:

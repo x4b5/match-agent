@@ -423,10 +423,14 @@ def _beheer_bestanden(directory: str, label: str):
                         laatst_gen_str = time.strftime('%d-%m %H:%M', time.localtime(laatst_gen_tijd))
                         break
             
+            profiel = laad_profiel_uit_map(pad)
+            betrouwbaarheid = profiel.get("profiel_betrouwbaarheid", 0) if profiel else 0
+            
             tabel_data.append({
                 "naam": v,
                 "docs": aantal_docs,
                 "status": heeft_prof,
+                "betrouwbaarheid": betrouwbaarheid,
                 "laatst_gen_tijd": laatst_gen_tijd,
                 "laatst_gen_str": laatst_gen_str,
                 "pad": pad
@@ -442,6 +446,8 @@ def _beheer_bestanden(directory: str, label: str):
             tabel_data.sort(key=lambda x: x["docs"], reverse=s_desc)
         elif s_key == "Status":
             tabel_data.sort(key=lambda x: x["status"], reverse=s_desc)
+        elif s_key == "Betrouwbaarheid":
+            tabel_data.sort(key=lambda x: x["betrouwbaarheid"], reverse=s_desc)
         elif s_key == "Laatst Gen.":
             tabel_data.sort(key=lambda x: x["laatst_gen_tijd"], reverse=s_desc)
 
@@ -463,9 +469,9 @@ def _beheer_bestanden(directory: str, label: str):
         with h_col1: sort_button("Naam / ID", "Naam / ID")
         with h_col2: sort_button("Docs", "Docs")
         with h_col3: sort_button("Status", "Status")
-        with h_col4: sort_button("Laatst Gen.", "Laatst Gen.")
-        with h_col5: st.markdown("<p style='text-align:center;margin:0;padding-top:8px;font-size:0.8rem;font-weight:bold;'>Genereer</p>", unsafe_allow_html=True)
-        with h_col6: st.markdown("<p style='text-align:center;margin:0;padding-top:8px;font-size:0.8rem;font-weight:bold;'>Dossier</p>", unsafe_allow_html=True)
+        with h_col4: sort_button("Betrouwbaarheid", "Betrouwbaarheid")
+        with h_col5: sort_button("Laatst Gen.", "Laatst Gen.")
+        with h_col6: st.markdown("<p style='text-align:center;margin:0;padding-top:8px;font-size:0.8rem;font-weight:bold;'>Acties</p>", unsafe_allow_html=True)
         st.divider()
 
         for item in tabel_data:
@@ -476,7 +482,7 @@ def _beheer_bestanden(directory: str, label: str):
             laatst_gegenereerd = item["laatst_gen_str"]
 
             # Row container (simulated with columns)
-            r_col1, r_col2, r_col3, r_col4, r_col5, r_col6 = st.columns([2.5, 0.8, 1.5, 2.2, 1.5, 1.5])
+            r_col1, r_col2, r_col3, r_col4, r_col5, r_col6 = st.columns([2.5, 0.8, 1.5, 2.0, 1.5, 1.7])
             
             with r_col1:
                 st.markdown(f"**{v}**")
@@ -489,25 +495,34 @@ def _beheer_bestanden(directory: str, label: str):
                     st.markdown(":green[:material/check_circle: Profiel]")
                 else:
                     st.markdown(":orange[:material/warning: Geen profiel]")
-            
+
             with r_col4:
+                if heeft_prof:
+                    score = item["betrouwbaarheid"]
+                    kleur = "red" if score < 40 else "orange" if score < 75 else "green"
+                    st.markdown(f":{kleur}[**{score}%**]")
+                else:
+                    st.markdown("—")
+            
+            with r_col5:
                 st.markdown(f"<p style='font-size: 0.8rem; margin: 0; padding-top: 4px; color: rgba(240,242,245,0.4);'>{laatst_gegenereerd}</p>", unsafe_allow_html=True)
 
-            with r_col5:
-                if st.button(":material/auto_awesome:", key=f"btn_gen_{label}_{v}", help=f"Genereer profiel voor {v}", type="primary", use_container_width=True):
-                    with st.spinner(f"Analyseren van {v}..."):
-                        nieuw_profiel = genereer_profiel_voor_map(pad, profileer_fn)
-                        if isinstance(nieuw_profiel, dict):
-                            st.cache_data.clear()
-                            st.toast(f"Profiel voor '{v}' gegenereerd!", icon=":material/check_circle:")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error(f"Fout bij genereren voor {v}: {nieuw_profiel}")
-            
             with r_col6:
-                if st.button(":material/delete:", key=f"btn_del_{label}_{v}", help=f"Verwijder dossier {v}", type="secondary", use_container_width=True):
-                    bevestig_verwijder_map(pad, v)
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button(":material/auto_awesome:", key=f"btn_gen_{label}_{v}", help=f"Genereer profiel voor {v}", type="primary"):
+                        with st.spinner(f"Analyseren van {v}..."):
+                            nieuw_profiel = genereer_profiel_voor_map(pad, profileer_fn)
+                            if isinstance(nieuw_profiel, dict):
+                                st.cache_data.clear()
+                                st.toast(f"Profiel voor '{v}' gegenereerd!", icon=":material/check_circle:")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error(f"Fout bij genereren voor {v}: {nieuw_profiel}")
+                with c2:
+                    if st.button(":material/delete:", key=f"btn_del_{label}_{v}", help=f"Verwijder dossier {v}", type="secondary"):
+                        bevestig_verwijder_map(pad, v)
             
             # Subtiele scheidingslijn tussen rijen
             st.markdown('<div style="margin: 2px 0; opacity: 0.1; border-bottom: 1px solid white;"></div>', unsafe_allow_html=True)
@@ -591,9 +606,9 @@ def _beheer_bestanden(directory: str, label: str):
             st.info("Nog geen documenten. Upload er een via het veld hierboven.")
 
     with tab_profiel:
-        col_gen, col_spacer = st.columns([1, 2])
+        col_gen, col_score, col_spacer = st.columns([1, 1, 1.5])
         with col_gen:
-            if st.button(":material/auto_awesome: Genereer Profiel", type="primary", key=f"gen_{label}", width="stretch"):
+            if st.button(":material/auto_awesome: Hergenereer", type="primary", key=f"gen_{label}", use_container_width=True):
                 with st.spinner("LLM is aan het analyseren..."):
                     nieuw_profiel = genereer_profiel_voor_map(doel_pad, profileer_fn)
                     if isinstance(nieuw_profiel, dict):
@@ -603,6 +618,20 @@ def _beheer_bestanden(directory: str, label: str):
                         st.rerun()
                     else:
                         st.error(f"Kan profiel niet genereren: {nieuw_profiel}")
+        
+        with col_score:
+            if profiel:
+                score = profiel.get("profiel_betrouwbaarheid", 0)
+                kleur = "#FF5252" if score < 40 else "#FFAB00" if score < 75 else "#00E676"
+                st.markdown(f"""
+                <div style="
+                    background: {kleur}22; border: 1px solid {kleur}44;
+                    padding: 6px 15px; border-radius: 8px; text-align: center;
+                ">
+                    <span style="font-size: 0.7rem; color: rgba(255,255,255,0.6); display: block; text-transform: uppercase;">Betrouwbaarheid</span>
+                    <span style="font-size: 1.1rem; font-weight: 800; color: {kleur};">{score}%</span>
+                </div>
+                """, unsafe_allow_html=True)
 
         if profiel:
             # Inline profiel editor
@@ -627,6 +656,42 @@ def _beheer_bestanden(directory: str, label: str):
                     except json.JSONDecodeError as e:
                         st.error(f"Ongeldige JSON: {e}")
             st.json(profiel)
+
+            # --- Sectie: Profiel Verrijken ---
+            vervolgvragen = profiel.get("vervolgvragen", [])
+            if vervolgvragen:
+                st.divider()
+                st.subheader(":material/edit_note: Profiel Verrijken")
+                st.info("De AI heeft de volgende vragen om dit profiel betrouwbaarder te maken. Beantwoord ze hieronder om het profiel te verfijnen.")
+                
+                with st.form(key=f"enrich_form_{label}_{doel_map}"):
+                    antwoorden = {}
+                    for idx, vraag in enumerate(vervolgvragen):
+                        antwoorden[vraag] = st.text_area(vraag, key=f"ans_{label}_{idx}")
+                    
+                    if st.form_submit_button(":material/auto_fix: Profiel Verfijnen", type="primary"):
+                        if any(antwoorden.values()):
+                            extra_tekst = "\n\n--- EXTRA INFORMATIE (VERRIJKING) ---\n"
+                            for v, a in antwoorden.items():
+                                if a.strip():
+                                    extra_tekst += f"Vraag: {v}\nAntwoord: {a}\n\n"
+                            
+                            # Sla antwoorden op als een nieuw tekstbestand
+                            verrijking_pad = os.path.join(doel_pad, f"verrijking_{int(time.time())}.txt")
+                            with open(verrijking_pad, "w", encoding="utf-8") as f:
+                                f.write(extra_tekst)
+                            
+                            with st.spinner("Profiel opnieuw genereren met nieuwe informatie..."):
+                                nieuw_profiel = genereer_profiel_voor_map(doel_pad, profileer_fn)
+                                if isinstance(nieuw_profiel, dict):
+                                    st.cache_data.clear()
+                                    st.toast("Profiel succesvol verfijnd!", icon=":material/auto_fix:")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error(f"Fout bij verfijnen: {nieuw_profiel}")
+                        else:
+                            st.warning("Vul minimaal één antwoord in om te verfijnen.")
         else:
             st.markdown("""
             <div style="text-align: center; padding: 1.5rem 0; color: rgba(240,242,245,0.35);">

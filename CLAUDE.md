@@ -36,13 +36,13 @@ scripts/           # Utility scripts
 
 ## Gebruik & UI
 
-Start de web interface:
+Start de web interface (eenvoudigste manier):
 
 ```bash
-streamlit run app.py
+./start.sh
 ```
 
-Voor CLI matching:
+Of via de CLI matching:
 
 ```bash
 python3 paper_agent.py
