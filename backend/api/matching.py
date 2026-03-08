@@ -8,7 +8,7 @@ from backend.config import KANDIDATEN_DIR, WERKGEVERSVRAGEN_DIR
 from backend.utils import laad_profiel_uit_map
 from backend.services.agents import match_kandidaat, match_kandidaat_stream
 from backend.database import (
-    bewaar_match, haal_top_matches_vector, haal_document,
+    bewaar_match, haal_top_matches_vector, haal_top_vacatures_vector, haal_document,
     haal_laatste_matches, haal_cached_match, haal_alle_documenten
 )
 from backend.services.ollama_service import genereer_embedding
@@ -18,6 +18,10 @@ router = APIRouter(prefix="/matching", tags=["Matching"])
 
 class SemanticSearchRequest(BaseModel):
     vacature_naam: str
+    limit: int = 5
+
+class ReverseSearchRequest(BaseModel):
+    kandidaat_naam: str
     limit: int = 5
 
 
@@ -88,6 +92,46 @@ async def match_history(limit: int = 100):
             entry["resultaat"] = None
         resultaat.append(entry)
     return resultaat
+
+@router.post("/reverse-search")
+async def reverse_search(req: ReverseSearchRequest):
+    """Reverse matching: bij welke vacatures past deze kandidaat?"""
+    cand_doc = await haal_document(req.kandidaat_naam)
+    cand_profiel = cand_doc.get("profiel_dict") if cand_doc else None
+    
+    if not cand_profiel:
+        cand_pad = os.path.join(KANDIDATEN_DIR, req.kandidaat_naam)
+        cand_profiel = laad_profiel_uit_map(cand_pad)
+    
+    if not cand_profiel:
+        raise HTTPException(status_code=400, detail=f"Kandidaat profiel niet gevonden voor {req.kandidaat_naam}")
+    
+    cand_json = json.dumps(cand_profiel, ensure_ascii=False)
+    vector = await genereer_embedding(cand_json)
+    
+    if not vector:
+        raise HTTPException(status_code=500, detail="Kon geen embedding genereren.")
+    
+    top_vacatures = await haal_top_vacatures_vector(vector, limit=req.limit)
+    
+    enriched = []
+    for vac in top_vacatures:
+        doc = await haal_document(vac["naam"])
+        profiel = doc.get("profiel_dict") if doc else None
+        if not profiel:
+            vac_pad = os.path.join(WERKGEVERSVRAGEN_DIR, vac["naam"])
+            profiel = laad_profiel_uit_map(vac_pad)
+        if profiel:
+            enriched.append({
+                "vacature_naam": vac["naam"],
+                "score": vac["score"],
+                "percentage": vac["percentage"],
+                "titel": profiel.get("titel", "Onbekend"),
+                "organisatie": profiel.get("organisatie", "Onbekend"),
+            })
+    
+    return {"message": "Reverse search voltooid", "matches": enriched}
+
 
 
 # --- Semantic Search ---

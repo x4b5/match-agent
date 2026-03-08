@@ -4,8 +4,8 @@ import shutil
 
 from backend.config import WERKGEVERSVRAGEN_DIR
 from backend.utils import formatteer_directory_response, opslaan_profiel, zorg_voor_uuid
-from backend.services.agents import profileer_werkgeversvraag, extract_text_sync, genereer_embedding
-from backend.database import bewaar_embedding, bewaar_document, haal_alle_documenten
+from backend.services.agents import profileer_werkgeversvraag, extract_text_sync, genereer_embedding, verrijk_werkgeversvraag_profiel
+from backend.database import bewaar_embedding, bewaar_document, haal_alle_documenten, haal_document, bewaar_verrijking, update_profiel_na_verrijking
 from backend.services.pii_scrubber import scrub_pii
 from backend.api.tasks import maak_task, update_task
 
@@ -131,6 +131,13 @@ async def _generate_profile_task(map_pad: str, task_id: str):
                 profiel_dict=resultaat if isinstance(resultaat, dict) else None,
                 waarschuwingen=waarschuwingen
             )
+            
+            # Smart Notification: automatische shortlist bij nieuwe vacature
+            if vector and isinstance(resultaat, dict):
+                from backend.database import haal_top_matches_vector
+                shortlist = await haal_top_matches_vector(vector, limit=5)
+                if shortlist:
+                    print(f"📬 Auto-shortlist voor '{naam}': {len(shortlist)} matches gevonden (top: {shortlist[0]['percentage']}%)")
 
         except Exception as e:
             print(f"Error saving data for vacature {map_pad}: {e}")
@@ -153,3 +160,47 @@ async def generate_profile(name: str, background_tasks: BackgroundTasks):
     task_id = maak_task("profile_generation", name)
     background_tasks.add_task(_generate_profile_task, doel_pad, task_id)
     return {"message": "Profiel generatie gestart in de achtergrond.", "task_id": task_id}
+
+from pydantic import BaseModel as PydanticBaseModel
+import json as json_module
+
+class EnrichRequest(PydanticBaseModel):
+    antwoorden: dict  # {"vraag": "antwoord", ...}
+
+@router.post("/{name}/enrich")
+async def enrich_profile(name: str, req: EnrichRequest, background_tasks: BackgroundTasks):
+    """Verrijk een werkgeversvraag-profiel met nieuwe Q&A antwoorden."""
+    doc = await haal_document(name)
+    if not doc or not doc.get("profiel_dict"):
+        raise HTTPException(status_code=400, detail="Geen bestaand profiel gevonden. Genereer eerst een profiel.")
+    
+    document_id = doc["document_id"]
+    
+    # Sla antwoorden op 
+    await bewaar_verrijking(document_id, req.antwoorden)
+    
+    # Re-profile met LLM
+    profiel_json = json_module.dumps(doc["profiel_dict"], ensure_ascii=False)
+    antwoorden_json = json_module.dumps(req.antwoorden, ensure_ascii=False)
+    ruwe_tekst = doc.get("ruwe_tekst", "")
+    
+    nieuw_profiel = await verrijk_werkgeversvraag_profiel(profiel_json, antwoorden_json, ruwe_tekst)
+    
+    if not isinstance(nieuw_profiel, dict):
+        raise HTTPException(status_code=500, detail="LLM kon geen verrijkt profiel genereren.")
+    
+    # Update in DB met delta tracking
+    versie_info = await update_profiel_na_verrijking(document_id, nieuw_profiel)
+    
+    # Update ook het lokale JSON bestand
+    doel_pad = os.path.join(WERKGEVERSVRAGEN_DIR, name)
+    if os.path.exists(doel_pad):
+        opslaan_profiel(doel_pad, nieuw_profiel)
+    
+    return {
+        "message": f"Profiel verrijkt naar versie {versie_info['versie']}.",
+        "versie": versie_info["versie"],
+        "nieuwe_score": nieuw_profiel.get("profiel_betrouwbaarheid", 0),
+        "vervolgvragen": nieuw_profiel.get("vervolgvragen", []),
+        "profiel": nieuw_profiel
+    }

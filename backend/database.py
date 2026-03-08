@@ -9,6 +9,7 @@ DB_PATH = os.path.join(ICLOUD_BASE, "matchflix.db")
 
 async def init_db():
     """Initialiseer de database tabellen asynchroon."""
+    os.makedirs(ICLOUD_BASE, exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as conn:
         conn.row_factory = aiosqlite.Row
         await conn.execute("""
@@ -44,6 +45,9 @@ async def init_db():
                 profiel_json TEXT,
                 waarschuwingen TEXT,
                 profiel_compleet BOOLEAN,
+                verrijkings_antwoorden TEXT,
+                versie INTEGER DEFAULT 1,
+                vorige_profiel_json TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -157,6 +161,23 @@ async def haal_top_matches_vector(vacature_vector: list[float], limit: int = 5) 
     # Sort by score descending
     scored_kandidaten.sort(key=lambda x: x["score"], reverse=True)
     return scored_kandidaten[:limit]
+
+async def haal_top_vacatures_vector(kandidaat_vector: list[float], limit: int = 5) -> list[dict]:
+    """Reverse matching: haal de top vacatures op voor een gegeven kandidaat-vector."""
+    vacatures = await haal_alle_embeddings("vacature")
+    
+    scored = []
+    for vac in vacatures:
+        score = bereken_cosine_similarity(kandidaat_vector, vac["vector"])
+        scored.append({
+            "document_id": vac["document_id"],
+            "naam": vac["naam"],
+            "score": score,
+            "percentage": max(0, min(100, int(score * 100)))
+        })
+    
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:limit]
 
 async def bewaar_document(document_id: str, doc_type: str, naam: str, ruwe_tekst: str, profiel_dict: dict, waarschuwingen: list):
     """Sla een geëxtraheerd profiel en ruwe tekst op in de database."""
@@ -273,3 +294,56 @@ async def verwijder_alle_data(document_id: str) -> dict:
         await conn.commit()
     
     return rapport
+
+async def bewaar_verrijking(document_id: str, antwoorden: dict):
+    """Sla verrijkings-antwoorden op bij een bestaand document."""
+    async with aiosqlite.connect(DB_PATH) as conn:
+        # Haal bestaande antwoorden op
+        cursor = await conn.execute("SELECT verrijkings_antwoorden FROM documenten WHERE document_id = ?", (document_id,))
+        row = await cursor.fetchone()
+        
+        bestaande = {}
+        if row and row[0]:
+            bestaande = json.loads(row[0])
+        
+        # Merge nieuwe antwoorden
+        bestaande.update(antwoorden)
+        
+        await conn.execute(
+            "UPDATE documenten SET verrijkings_antwoorden = ? WHERE document_id = ?",
+            (json.dumps(bestaande, ensure_ascii=False), document_id)
+        )
+        await conn.commit()
+
+async def update_profiel_na_verrijking(document_id: str, nieuw_profiel: dict):
+    """Update het profiel na verrijking. Bewaart de vorige versie voor delta tracking."""
+    async with aiosqlite.connect(DB_PATH) as conn:
+        # Haal huidige staat op
+        cursor = await conn.execute(
+            "SELECT profiel_json, versie FROM documenten WHERE document_id = ?", 
+            (document_id,)
+        )
+        row = await cursor.fetchone()
+        
+        vorig_profiel = row[0] if row else None
+        huidige_versie = row[1] if row and row[1] else 1
+        
+        # Update met nieuw profiel, sla vorige versie op
+        await conn.execute("""
+            UPDATE documenten 
+            SET profiel_json = ?, 
+                vorige_profiel_json = ?,
+                versie = ?,
+                profiel_compleet = 1,
+                timestamp = CURRENT_TIMESTAMP
+            WHERE document_id = ?
+        """, (
+            json.dumps(nieuw_profiel, ensure_ascii=False),
+            vorig_profiel,
+            huidige_versie + 1,
+            document_id
+        ))
+        await conn.commit()
+        
+        return {"versie": huidige_versie + 1, "vorige_versie": huidige_versie}
+

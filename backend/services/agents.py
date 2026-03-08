@@ -6,6 +6,8 @@ import traceback
 from backend.config import (
     PROFIEL_KANDIDAAT_PROMPT,
     PROFIEL_WERKGEVERSVRAAG_PROMPT,
+    VERRIJK_KANDIDAAT_PROMPT,
+    VERRIJK_WERKGEVERSVRAAG_PROMPT,
     PROFIEL_MODEL,
     MATCH_MODI,
     OLLAMA_MODEL,
@@ -31,6 +33,22 @@ async def profileer_kandidaat(tekst: str) -> dict:
 
 async def profileer_werkgeversvraag(tekst: str) -> dict:
     prompt = PROFIEL_WERKGEVERSVRAAG_PROMPT.format(tekst=tekst)
+    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
+
+async def verrijk_kandidaat_profiel(profiel_json: str, antwoorden_json: str, ruwe_tekst: str) -> dict:
+    prompt = VERRIJK_KANDIDAAT_PROMPT.format(
+        profiel_json=profiel_json, 
+        antwoorden_json=antwoorden_json, 
+        ruwe_tekst=ruwe_tekst
+    )
+    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+
+async def verrijk_werkgeversvraag_profiel(profiel_json: str, antwoorden_json: str, ruwe_tekst: str) -> dict:
+    prompt = VERRIJK_WERKGEVERSVRAAG_PROMPT.format(
+        profiel_json=profiel_json, 
+        antwoorden_json=antwoorden_json, 
+        ruwe_tekst=ruwe_tekst
+    )
     return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
 
 def _verkort_tekst(tekst: str, max_lengte: int) -> tuple[str, bool]:

@@ -50,6 +50,13 @@ class PersonalityAxes(BaseModel):
     Gestructureerd: int = Field(ge=0, le=100)
     Ondernemend: int = Field(ge=0, le=100)
 
+class ScoreBreakdown(BaseModel):
+    persoonlijkheid_fit: int = Field(ge=0, le=100, description="Hoe goed passen de karaktereigenschappen?")
+    cultuur_fit: int = Field(ge=0, le=100, description="Hoe goed past de bedrijfscultuur?")
+    skills_overlap: int = Field(ge=0, le=100, description="In hoeverre zijn vereiste skills aanwezig?")
+    groei_potentieel: int = Field(ge=0, le=100, description="Hoeveel groeipotentieel is er?")
+    motivatie_alignment: int = Field(ge=0, le=100, description="Hoe goed sluiten drijfveren aan?")
+
 class QuickScanMatchResult(BaseModel):
     match_percentage: int = Field(ge=0, le=100)
     matchende_punten: List[str]
@@ -72,7 +79,9 @@ class StandaardMatchResult(BaseModel):
     cultuur_fit: str
     aandachtspunten: str
     boodschap_aan_kandidaat: str
+    match_narratief: str = Field(description="Kort, inspirerend verhaal dat de match tot leven brengt")
     onderbouwing: str
     personality_axes: PersonalityAxes
+    score_breakdown: ScoreBreakdown = Field(description="Transparante sub-scores per dimensie")
     match_betrouwbaarheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
     vervolgvragen: List[str]

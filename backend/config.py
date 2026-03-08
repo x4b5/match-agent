@@ -1,7 +1,7 @@
 import os
 
 ICLOUD_BASE = os.path.expanduser(
-    "~/Library/Mobile Documents/com~apple~CloudDocs"
+    "~/Library/Mobile Documents/com~apple~CloudDocs/matchflix"
 )
 
 KANDIDATEN_DIR = os.path.join(ICLOUD_BASE, "kandidaten")
@@ -138,6 +138,49 @@ Zet je analyse om in exact dit JSON-format (geen andere tekst, alleen JSON).
 PROFIEL:
 {profiel_json}"""
 
+VERRIJK_KANDIDAAT_PROMPT = """Je hebt eerder een profiel gemaakt van een kandidaat. Nu heb je aanvullende informatie gekregen via een Q&A sessie.
+Combineer het BESTAANDE PROFIEL met de NIEUWE ANTWOORDEN om een VERBETERD, RIJKER profiel te maken.
+
+Instructies:
+- Integreer de nieuwe informatie naadloos in het profiel — niet als apart blokje, maar verweven.
+- Update de betrouwbaarheidsscore omhoog als de antwoorden cruciale gaten vullen.
+- Voeg nieuwe inzichten toe aan persoonlijkheid, drijfveren, impliciete kwaliteiten etc.
+- Genereer NIEUWE vervolgvragen als er NOG steeds belangrijke gaten zijn (max 5).
+- Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
+
+BESTAAND PROFIEL:
+{profiel_json}
+
+NIEUWE ANTWOORDEN (vraag → antwoord):
+{antwoorden_json}
+
+ORIGINELE TEKST (ter referentie):
+{ruwe_tekst}
+
+Genereer het VOLLEDIGE bijgewerkte profiel in hetzelfde JSON-format als het origineel."""
+
+VERRIJK_WERKGEVERSVRAAG_PROMPT = """Je hebt eerder een werkgeversvraag-profiel gemaakt. Nu heb je aanvullende informatie gekregen via een Q&A sessie.
+Combineer het BESTAANDE PROFIEL met de NIEUWE ANTWOORDEN om een VERBETERD, RIJKER profiel te maken.
+
+Instructies:
+- Integreer de nieuwe informatie naadloos — niet als apart blokje, maar verweven.
+- Update de betrouwbaarheidsscore omhoog als de antwoorden cruciale gaten vullen.
+- Voeg nieuwe inzichten toe aan gezochte persoonlijkheid, verborgen behoeften, etc.
+- Genereer NIEUWE vervolgvragen als er NOG steeds belangrijke gaten zijn (max 5).
+- Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
+
+BESTAAND PROFIEL:
+{profiel_json}
+
+NIEUWE ANTWOORDEN (vraag → antwoord):
+{antwoorden_json}
+
+ORIGINELE TEKST (ter referentie):
+{ruwe_tekst}
+
+Genereer het VOLLEDIGE bijgewerkte profiel in hetzelfde JSON-format als het origineel."""
+
+
 # --- Match-modi ---
 
 # Modellen per gebruik
@@ -207,6 +250,7 @@ Antwoord in exact dit JSON-format (geen andere tekst):
   "cultuur_fit": "Waarom passen ze bij elkaar qua karakter en bedrijfscultuur?",
   "aandachtspunten": "Waar moet extra begeleiding op worden ingezet?",
   "boodschap_aan_kandidaat": "Een korte, motiverende boodschap gericht aan de kandidaat zelf: waarom is deze rol iets voor jou? Spreek de kandidaat direct aan.",
+  "match_narratief": "Een kort, inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt. Maak het persoonlijk en activerend.",
   "onderbouwing": "uitgebreide toelichting: waarom is dit een interessante match qua karakter and passie? Wat voegt deze onverwachte kandidaat toe?",
   "personality_axes": {{
     "Analytisch": <getal 0-100>,
@@ -214,6 +258,13 @@ Antwoord in exact dit JSON-format (geen andere tekst):
     "Creatief": <getal 0-100>,
     "Gestructureerd": <getal 0-100>,
     "Ondernemend": <getal 0-100>
+  }},
+  "score_breakdown": {{
+    "persoonlijkheid_fit": <getal 0-100>,
+    "cultuur_fit": <getal 0-100>,
+    "skills_overlap": <getal 0-100>,
+    "groei_potentieel": <getal 0-100>,
+    "motivatie_alignment": <getal 0-100>
   }},
   "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog",
   "vervolgvragen": ["Diepgaande vraag 1 om missende info boven water te krijgen", "vraag 2"]
@@ -253,6 +304,7 @@ Antwoord in exact dit JSON-format (geen andere tekst):
   "cultuur_fit": "Waarom passen ze bij elkaar qua karakter en bedrijfscultuur?",
   "aandachtspunten": "Waar moet extra begeleiding op worden extra ingezet?",
   "boodschap_aan_kandidaat": "Een korte, motiverende boodschap gericht aan de kandidaat zelf: waarom is deze rol iets voor jou? Spreek de kandidaat direct aan.",
+  "match_narratief": "Een kort, inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt. Maak het persoonlijk en activerend.",
   "onderbouwing": "uitgebreide toelichting: waarom is dit een interessante match qua karakter and passie? Wat voegt deze onverwachte kandidaat toe?",
   "personality_axes": {{
     "Analytisch": <getal 0-100>,
@@ -260,6 +312,13 @@ Antwoord in exact dit JSON-format (geen andere tekst):
     "Creatief": <getal 0-100>,
     "Gestructureerd": <getal 0-100>,
     "Ondernemend": <getal 0-100>
+  }},
+  "score_breakdown": {{
+    "persoonlijkheid_fit": <getal 0-100>,
+    "cultuur_fit": <getal 0-100>,
+    "skills_overlap": <getal 0-100>,
+    "groei_potentieel": <getal 0-100>,
+    "motivatie_alignment": <getal 0-100>
   }},
   "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog",
   "vervolgvragen": ["Diepgaande vraag 1 om missende info boven water te krijgen", "vraag 2"]
