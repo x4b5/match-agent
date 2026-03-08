@@ -86,8 +86,8 @@ Belangrijke instructies:
     "soft_skills": ["lijst", "van", "soft skills"],
     "beschikbaarheid_en_locatie": "Praktische zaken (indien genoemd in tekst)",
     "opleiding_en_ervaring_samenvatting": "Korte samenvatting van achtergrond (niet leidend voor match)",
-    "profiel_betrouwbaarheid": <getal 0-100 gebaseerd op volledigheid brontekst>,
-    "vervolgvragen": ["maximaal 5 vragen om ontbrekende info aan te vullen"]
+    "profiel_betrouwbaarheid": 80,
+    "vervolgvragen": ["Vraag 1?", "Vraag 2?"]
 }}
 
 KANDIDAATTEKST:
@@ -116,8 +116,8 @@ Belangrijke instructies:
     "nice_to_have_skills": ["lijst", "van", "mooi meegenomen, maar trainbare skills"],
     "werktijden_en_omstandigheden": "Praktische zaken t.a.v. werktijden of fysieke omstandigheden",
     "belangrijkste_taak": "Wat deze persoon vooral gaat doen",
-    "profiel_betrouwbaarheid": <getal 0-100 gebaseerd op volledigheid vacaturetekst>,
-    "vervolgvragen": ["maximaal 5 vragen om context te verduidelijken"]
+    "profiel_betrouwbaarheid": 80,
+    "vervolgvragen": ["Vraag 1?", "Vraag 2?"]
 }}
 
 WERKGEVERSVRAAG:
