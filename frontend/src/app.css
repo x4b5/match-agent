@@ -244,6 +244,16 @@ p {
   50% { opacity: 0.5; transform: scale(1.4); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
 /* Nav Link */
 .nav-link {
   color: var(--text-secondary);

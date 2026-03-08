@@ -9,6 +9,7 @@
   let searchQuery = $state("");
   let sortOption = $state("alpha-asc");
   let filterProfile = $state("all");
+  let generatingNames: Set<string> = $state(new Set());
 
   let filteredCandidates = $derived(
     (() => {
@@ -67,14 +68,34 @@
   }
 
   async function generateProfile(name: string) {
-    const res = await fetch(
-      `/api/candidates/${encodeURIComponent(name)}/generate-profile`,
-      { method: "POST" },
-    );
-    if (res.ok) {
-      alert("Profiel generatie gestart in de achtergrond.");
-    } else {
+    generatingNames = new Set([...generatingNames, name]);
+    try {
+      const res = await fetch(
+        `/api/candidates/${encodeURIComponent(name)}/generate-profile`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        alert("Fout bij starten generatie");
+        return;
+      }
+      // Poll totdat profiel klaar is
+      const poll = setInterval(async () => {
+        const data = await fetch("/api/candidates/").then((r) => r.json());
+        const updated = data.find((c: any) => c.naam === name);
+        if (updated?.has_profile) {
+          clearInterval(poll);
+          candidates = data;
+          generatingNames = new Set([...generatingNames].filter((n) => n !== name));
+        }
+      }, 3000);
+      // Stop polling na 5 minuten
+      setTimeout(() => {
+        clearInterval(poll);
+        generatingNames = new Set([...generatingNames].filter((n) => n !== name));
+      }, 300000);
+    } catch {
       alert("Fout bij starten generatie");
+      generatingNames = new Set([...generatingNames].filter((n) => n !== name));
     }
   }
 </script>
@@ -214,12 +235,13 @@
           <button
             class="btn-primary"
             onclick={() => generateProfile(candidate.naam)}
+            disabled={generatingNames.has(candidate.naam)}
           >
-            <span
-              class="material-icons"
-              style="font-size: 1rem; vertical-align: middle;"
-              >auto_awesome</span
-            > Genereer
+            {#if generatingNames.has(candidate.naam)}
+              <span class="material-icons spin" style="font-size: 1rem; vertical-align: middle;">autorenew</span> Bezig...
+            {:else}
+              <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">auto_awesome</span> Genereer
+            {/if}
           </button>
           <button
             class="btn-secondary"
