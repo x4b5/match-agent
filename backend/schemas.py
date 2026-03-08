@@ -19,7 +19,7 @@ class KandidaatProfiel(BaseModel):
     beschikbaarheid_en_locatie: str = Field(description="Praktische zaken (indien genoemd in tekst)")
     opleiding_en_ervaring_samenvatting: str = Field(description="Korte samenvatting van achtergrond")
     profiel_betrouwbaarheid: int = Field(ge=0, le=100, description="Hoe compleet is dit profiel?")
-    vervolgvragen: List[str] = Field(max_items=5, description="Concrete vragen over essentiële info die mist")
+    vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
 
 class WerkgeversvraagProfiel(BaseModel):
     titel: str = Field(description="Functietitel")
@@ -37,11 +37,11 @@ class WerkgeversvraagProfiel(BaseModel):
     werktijden_en_omstandigheden: str = Field(description="Praktische zaken t.a.v. werktijden of fysieke omstandigheden")
     belangrijkste_taak: str = Field(description="Wat deze persoon vooral gaat doen")
     profiel_betrouwbaarheid: int = Field(ge=0, le=100, description="Hoe compleet is deze werkgeversvraag?")
-    vervolgvragen: List[str] = Field(max_items=5, description="Concrete vragen over essentiële info die mist")
+    vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
 
 class EvalueerProfielResult(BaseModel):
     volledigheid_score: int = Field(ge=0, le=100, description="Volledigheid score")
-    vervolgvragen: List[str] = Field(max_items=5, description="Concrete vragen over missende info")
+    vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over missende info")
 
 class PersonalityAxes(BaseModel):
     Analytisch: int = Field(ge=0, le=100)

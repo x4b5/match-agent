@@ -19,11 +19,11 @@ async def vergeet_mij(req: VergeetMijRequest):
     AVG/GDPR 'Recht op Vergetelheid' – verwijdert alle data van een persoon/vacature 
     uit de database (documenten, embeddings, matches) en optioneel van de schijf.
     """
-    # Zoek het document op via naam
-    doc = await haal_document(req.naam)
+    # Zoek het document op via naam en type
+    doc = await haal_document(req.naam, req.doc_type)
     
     if not doc:
-        raise HTTPException(status_code=404, detail=f"Geen data gevonden voor '{req.naam}'.")
+        raise HTTPException(status_code=404, detail=f"Geen data gevonden voor '{req.naam}' ({req.doc_type}).")
     
     document_id = doc["document_id"]
     

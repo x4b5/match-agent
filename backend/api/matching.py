@@ -2,9 +2,13 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import os
 import json
+import time
+import logging
 from sse_starlette.sse import EventSourceResponse
 
-from backend.config import KANDIDATEN_DIR, WERKGEVERSVRAGEN_DIR
+from backend.config import KANDIDATEN_DIR, WERKGEVERSVRAGEN_DIR, MATCH_MODI, OLLAMA_MODEL
+
+logger = logging.getLogger("matchflix.matching")
 from backend.utils import laad_profiel_uit_map
 from backend.services.agents import match_kandidaat, match_kandidaat_stream
 from backend.database import (
@@ -177,11 +181,20 @@ async def run_match(req: MatchRequest):
             return {"message": "Match voltooid (cache)", "result": cached["resultaat_dict"], "cached": True}
 
     cv_profiel, vac_profiel, cv_json, vac_json = await _krijg_profielen(req)
+    
+    # Track duration en model
+    start_time = time.time()
+    modi = MATCH_MODI.get(req.modus)
+    model_versie = (modi.get("model_override") if modi else None) or OLLAMA_MODEL
+    
     result = await match_kandidaat(cv_json, vac_json, modus=req.modus)
+    duur_ms = int((time.time() - start_time) * 1000)
 
     kandidaat_id = cv_profiel.get("id", req.kandidaat_naam)
     vacature_id = vac_profiel.get("id", req.vacature_naam)
     vacature_titel = vac_profiel.get("titel", req.vacature_naam)
+    
+    logger.info(f"Match {req.kandidaat_naam} ↔ {req.vacature_naam}: {result.get('match_percentage', '?')}% ({model_versie}, {duur_ms}ms)")
 
     await bewaar_match(
         kandidaat_naam=req.kandidaat_naam,
@@ -190,7 +203,9 @@ async def run_match(req: MatchRequest):
         vacature_id=vacature_id,
         percentage=result.get("match_percentage", 0),
         modus=req.modus,
-        resultaat_dict=result
+        resultaat_dict=result,
+        model_versie=model_versie,
+        duur_ms=duur_ms
     )
     return {"message": "Match voltooid", "result": result}
 

@@ -2,16 +2,28 @@ import aiosqlite
 import json
 import os
 import math
+import logging
 from datetime import datetime
 from backend.config import ICLOUD_BASE
 
+logger = logging.getLogger("matchflix.db")
 DB_PATH = os.path.join(ICLOUD_BASE, "matchflix.db")
+
+
+async def _get_connection() -> aiosqlite.Connection:
+    """Maak een geconfigureerde database-connectie met WAL-modus en row_factory."""
+    conn = await aiosqlite.connect(DB_PATH)
+    conn.row_factory = aiosqlite.Row
+    await conn.execute("PRAGMA journal_mode=WAL")
+    await conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
 
 async def init_db():
     """Initialiseer de database tabellen asynchroon."""
     os.makedirs(ICLOUD_BASE, exist_ok=True)
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
+    conn = await _get_connection()
+    try:
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS matches (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,6 +34,8 @@ async def init_db():
                 vacature_id TEXT,
                 match_percentage INTEGER,
                 modus TEXT,
+                model_versie TEXT,
+                duur_ms INTEGER,
                 resultaat_json TEXT
             )
         """)
@@ -48,7 +62,21 @@ async def init_db():
                 verrijkings_antwoorden TEXT,
                 versie INTEGER DEFAULT 1,
                 vorige_profiel_json TEXT,
+                content_hash TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS taken (
+                id TEXT PRIMARY KEY,
+                status TEXT DEFAULT 'pending',
+                type TEXT,
+                naam TEXT,
+                progress TEXT,
+                error TEXT,
+                started_at REAL,
+                updated_at REAL
             )
         """)
         
@@ -58,14 +86,38 @@ async def init_db():
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_embed_type ON embeddings(doc_type)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_doc_type ON documenten(doc_type)")
         await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_doc_naam ON documenten(naam, doc_type)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_taken_status ON taken(status)")
+        
+        # Migreer bestaande tabellen: voeg nieuwe kolommen toe als ze ontbreken
+        try:
+            await conn.execute("ALTER TABLE matches ADD COLUMN model_versie TEXT")
+        except Exception:
+            pass  # Kolom bestaat al
+        try:
+            await conn.execute("ALTER TABLE matches ADD COLUMN duur_ms INTEGER")
+        except Exception:
+            pass  # Kolom bestaat al
+        
+        try:
+            await conn.execute("ALTER TABLE documenten ADD COLUMN content_hash TEXT")
+        except Exception:
+            pass  # Kolom bestaat al
+        
         await conn.commit()
+        logger.info(f"Database geïnitialiseerd: {DB_PATH} (WAL modus)")
+    finally:
+        await conn.close()
 
-async def bewaar_match(kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, percentage, modus, resultaat_dict):
+
+# ── Matches ──
+
+async def bewaar_match(kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, percentage, modus, resultaat_dict, model_versie=None, duur_ms=None):
     """Sla een match resultaat op in de database."""
-    async with aiosqlite.connect(DB_PATH) as conn:
+    conn = await _get_connection()
+    try:
         await conn.execute("""
-            INSERT INTO matches (kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, match_percentage, modus, resultaat_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO matches (kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, match_percentage, modus, model_versie, duur_ms, resultaat_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             kandidaat_naam, 
             kandidaat_id, 
@@ -73,22 +125,28 @@ async def bewaar_match(kandidaat_naam, kandidaat_id, vacature_titel, vacature_id
             vacature_id, 
             percentage, 
             modus, 
+            model_versie,
+            duur_ms,
             json.dumps(resultaat_dict, ensure_ascii=False)
         ))
         await conn.commit()
+    finally:
+        await conn.close()
 
 async def haal_laatste_matches(limit=50):
     """Haal de meest recente matches op."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("SELECT * FROM matches ORDER BY timestamp DESC LIMIT ?", (limit,))
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
+    finally:
+        await conn.close()
 
 async def haal_matches_voor_vacature(vacature_id):
     """Haal alle matches op voor een specifieke vacature UUID, gesorteerd op percentage."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("""
             SELECT * FROM matches 
             WHERE vacature_id = ? 
@@ -96,28 +154,38 @@ async def haal_matches_voor_vacature(vacature_id):
         """, (vacature_id,))
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
+    finally:
+        await conn.close()
 
 async def haal_unieke_vacatures():
     """Haal lijst van unieke vacatures waarvoor gematcht is."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("SELECT DISTINCT vacature_titel FROM matches ORDER BY vacature_titel")
         rows = await cursor.fetchall()
         return [row["vacature_titel"] for row in rows]
+    finally:
+        await conn.close()
+
+
+# ── Embeddings ──
 
 async def bewaar_embedding(document_id, doc_type, naam, vector):
     """Sla een embedding vector (list van floats) op in de database."""
-    async with aiosqlite.connect(DB_PATH) as conn:
+    conn = await _get_connection()
+    try:
         await conn.execute("""
             INSERT OR REPLACE INTO embeddings (document_id, doc_type, naam, vector_json)
             VALUES (?, ?, ?, ?)
         """, (document_id, doc_type, naam, json.dumps(vector)))
         await conn.commit()
+    finally:
+        await conn.close()
 
 async def haal_alle_embeddings(doc_type):
     """Haal alle embeddings op van een specifiek type (bijv. 'kandidaat')."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("SELECT document_id, naam, vector_json FROM embeddings WHERE doc_type = ?", (doc_type,))
         res = []
         rows = await cursor.fetchall()
@@ -128,6 +196,11 @@ async def haal_alle_embeddings(doc_type):
                 "vector": json.loads(row["vector_json"])
             })
         return res
+    finally:
+        await conn.close()
+
+
+# ── Vector Similarity ──
 
 def bereken_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
     """Bereken de cosine similarity tussen twee vectoren."""
@@ -154,11 +227,9 @@ async def haal_top_matches_vector(vacature_vector: list[float], limit: int = 5) 
             "document_id": kandidaat["document_id"],
             "naam": kandidaat["naam"],
             "score": score,
-            # scale similarity score roughly to a 0-100 percentage
             "percentage": max(0, min(100, int(score * 100))) 
         })
         
-    # Sort by score descending
     scored_kandidaten.sort(key=lambda x: x["score"], reverse=True)
     return scored_kandidaten[:limit]
 
@@ -179,12 +250,29 @@ async def haal_top_vacatures_vector(kandidaat_vector: list[float], limit: int = 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored[:limit]
 
-async def bewaar_document(document_id: str, doc_type: str, naam: str, ruwe_tekst: str, profiel_dict: dict, waarschuwingen: list):
+
+# ── Documenten ──
+
+async def haal_uuid_bij_naam(naam: str, doc_type: str) -> str | None:
+    """Haal de UUID op van een document op basis van naam en type."""
+    conn = await _get_connection()
+    try:
+        cursor = await conn.execute(
+            "SELECT document_id FROM documenten WHERE naam = ? AND doc_type = ? LIMIT 1",
+            (naam, doc_type)
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else None
+    finally:
+        await conn.close()
+
+async def bewaar_document(document_id: str, doc_type: str, naam: str, ruwe_tekst: str, profiel_dict: dict, waarschuwingen: list, content_hash: str = None):
     """Sla een geëxtraheerd profiel en ruwe tekst op in de database."""
-    async with aiosqlite.connect(DB_PATH) as conn:
+    conn = await _get_connection()
+    try:
         await conn.execute("""
-            INSERT OR REPLACE INTO documenten (document_id, doc_type, naam, ruwe_tekst, profiel_json, waarschuwingen, profiel_compleet)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO documenten (document_id, doc_type, naam, ruwe_tekst, profiel_json, waarschuwingen, profiel_compleet, content_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             document_id, 
             doc_type, 
@@ -192,42 +280,57 @@ async def bewaar_document(document_id: str, doc_type: str, naam: str, ruwe_tekst
             ruwe_tekst, 
             json.dumps(profiel_dict, ensure_ascii=False) if profiel_dict else None,
             json.dumps(waarschuwingen, ensure_ascii=False) if waarschuwingen else None,
-            True if profiel_dict else False
+            True if profiel_dict else False,
+            content_hash
         ))
         await conn.commit()
+    finally:
+        await conn.close()
 
-async def haal_document(identifier: str) -> dict | None:
-    """Haal een document op basis van UUID of Directory Naam."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
-        # Weak match on either UUID or the directory name (which is unique enough for now)
-        cursor = await conn.execute("""
-            SELECT * FROM documenten 
-            WHERE document_id = ? OR naam = ?
-            LIMIT 1
-        """, (identifier, identifier))
-        
+async def haal_document_bij_hash(content_hash: str, doc_type: str) -> dict | None:
+    """Check of een document met deze hash al bestaat."""
+    if not content_hash:
+        return None
+    conn = await _get_connection()
+    try:
+        cursor = await conn.execute(
+            "SELECT * FROM documenten WHERE content_hash = ? AND doc_type = ? LIMIT 1",
+            (content_hash, doc_type)
+        )
         row = await cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        await conn.close()
+
+async def haal_document(identifier: str, doc_type: str = None) -> dict | None:
+    """Haal een document op bij naam of UUID. Optioneel filteren op type."""
+    conn = await _get_connection()
+    try:
+        # Zoek eerst op UUID
+        cursor = await conn.execute("SELECT * FROM documenten WHERE document_id = ? LIMIT 1", (identifier,))
+        row = await cursor.fetchone()
+        
+        if not row:
+            # Zoek op naam
+            if doc_type:
+                cursor = await conn.execute("SELECT * FROM documenten WHERE naam = ? AND doc_type = ? LIMIT 1", (identifier, doc_type))
+            else:
+                cursor = await conn.execute("SELECT * FROM documenten WHERE naam = ? LIMIT 1", (identifier,))
+            row = await cursor.fetchone()
+            
         if not row:
             return None
-            
         doc = dict(row)
-        if doc.get("profiel_json"):
-            doc["profiel_dict"] = json.loads(doc["profiel_json"])
-        else:
-            doc["profiel_dict"] = None
-            
-        if doc.get("waarschuwingen"):
-            doc["waarschuwingen_list"] = json.loads(doc["waarschuwingen"])
-        else:
-            doc["waarschuwingen_list"] = []
-            
+        doc["profiel_dict"] = json.loads(doc["profiel_json"]) if doc.get("profiel_json") else None
+        doc["waarschuwingen_list"] = json.loads(doc["waarschuwingen"]) if doc.get("waarschuwingen") else []
         return doc
+    finally:
+        await conn.close()
 
 async def haal_alle_documenten(doc_type: str) -> list[dict]:
     """Haal alle documenten van een specifiek type op."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("SELECT * FROM documenten WHERE doc_type = ? ORDER BY timestamp DESC", (doc_type,))
         rows = await cursor.fetchall()
         
@@ -241,12 +344,16 @@ async def haal_alle_documenten(doc_type: str) -> list[dict]:
             result.append(doc)
             
         return result
+    finally:
+        await conn.close()
+
+
+# ── Match Cache ──
 
 async def haal_cached_match(kandidaat_naam: str, vacature_naam: str, modus: str) -> dict | None:
-    """Check of er al een match-resultaat bestaat voor deze combinatie.
-    Geeft None terug als er geen cache is of als het profiel nieuwer is dan de match."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
+    """Check of er al een match-resultaat bestaat voor deze combinatie."""
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("""
             SELECT m.*, d.timestamp as profiel_timestamp
             FROM matches m
@@ -260,7 +367,6 @@ async def haal_cached_match(kandidaat_naam: str, vacature_naam: str, modus: str)
             return None
 
         match = dict(row)
-        # Invalideer cache als profiel nieuwer is dan de match
         if match.get("profiel_timestamp") and match.get("timestamp"):
             if match["profiel_timestamp"] > match["timestamp"]:
                 return None
@@ -268,37 +374,44 @@ async def haal_cached_match(kandidaat_naam: str, vacature_naam: str, modus: str)
         if match.get("resultaat_json"):
             match["resultaat_dict"] = json.loads(match["resultaat_json"])
         return match
+    finally:
+        await conn.close()
 
+
+# ── GDPR ──
 
 async def verwijder_alle_data(document_id: str) -> dict:
     """
     GDPR 'Vergeet Mij' – verwijdert ALLE data voor een specifiek document UUID.
-    Wist uit: documenten, embeddings, en matches tabellen.
+    Wist uit: documenten, embeddings, matches, en taken tabellen.
     Retourneert een rapport van wat verwijderd is.
     """
     rapport = {"documenten": 0, "embeddings": 0, "matches": 0}
     
-    async with aiosqlite.connect(DB_PATH) as conn:
-        # Verwijder uit documenten
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("DELETE FROM documenten WHERE document_id = ?", (document_id,))
         rapport["documenten"] = cursor.rowcount
         
-        # Verwijder embedding
         cursor = await conn.execute("DELETE FROM embeddings WHERE document_id = ?", (document_id,))
         rapport["embeddings"] = cursor.rowcount
         
-        # Verwijder uit matches (zowel als kandidaat als als vacature)
         cursor = await conn.execute("DELETE FROM matches WHERE kandidaat_id = ? OR vacature_id = ?", (document_id, document_id))
         rapport["matches"] = cursor.rowcount
         
         await conn.commit()
+    finally:
+        await conn.close()
     
     return rapport
 
+
+# ── Verrijking ──
+
 async def bewaar_verrijking(document_id: str, antwoorden: dict):
     """Sla verrijkings-antwoorden op bij een bestaand document."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        # Haal bestaande antwoorden op
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute("SELECT verrijkings_antwoorden FROM documenten WHERE document_id = ?", (document_id,))
         row = await cursor.fetchone()
         
@@ -306,7 +419,6 @@ async def bewaar_verrijking(document_id: str, antwoorden: dict):
         if row and row[0]:
             bestaande = json.loads(row[0])
         
-        # Merge nieuwe antwoorden
         bestaande.update(antwoorden)
         
         await conn.execute(
@@ -314,11 +426,13 @@ async def bewaar_verrijking(document_id: str, antwoorden: dict):
             (json.dumps(bestaande, ensure_ascii=False), document_id)
         )
         await conn.commit()
+    finally:
+        await conn.close()
 
 async def update_profiel_na_verrijking(document_id: str, nieuw_profiel: dict):
     """Update het profiel na verrijking. Bewaart de vorige versie voor delta tracking."""
-    async with aiosqlite.connect(DB_PATH) as conn:
-        # Haal huidige staat op
+    conn = await _get_connection()
+    try:
         cursor = await conn.execute(
             "SELECT profiel_json, versie FROM documenten WHERE document_id = ?", 
             (document_id,)
@@ -328,7 +442,6 @@ async def update_profiel_na_verrijking(document_id: str, nieuw_profiel: dict):
         vorig_profiel = row[0] if row else None
         huidige_versie = row[1] if row and row[1] else 1
         
-        # Update met nieuw profiel, sla vorige versie op
         await conn.execute("""
             UPDATE documenten 
             SET profiel_json = ?, 
@@ -346,4 +459,76 @@ async def update_profiel_na_verrijking(document_id: str, nieuw_profiel: dict):
         await conn.commit()
         
         return {"versie": huidige_versie + 1, "vorige_versie": huidige_versie}
+    finally:
+        await conn.close()
 
+
+# ── Taken (persistent task store) ──
+
+async def maak_task_db(task_id: str, task_type: str, naam: str):
+    """Sla een nieuwe taak op in de database."""
+    import time
+    conn = await _get_connection()
+    try:
+        await conn.execute("""
+            INSERT OR REPLACE INTO taken (id, status, type, naam, progress, error, started_at, updated_at)
+            VALUES (?, 'pending', ?, ?, NULL, NULL, ?, ?)
+        """, (task_id, task_type, naam, time.time(), time.time()))
+        await conn.commit()
+    finally:
+        await conn.close()
+
+async def update_task_db(task_id: str, **kwargs):
+    """Update velden van een bestaande task in de database."""
+    import time
+    if not kwargs:
+        return
+    
+    conn = await _get_connection()
+    try:
+        sets = []
+        vals = []
+        for k, v in kwargs.items():
+            sets.append(f"{k} = ?")
+            vals.append(v)
+        sets.append("updated_at = ?")
+        vals.append(time.time())
+        vals.append(task_id)
+        
+        await conn.execute(f"UPDATE taken SET {', '.join(sets)} WHERE id = ?", vals)
+        await conn.commit()
+    finally:
+        await conn.close()
+
+async def haal_task_db(task_id: str) -> dict | None:
+    """Haal een task op uit de database."""
+    conn = await _get_connection()
+    try:
+        cursor = await conn.execute("SELECT * FROM taken WHERE id = ?", (task_id,))
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        await conn.close()
+
+async def haal_alle_taken_db() -> list[dict]:
+    """Haal alle recente taken op (max 1 uur oud)."""
+    import time
+    conn = await _get_connection()
+    try:
+        cutoff = time.time() - 3600
+        cursor = await conn.execute("SELECT * FROM taken WHERE started_at > ? ORDER BY started_at DESC", (cutoff,))
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        await conn.close()
+
+async def cleanup_taken_db():
+    """Verwijder taken ouder dan 1 uur."""
+    import time
+    conn = await _get_connection()
+    try:
+        cutoff = time.time() - 3600
+        await conn.execute("DELETE FROM taken WHERE started_at < ?", (cutoff,))
+        await conn.commit()
+    finally:
+        await conn.close()

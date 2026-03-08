@@ -1,0 +1,334 @@
+{
+  "beschrijving": "Benchmark dataset voor MATCHFLIX matching kwaliteit. Gebruik deze test cases om matching-aanpassingen te evalueren.",
+  "versie": "1.0",
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "naam": "Horeca → Beveiliging (hoge match, overdraagbare skills)",
+      "kandidaat": {
+        "naam": "Maria Jansen",
+        "kernrol": "Horecamanager",
+        "persoonlijkheid": [
+          "stressbestendig",
+          "gastvrij",
+          "alert",
+          "leidinggevend"
+        ],
+        "kwaliteiten": ["conflictbeheersing", "multitasking", "klantgericht"],
+        "drijfveren": [
+          "veiligheid bieden",
+          "structuur",
+          "verantwoordelijkheid"
+        ],
+        "werkstijl": "Hands-on, leidend door voorbeeld"
+      },
+      "vacature": {
+        "titel": "Objectbeveiliger",
+        "gezochte_persoonlijkheid": [
+          "alert",
+          "stressbestendig",
+          "communicatief"
+        ],
+        "benodigde_kwaliteiten": ["conflictbeheersing", "de-escalatie"],
+        "team_en_cultuur": "Hecht beveiligingsteam, wisselende diensten"
+      },
+      "verwacht_bereik": { "min": 60, "max": 85 },
+      "verwacht_betrouwbaarheid": "Gemiddeld",
+      "rationale": "Sterke overdraagbare skills (stressbestendigheid, conflictbeheersing), maar geen beveiligingservaring"
+    },
+    {
+      "id": "TC-002",
+      "naam": "Junior Developer → Senior Architect (lage match, te groot gat)",
+      "kandidaat": {
+        "naam": "Tim Peters",
+        "kernrol": "Junior Frontend Developer",
+        "persoonlijkheid": ["leergierig", "creatief", "introvert"],
+        "kwaliteiten": ["HTML/CSS", "React basics"],
+        "drijfveren": ["technische groei", "nieuwe dingen leren"],
+        "werkstijl": "Individueel, gestructureerd"
+      },
+      "vacature": {
+        "titel": "Lead Software Architect",
+        "gezochte_persoonlijkheid": [
+          "strategisch denkend",
+          "leidinggevend",
+          "senior"
+        ],
+        "benodigde_kwaliteiten": [
+          "systeemontwerp",
+          "teamleiderschap",
+          "10+ jaar ervaring"
+        ],
+        "team_en_cultuur": "Enterprise omgeving, veel stakeholders"
+      },
+      "verwacht_bereik": { "min": 15, "max": 40 },
+      "verwacht_betrouwbaarheid": "Hoog",
+      "rationale": "Te groot ervarings- en senioriteitsgat. Leergierigheid is positief maar onvoldoende."
+    },
+    {
+      "id": "TC-003",
+      "naam": "Docent → HR Medewerker (goede match, mensgerichte skills)",
+      "kandidaat": {
+        "naam": "Sanne de Groot",
+        "kernrol": "Basisschooldocent",
+        "persoonlijkheid": [
+          "empathisch",
+          "geduldig",
+          "communicatief",
+          "organisatorisch sterk"
+        ],
+        "kwaliteiten": [
+          "presenteren",
+          "coaching",
+          "conflictbeheersing",
+          "rapporteren"
+        ],
+        "drijfveren": ["mensen helpen groeien", "verbinding", "impact"],
+        "werkstijl": "Samenwerkend, mensgericht"
+      },
+      "vacature": {
+        "titel": "HR Medewerker",
+        "gezochte_persoonlijkheid": ["empathisch", "communicatief", "discreet"],
+        "benodigde_kwaliteiten": [
+          "gesprekstechnieken",
+          "organisatie",
+          "rapportage"
+        ],
+        "team_en_cultuur": "Klein HR team, directe lijnen met management"
+      },
+      "verwacht_bereik": { "min": 65, "max": 90 },
+      "verwacht_betrouwbaarheid": "Hoog",
+      "rationale": "Sterke overlap in mensgerichte competenties en drijfveren. Coaching → HR is logische stap."
+    },
+    {
+      "id": "TC-004",
+      "naam": "Kok → Software Tester (lage match, geen overlap)",
+      "kandidaat": {
+        "naam": "Ahmed El Amrani",
+        "kernrol": "Sous-chef",
+        "persoonlijkheid": ["creatief", "stressbestendig", "perfectionistisch"],
+        "kwaliteiten": ["koken", "voorraadbeheer", "team aansturen"],
+        "drijfveren": ["culinaire kunst", "gasten verrassen"],
+        "werkstijl": "Snel, onder druk"
+      },
+      "vacature": {
+        "titel": "QA Software Tester",
+        "gezochte_persoonlijkheid": [
+          "analytisch",
+          "gedetailleerd",
+          "methodisch"
+        ],
+        "benodigde_kwaliteiten": [
+          "testautomatisering",
+          "bug tracking",
+          "ISTQB"
+        ],
+        "team_en_cultuur": "Agile scrum team"
+      },
+      "verwacht_bereik": { "min": 10, "max": 35 },
+      "verwacht_betrouwbaarheid": "Hoog",
+      "rationale": "Weinig overdraagbaar. Perfectionisme is enige link, maar skills zijn volledig anders."
+    },
+    {
+      "id": "TC-005",
+      "naam": "Verpleegkundige → Zorgcoördinator (perfecte match, logische stap)",
+      "kandidaat": {
+        "naam": "Linda van Dam",
+        "kernrol": "Verpleegkundige niveau 5",
+        "persoonlijkheid": [
+          "zorgzaam",
+          "besluitvaardig",
+          "nauwkeurig",
+          "teamspeler"
+        ],
+        "kwaliteiten": [
+          "medische kennis",
+          "coördinatie",
+          "patiëntcommunicatie",
+          "rapportage"
+        ],
+        "drijfveren": ["mensen helpen", "kwaliteit van zorg", "doorgroeien"],
+        "werkstijl": "Gestructureerd, samenwerkend"
+      },
+      "vacature": {
+        "titel": "Zorgcoördinator",
+        "gezochte_persoonlijkheid": [
+          "organisatorisch",
+          "empathisch",
+          "leidinggevend"
+        ],
+        "benodigde_kwaliteiten": ["zorgervaring", "planning", "teamaansturing"],
+        "team_en_cultuur": "Multidisciplinair zorgteam"
+      },
+      "verwacht_bereik": { "min": 80, "max": 98 },
+      "verwacht_betrouwbaarheid": "Hoog",
+      "rationale": "Logische doorgroeistap. Alle kerncompetenties overlappen, plus sectorkennis."
+    },
+    {
+      "id": "TC-006",
+      "naam": "Accountant → Creatief Directeur (mismatch, tegengestelde profielen)",
+      "kandidaat": {
+        "naam": "Peter Bakker",
+        "kernrol": "Registeraccountant",
+        "persoonlijkheid": [
+          "analytisch",
+          "risicomijdend",
+          "nauwkeurig",
+          "introvert"
+        ],
+        "kwaliteiten": ["financiële analyse", "compliance", "Excel gevorderd"],
+        "drijfveren": ["zekerheid", "correctheid", "orde"],
+        "werkstijl": "Individueel, gestructureerd, regelgebaseerd"
+      },
+      "vacature": {
+        "titel": "Creatief Directeur",
+        "gezochte_persoonlijkheid": [
+          "visionair",
+          "risiconemend",
+          "charismatisch",
+          "extravert"
+        ],
+        "benodigde_kwaliteiten": [
+          "creatieve concepten",
+          "team inspireren",
+          "storytelling"
+        ],
+        "team_en_cultuur": "Dynamisch reclamebureau"
+      },
+      "verwacht_bereik": { "min": 5, "max": 25 },
+      "verwacht_betrouwbaarheid": "Hoog",
+      "rationale": "Fundamentele mismatch op alle assen: persoonlijkheid, drijfveren, en werkstijl."
+    },
+    {
+      "id": "TC-007",
+      "naam": "Sportcoach → Recruiter (goede match, verrassend)",
+      "kandidaat": {
+        "naam": "Daan Vermeer",
+        "kernrol": "Jeugdsportcoach",
+        "persoonlijkheid": [
+          "motiverend",
+          "energiek",
+          "mensgericht",
+          "competitief"
+        ],
+        "kwaliteiten": [
+          "talent herkennen",
+          "mensen motiveren",
+          "potentieel zien"
+        ],
+        "drijfveren": ["talent ontwikkelen", "winnen", "impact maken"],
+        "werkstijl": "Actief, coachend, resultaatgericht"
+      },
+      "vacature": {
+        "titel": "Corporate Recruiter",
+        "gezochte_persoonlijkheid": ["overtuigend", "mensgericht", "proactief"],
+        "benodigde_kwaliteiten": [
+          "talent herkennen",
+          "netwerken",
+          "overtuigingskracht"
+        ],
+        "team_en_cultuur": "Snel groeiend techbedrijf"
+      },
+      "verwacht_bereik": { "min": 55, "max": 80 },
+      "verwacht_betrouwbaarheid": "Gemiddeld",
+      "rationale": "Verrassende maar logische match: talent herkennen en motiveren zijn kerncompetenties in beide rollen."
+    },
+    {
+      "id": "TC-008",
+      "naam": "Magazijnmedewerker → Logistiek Planner (middel match, groei nodig)",
+      "kandidaat": {
+        "naam": "Fatima Yilmaz",
+        "kernrol": "Magazijnmedewerker",
+        "persoonlijkheid": ["betrouwbaar", "fysiek sterk", "ordelijk"],
+        "kwaliteiten": [
+          "inventory management",
+          "heftruckrijbewijs",
+          "fysiek werk"
+        ],
+        "drijfveren": ["zekerheid", "structuur", "doorgroeien"],
+        "werkstijl": "Uitvoerend, gestructureerd"
+      },
+      "vacature": {
+        "titel": "Logistiek Planner",
+        "gezochte_persoonlijkheid": [
+          "analytisch",
+          "planmatig",
+          "communicatief"
+        ],
+        "benodigde_kwaliteiten": [
+          "ERP systemen",
+          "supply chain planning",
+          "data-analyse"
+        ],
+        "team_en_cultuur": "Groot distributiebedrijf"
+      },
+      "verwacht_bereik": { "min": 35, "max": 55 },
+      "verwacht_betrouwbaarheid": "Gemiddeld",
+      "rationale": "Sectorkennis is er, maar analytische en technische skills ontbreken. Groeipotentieel met training."
+    },
+    {
+      "id": "TC-009",
+      "naam": "Onvolledig profiel (betrouwbaarheid test)",
+      "kandidaat": {
+        "naam": "Onbekend",
+        "kernrol": "Onbekend",
+        "persoonlijkheid": [],
+        "kwaliteiten": [],
+        "drijfveren": [],
+        "werkstijl": ""
+      },
+      "vacature": {
+        "titel": "Projectmanager",
+        "gezochte_persoonlijkheid": ["leidinggevend", "communicatief"],
+        "benodigde_kwaliteiten": ["projectplanning", "stakeholder management"],
+        "team_en_cultuur": "Consultancybureau"
+      },
+      "verwacht_bereik": { "min": 0, "max": 30 },
+      "verwacht_betrouwbaarheid": "Laag",
+      "rationale": "Onvoldoende informatie voor een betrouwbare match. Betrouwbaarheid moet Laag zijn."
+    },
+    {
+      "id": "TC-010",
+      "naam": "Exacte match (zelfde profiel als vacature)",
+      "kandidaat": {
+        "naam": "Eva Mulder",
+        "kernrol": "Senior Projectmanager",
+        "persoonlijkheid": [
+          "leidinggevend",
+          "communicatief",
+          "resultaatgericht",
+          "diplomatiek"
+        ],
+        "kwaliteiten": [
+          "projectplanning",
+          "stakeholder management",
+          "budgetbeheer",
+          "Agile/Scrum"
+        ],
+        "drijfveren": [
+          "impact maken",
+          "teams laten groeien",
+          "complexe problemen oplossen"
+        ],
+        "werkstijl": "Sturend, samenwerkend, resultaatgericht"
+      },
+      "vacature": {
+        "titel": "Senior Projectmanager",
+        "gezochte_persoonlijkheid": [
+          "leidinggevend",
+          "communicatief",
+          "resultaatgericht"
+        ],
+        "benodigde_kwaliteiten": [
+          "projectplanning",
+          "stakeholder management",
+          "Agile"
+        ],
+        "team_en_cultuur": "Groeiend technologiebedrijf"
+      },
+      "verwacht_bereik": { "min": 85, "max": 100 },
+      "verwacht_betrouwbaarheid": "Hoog",
+      "rationale": "Vrijwel perfecte overlap op alle dimensies. Score moet zeer hoog zijn."
+    }
+  ]
+}

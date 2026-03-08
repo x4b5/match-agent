@@ -44,7 +44,18 @@ def opslaan_profiel(map_pad: str, profiel: dict) -> str:
         json.dump(profiel, f, ensure_ascii=False, indent=2)
     return profiel_pad
 
+import hashlib
+
+def bereken_hash(tekst: str) -> str:
+    """Bereken een SHA-256 hash van de tekst voor deduplicatie."""
+    return hashlib.sha256(tekst.encode('utf-8')).hexdigest()
+
 def zorg_voor_uuid(map_pad: str) -> str:
+    """
+    Zorgt voor een stabiele UUID voor een directory.
+    [DEPRECATIE WAARSCHUWING] Gebruik bij voorkeur de database als bron van waarheid.
+    Deze functie blijft voor backwards compatibility en offline gebruik.
+    """
     if not os.path.isdir(map_pad):
         return ""
     uuid_pad = os.path.join(map_pad, "uuid.txt")
