@@ -33,7 +33,7 @@
         "team_en_cultuur": "Hecht beveiligingsteam, wisselende diensten"
       },
       "verwacht_bereik": { "min": 60, "max": 85 },
-      "verwacht_betrouwbaarheid": "Gemiddeld",
+      "verwacht_dossier_compleetheid": "Gemiddeld",
       "rationale": "Sterke overdraagbare skills (stressbestendigheid, conflictbeheersing), maar geen beveiligingservaring"
     },
     {
@@ -62,7 +62,7 @@
         "team_en_cultuur": "Enterprise omgeving, veel stakeholders"
       },
       "verwacht_bereik": { "min": 15, "max": 40 },
-      "verwacht_betrouwbaarheid": "Hoog",
+      "verwacht_dossier_compleetheid": "Hoog",
       "rationale": "Te groot ervarings- en senioriteitsgat. Leergierigheid is positief maar onvoldoende."
     },
     {
@@ -97,7 +97,7 @@
         "team_en_cultuur": "Klein HR team, directe lijnen met management"
       },
       "verwacht_bereik": { "min": 65, "max": 90 },
-      "verwacht_betrouwbaarheid": "Hoog",
+      "verwacht_dossier_compleetheid": "Hoog",
       "rationale": "Sterke overlap in mensgerichte competenties en drijfveren. Coaching → HR is logische stap."
     },
     {
@@ -126,7 +126,7 @@
         "team_en_cultuur": "Agile scrum team"
       },
       "verwacht_bereik": { "min": 10, "max": 35 },
-      "verwacht_betrouwbaarheid": "Hoog",
+      "verwacht_dossier_compleetheid": "Hoog",
       "rationale": "Weinig overdraagbaar. Perfectionisme is enige link, maar skills zijn volledig anders."
     },
     {
@@ -161,7 +161,7 @@
         "team_en_cultuur": "Multidisciplinair zorgteam"
       },
       "verwacht_bereik": { "min": 80, "max": 98 },
-      "verwacht_betrouwbaarheid": "Hoog",
+      "verwacht_dossier_compleetheid": "Hoog",
       "rationale": "Logische doorgroeistap. Alle kerncompetenties overlappen, plus sectorkennis."
     },
     {
@@ -196,7 +196,7 @@
         "team_en_cultuur": "Dynamisch reclamebureau"
       },
       "verwacht_bereik": { "min": 5, "max": 25 },
-      "verwacht_betrouwbaarheid": "Hoog",
+      "verwacht_dossier_compleetheid": "Hoog",
       "rationale": "Fundamentele mismatch op alle assen: persoonlijkheid, drijfveren, en werkstijl."
     },
     {
@@ -230,7 +230,7 @@
         "team_en_cultuur": "Snel groeiend techbedrijf"
       },
       "verwacht_bereik": { "min": 55, "max": 80 },
-      "verwacht_betrouwbaarheid": "Gemiddeld",
+      "verwacht_dossier_compleetheid": "Gemiddeld",
       "rationale": "Verrassende maar logische match: talent herkennen en motiveren zijn kerncompetenties in beide rollen."
     },
     {
@@ -268,7 +268,7 @@
     },
     {
       "id": "TC-009",
-      "naam": "Onvolledig profiel (betrouwbaarheid test)",
+      "naam": "Onvolledig profiel (dossiercompleetheid test)",
       "kandidaat": {
         "naam": "Onbekend",
         "kernrol": "Onbekend",
@@ -284,8 +284,8 @@
         "team_en_cultuur": "Consultancybureau"
       },
       "verwacht_bereik": { "min": 0, "max": 30 },
-      "verwacht_betrouwbaarheid": "Laag",
-      "rationale": "Onvoldoende informatie voor een betrouwbare match. Betrouwbaarheid moet Laag zijn."
+      "verwacht_dossier_compleetheid": "Laag",
+      "rationale": "Onvoldoende informatie voor een dossiercompleetheidsscore. Dossiercompleetheid moet Laag zijn."
     },
     {
       "id": "TC-010",
@@ -327,7 +327,7 @@
         "team_en_cultuur": "Groeiend technologiebedrijf"
       },
       "verwacht_bereik": { "min": 85, "max": 100 },
-      "verwacht_betrouwbaarheid": "Hoog",
+      "verwacht_dossier_compleetheid": "Hoog",
       "rationale": "Vrijwel perfecte overlap op alle dimensies. Score moet zeer hoog zijn."
     }
   ]

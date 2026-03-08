@@ -85,7 +85,7 @@ def create_document_router(
                 "doc_count": fysieke_info.get("doc_count", 0),
                 "docs": fysieke_info.get("docs", []),
                 "has_profile": doc["profiel_compleet"],
-                "profile_score": doc["profiel_dict"].get("profiel_betrouwbaarheid", 0) if doc["profiel_dict"] else 0,
+                "profile_score": doc["profiel_dict"].get("dossier_compleetheid", doc["profiel_dict"].get("profiel_betrouwbaarheid", 0)) if doc["profiel_dict"] else 0,
                 "profile_data": doc["profiel_dict"],
                 "waarschuwingen": doc.get("waarschuwingen_list", []),
                 "exists_on_disk": bestaat_fysiek,
@@ -169,7 +169,7 @@ def create_document_router(
             "has_profile": bool(profiel),
             "profile_data": profiel,
             "waarschuwingen": waarschuwingen,
-            "profile_score": (profiel or {}).get("profiel_betrouwbaarheid", 0),
+            "profile_score": (profiel or {}).get("dossier_compleetheid", (profiel or {}).get("profiel_betrouwbaarheid", 0)),
             "aandachtspunten": (profiel or {}).get("aandachtspunten", []),
             "vervolgvragen": (profiel or {}).get("vervolgvragen", []),
             "exists_on_disk": exists_on_disk
@@ -344,7 +344,7 @@ def create_document_router(
         return {
             "message": f"Profiel verrijkt naar versie {versie_info['versie']}.",
             "versie": versie_info["versie"],
-            "nieuwe_score": nieuw_profiel.get("profiel_betrouwbaarheid", 0),
+            "nieuwe_score": nieuw_profiel.get("dossier_compleetheid", nieuw_profiel.get("profiel_betrouwbaarheid", 0)),
             "vervolgvragen": nieuw_profiel.get("vervolgvragen", []),
             "profiel": nieuw_profiel
         }

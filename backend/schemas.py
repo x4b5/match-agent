@@ -18,7 +18,7 @@ class KandidaatProfiel(BaseModel):
     soft_skills: List[str] = Field(description="Soft skills")
     beschikbaarheid_en_locatie: str = Field(description="Praktische zaken (indien genoemd in tekst)")
     opleiding_en_ervaring_samenvatting: str = Field(description="Korte samenvatting van achtergrond")
-    profiel_betrouwbaarheid: int = Field(ge=0, le=100, description="Hoe compleet is dit profiel?")
+    dossier_compleetheid: int = Field(ge=0, le=100, description="Hoe compleet is dit dossier?")
     aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij dit profiel")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
 
@@ -37,7 +37,7 @@ class WerkgeversvraagProfiel(BaseModel):
     nice_to_have_skills: List[str] = Field(description="Mooi meegenomen, maar trainbare skills")
     werktijden_en_omstandigheden: str = Field(description="Praktische zaken t.a.v. werktijden of fysieke omstandigheden")
     belangrijkste_taak: str = Field(description="Wat deze persoon vooral gaat doen")
-    profiel_betrouwbaarheid: int = Field(ge=0, le=100, description="Hoe compleet is deze werkgeversvraag?")
+    dossier_compleetheid: int = Field(ge=0, le=100, description="Hoe compleet is dit dossier?")
     aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij deze vraag")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
 
@@ -67,7 +67,7 @@ class QuickScanMatchResult(BaseModel):
     onderbouwing: str
     personality_axes: PersonalityAxes
     aandachtspunten: List[str] = Field(default_factory=list)
-    match_betrouwbaarheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
+    dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
 
 class StandaardMatchResult(BaseModel):
     match_percentage: int = Field(ge=0, le=100)
@@ -86,5 +86,5 @@ class StandaardMatchResult(BaseModel):
     onderbouwing: str
     personality_axes: PersonalityAxes
     score_breakdown: ScoreBreakdown = Field(description="Transparante sub-scores per dimensie")
-    match_betrouwbaarheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
+    dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
     vervolgvragen: List[str]

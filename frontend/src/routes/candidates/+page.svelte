@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import { toasts } from "$lib/toast";
+  import DossierCompleetheidEnrichment from "$lib/components/DossierCompleetheidEnrichment.svelte";
 
   let { data } = $props<{ data: PageData }>();
 
@@ -280,8 +281,8 @@
         >
           <option value="alpha-asc">Alfabetisch (A-Z)</option>
           <option value="alpha-desc">Alfabetisch (Z-A)</option>
-          <option value="score-desc">Betrouwbaarheid (Hoog-Laag)</option>
-          <option value="score-asc">Betrouwbaarheid (Laag-Hoog)</option>
+          <option value="score-desc">Dossiercompleetheid (Hoog-Laag)</option>
+          <option value="score-asc">Dossiercompleetheid (Laag-Hoog)</option>
         </select>
       </div>
     </div>
@@ -334,7 +335,7 @@
             >
               {candidate.doc_count} documenten
               {#if candidate.has_profile}
-                | Betrouwbaarheid: <strong
+                | Dossiercompleetheid: <strong
                   style="color: {candidate.profile_score > 75
                     ? 'var(--neon-green)'
                     : candidate.profile_score > 40
@@ -527,6 +528,30 @@
                     {/each}
                   </tbody>
                 </table>
+
+                {#if detail.vervolgvragen && detail.vervolgvragen.length > 0 && editingName !== candidate.naam}
+                  <DossierCompleetheidEnrichment
+                    questions={detail.vervolgvragen}
+                    name={candidate.naam}
+                    docType="candidates"
+                    onSuccess={(result) => {
+                      detailCache[candidate.naam] = {
+                        ...detail,
+                        profile_data: result.profiel,
+                        profile_score: result.nieuwe_score,
+                        vervolgvragen: result.vervolgvragen,
+                      };
+                      // Update the main list as well
+                      const idx = candidates.findIndex(
+                        (c: any) => c.naam === candidate.naam,
+                      );
+                      if (idx !== -1) {
+                        candidates[idx].profile_score = result.nieuwe_score;
+                        candidates[idx].has_profile = true;
+                      }
+                    }}
+                  />
+                {/if}
               {/if}
             {/if}
           {/if}

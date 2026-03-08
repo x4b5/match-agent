@@ -488,16 +488,16 @@
             >{selectedEmployer}</span
           >
         </div>
-        {#if finalMatchData.match_betrouwbaarheid}
+        {#if finalMatchData.dossier_compleetheid}
           <span
-            class="badge {finalMatchData.match_betrouwbaarheid.toLowerCase() ===
+            class="badge {finalMatchData.dossier_compleetheid.toLowerCase() ===
             'hoog'
               ? 'badge-success'
-              : finalMatchData.match_betrouwbaarheid.toLowerCase() === 'laag'
+              : finalMatchData.dossier_compleetheid.toLowerCase() === 'laag'
                 ? 'badge-danger'
                 : 'badge-warning'}"
           >
-            {finalMatchData.match_betrouwbaarheid} betrouwbaarheid
+            {finalMatchData.dossier_compleetheid} Dossiercompleetheid
           </span>
         {/if}
       </div>

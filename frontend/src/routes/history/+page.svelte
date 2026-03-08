@@ -18,9 +18,13 @@
 
       return result.sort((a: any, b: any) => {
         if (sortOption === "date-desc")
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+          return (
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
         if (sortOption === "date-asc")
-          return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+          return (
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
         if (sortOption === "score-desc")
           return (b.match_percentage || 0) - (a.match_percentage || 0);
         if (sortOption === "score-asc")
@@ -114,7 +118,11 @@
   </div>
 {:else}
   {#each filteredMatches as match}
-    <div class="card" style="cursor: pointer;" onclick={() => toggleExpand(match.id)}>
+    <div
+      class="card"
+      style="cursor: pointer;"
+      onclick={() => toggleExpand(match.id)}
+    >
       <div
         style="display: flex; justify-content: space-between; align-items: center;"
       >
@@ -136,15 +144,20 @@
             >
               {match.modus}
             </span>
-            {#if match.resultaat?.match_betrouwbaarheid}
-              <span>Betrouwbaarheid: {match.resultaat.match_betrouwbaarheid}</span>
+            {#if match.resultaat?.dossier_compleetheid}
+              <span
+                >Dossiercompleetheid: {match.resultaat
+                  .dossier_compleetheid}</span
+              >
             {/if}
           </div>
         </div>
         <div style="text-align: right; min-width: 80px;">
           <div
             class="metric-value"
-            style="font-size: 1.8rem; color: {scoreKleur(match.match_percentage)};"
+            style="font-size: 1.8rem; color: {scoreKleur(
+              match.match_percentage,
+            )};"
           >
             {match.match_percentage}%
           </div>

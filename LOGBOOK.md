@@ -3,5 +3,5 @@
 | Datum      | Uren | Omschrijving                                 |
 | ---------- | ---- | -------------------------------------------- |
 | 2026-03-07 | 2.9  | Add and update match-agent app functionality |
-| 2026-03-08 | 28.9   | feat: complete Matchflix transformation | 2026-03-08 | 28.2   | feat: Next-Gen Talent Discovery Engine - Profielverrijking, Reverse Matching, Match Narratief, Explainable AI, Smart Notifications, Delta Tracking | expert refinements |
+| 2026-03-08 | 29.1   | feat: voeg aandachtspunten toe aan profielen en matches + zoekveld voor batch candidate selectie |
 |            |      |                                              |

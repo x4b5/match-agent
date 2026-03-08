@@ -27,14 +27,14 @@ class TestKandidaatProfiel:
             soft_skills=["communicatie"],
             beschikbaarheid_en_locatie="Amsterdam",
             opleiding_en_ervaring_samenvatting="HBO ICT",
-            profiel_betrouwbaarheid=75,
+            dossier_compleetheid=75,
             vervolgvragen=["Wat is je ideale team?"]
         )
         assert profiel.naam == "Jan de Vries"
-        assert profiel.profiel_betrouwbaarheid == 75
+        assert profiel.dossier_compleetheid == 75
 
-    def test_betrouwbaarheid_te_hoog(self):
-        """profiel_betrouwbaarheid > 100 moet falen."""
+    def test_dossier_compleetheid_te_hoog(self):
+        """dossier_compleetheid > 100 moet falen."""
         with pytest.raises(ValidationError):
             KandidaatProfiel(
                 naam="Test", kernrol="Test",
@@ -43,12 +43,12 @@ class TestKandidaatProfiel:
                 werkstijl="", ambities_en_leerdoelen=[], gewenste_bedrijfscultuur="",
                 hobby_en_interesses=[], hard_skills=[], soft_skills=[],
                 beschikbaarheid_en_locatie="", opleiding_en_ervaring_samenvatting="",
-                profiel_betrouwbaarheid=150,  # Te hoog!
+                dossier_compleetheid=150,  # Te hoog!
                 vervolgvragen=[]
             )
 
-    def test_betrouwbaarheid_negatief(self):
-        """profiel_betrouwbaarheid < 0 moet falen."""
+    def test_dossier_compleetheid_negatief(self):
+        """dossier_compleetheid < 0 moet falen."""
         with pytest.raises(ValidationError):
             KandidaatProfiel(
                 naam="Test", kernrol="Test",
@@ -57,7 +57,7 @@ class TestKandidaatProfiel:
                 werkstijl="", ambities_en_leerdoelen=[], gewenste_bedrijfscultuur="",
                 hobby_en_interesses=[], hard_skills=[], soft_skills=[],
                 beschikbaarheid_en_locatie="", opleiding_en_ervaring_samenvatting="",
-                profiel_betrouwbaarheid=-10,  # Negatief!
+                dossier_compleetheid=-10,  # Negatief!
                 vervolgvragen=[]
             )
 
@@ -84,7 +84,7 @@ class TestWerkgeversvraagProfiel:
             nice_to_have_skills=["EHBO"],
             werktijden_en_omstandigheden="Wisselende diensten",
             belangrijkste_taak="Objectbeveiliging",
-            profiel_betrouwbaarheid=80,
+            dossier_compleetheid=80,
             vervolgvragen=[]
         )
         assert profiel.titel == "Objectbeveiliger"
@@ -125,12 +125,12 @@ class TestQuickScanMatchResult:
                 Analytisch=50, Sociaal=80, Creatief=60,
                 Gestructureerd=70, Ondernemend=40
             ),
-            match_betrouwbaarheid="Hoog"
+            dossier_compleetheid="Hoog"
         )
         assert result.match_percentage == 72
 
-    def test_ongeldige_betrouwbaarheid(self):
-        """match_betrouwbaarheid moet exact 'Laag', 'Gemiddeld', of 'Hoog' zijn."""
+    def test_ongeldige_dossier_compleetheid(self):
+        """dossier_compleetheid moet exact 'Laag', 'Gemiddeld', of 'Hoog' zijn."""
         with pytest.raises(ValidationError):
             QuickScanMatchResult(
                 match_percentage=72,
@@ -140,7 +140,7 @@ class TestQuickScanMatchResult:
                     Analytisch=50, Sociaal=80, Creatief=60,
                     Gestructureerd=70, Ondernemend=40
                 ),
-                match_betrouwbaarheid="Zeer Hoog"  # Ongeldig!
+                dossier_compleetheid="Zeer Hoog"  # Ongeldig!
             )
 
     def test_match_percentage_bereik(self):
@@ -154,7 +154,7 @@ class TestQuickScanMatchResult:
                     Analytisch=50, Sociaal=80, Creatief=60,
                     Gestructureerd=70, Ondernemend=40
                 ),
-                match_betrouwbaarheid="Hoog"
+                dossier_compleetheid="Hoog"
             )
 
 
@@ -171,7 +171,7 @@ class TestStandaardMatchResult:
             gedeelde_waarden=["Klanttevredenheid"],
             groeipotentieel="Kan doorgroeien naar teamleider",
             cultuur_fit="Past in informele cultuur",
-            aandachtspunten="Sectorkennis opbouwen",
+            aandachtspunten=["Sectorkennis opbouwen"],
             boodschap_aan_kandidaat="Deze rol is perfect voor jou!",
             match_narratief="Een verrassende match die inspireert.",
             onderbouwing="Sterk karakter en overdraagbare skills",
@@ -184,7 +184,7 @@ class TestStandaardMatchResult:
                 skills_overlap=60, groei_potentieel=90,
                 motivatie_alignment=80
             ),
-            match_betrouwbaarheid="Hoog",
+            dossier_compleetheid="Hoog",
             vervolgvragen=["Wat trekt je aan in beveiliging?"]
         )
         assert result.match_percentage == 82

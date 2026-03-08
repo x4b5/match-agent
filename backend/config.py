@@ -25,11 +25,11 @@ Je doel is om verrassende, inspirerende matches te maken: kandidaten tippen voor
 Wees creatief, objectief en eerlijk in het toekennen van het matchpercentage, waarbij cultuur- en persoonlijkheidsfit zwaar wegen.
 BELANGRIJK: Gebruik GEEN DISC-terminologie (Dominantie, Invloed, Stabiliteit, Conformisme) of kleuren-modellen; dit is niet wetenschappelijk onderbouwd. Focus op concrete talenten en kwaliteiten.
 
-BEOORDELING BETROUWBAARHEID: 
-Geef bij elke match een betrouwbaarheidsscore:
+BEOORDELING DOSSIERCOMPLEETHEID: 
+Geef bij elke match een score voor dossiercompleetheid:
 - HOOG: Er is voldoende detail over zowel de kandidaat als de vacature om een gefundeerde match te maken op persoonlijkheid en potentieel.
 - GEMIDDELD: Er zijn enkele aannames nodig of bepaalde nuances ontbreken.
-- LAAG: Essentiële informatie over karakter, drijfveren of specifieke werkstijl ontbreekt. Benoem in dit geval concrete 'vervolgvragen' die gesteld moeten worden om de match te verifiëren."""
+- LAAG: Essentiële informatie over karakter, drijfveren of specifieke werkstijl ontbreekt. Benoem in dit geval concrete 'vervolgvragen' die gesteld moeten worden om het dossier completer te maken."""
 
 MATCH_PROMPT = """Analyseer de match tussen dit kandidaatprofiel en deze werkgeversvraag met een focus op persoonlijkheid en potentieel.
 Geef een match percentage van 0 tot 100 gebaseerd op karakter, drijfveren en potentieel.
@@ -56,7 +56,7 @@ Geef je analyse in exact dit JSON-format (geen andere tekst, alleen JSON):
     "Gestructureerd": <getal 0-100>,
     "Ondernemend": <getal 0-100>
   }},
-  "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog",
+  "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
   "aandachtspunten": ["punt 1", "punt 2"],
   "vervolgvragen": ["kritieke vraag 1 om dossier completer te maken", "vraag 2"]
 }}"""
@@ -67,10 +67,14 @@ Zet de ruwe tekst om in exact dit JSON-format (geen andere tekst, alleen JSON).
 
 Belangrijke instructies:
 - Focus nadrukkelijk op wie de persoon IS, niet alleen wat ze GEDAAN hebben.
-- Leid impliciete kwaliteiten af uit de werkgeschiedenis. Voorbeeld: iemand die 10 jaar in de horeca werkte is waarschijnlijk stressbestendig, gastvrij, en een snelle multitasker — ook al staat dat niet letterlijk in de tekst.
-- Denk na over de onderliggende motivatie: wat drijft deze persoon écht? Zekerheid? Variatie? Mensen helpen? Autonomie?
-- Beschrijf een ideale werkdag die past bij deze persoon.
-- Gebruik GEEN DISC-kleuren of termen in je analyse.
+- Leid impliciete kwaliteiten af uit de werkgeschiedenis (bijv. horeca -> stressbestendig).
+- KRITISCH: Blijf bij de feiten. Als informatie NIET in de tekst staat, vul dan "Niet genoemd" in of laat de lijst leeg. Hallucineer GEEN karaktereigenschappen of hobby's die niet logisch herleidbaar zijn.
+- BEOORDELING DOSSIERCOMPLEETHEID: Wees EXTREEM streng!
+    - 0-20: Zeer weinig info (alleen naam/snipet).
+    - 20-40: Alleen korte intake-notities of 1-2 korte alinea's. Zonder CV is de score ALTIJD < 40%.
+    - 40-70: Goed CV met werkervaring, maar weinig inzicht in drijfveren/karakter.
+    - 70-90: Compleet dossier (CV + intake) met duidelijke persoonlijkheid en ambities.
+    - 90-100: Zeer rijk dossier met expliciete details en eventuele Q&A verrijking.
 
 {{
     "naam": "Naam Kandidaat",
@@ -89,7 +93,7 @@ Belangrijke instructies:
     "soft_skills": ["lijst", "van", "soft skills"],
     "beschikbaarheid_en_locatie": "Praktische zaken (indien genoemd in tekst)",
     "opleiding_en_ervaring_samenvatting": "Korte samenvatting van achtergrond (niet leidend voor match)",
-    "profiel_betrouwbaarheid": <getal van 0 tot 100 — hoe compleet is dit profiel voor een goede match?>,
+    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
     "aandachtspunten": ["lijst van punten die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden"],
     "vervolgvragen": ["max 5 concrete vragen over essentiële info die mist voor een goede match"]
 }}
@@ -103,7 +107,13 @@ Zet de ruwe tekst om in exact dit JSON-format (geen andere tekst, alleen JSON).
 Belangrijke instructies:
 - Focus niet alleen op de harde eisen, maar vooral op het TYPE PERSOON dat gezocht wordt.
 - Schets een ideale kandidaat-persona: hoe ziet de perfecte persoon eruit qua karakter en houding?
-- Denk na over verborgen behoeften: wat staat niet in de vacature maar is wel cruciaal voor succes in deze rol?
+- KRITISCH: Blijf bij de feiten uit de vacaturetekst. Als informatie NIET in de tekst staat, vul dan "Niet genoemd" in. Hallucineer GEEN bedrijfscultuur die niet beschreven is.
+- BEOORDELING DOSSIERCOMPLEETHEID: Wees EXTREEM streng!
+    - 0-20: Zeer summiere vacature (bijv. alleen functietitel en locatie).
+    - 20-40: Alleen korte notities of 1-2 korte alinea's. Zonder volledige vacaturetekst is de score ALTIJD < 40%.
+    - 40-70: Harde eisen zijn duidelijk, maar cultuur, persona en groeimogelijkheden ontbreken.
+    - 70-90: Goede vacaturetekst met info over taken, team en type persoon.
+    - 90-100: Zeer gedetailleerde omschrijving inclusief visie, succesfactoren en inwerktraject.
 
 {{
     "titel": "Functietitel",
@@ -120,7 +130,7 @@ Belangrijke instructies:
     "nice_to_have_skills": ["lijst", "van", "mooi meegenomen, maar trainbare skills"],
     "werktijden_en_omstandigheden": "Praktische zaken t.a.v. werktijden of fysieke omstandigheden",
     "belangrijkste_taak": "Wat deze persoon vooral gaat doen",
-    "profiel_betrouwbaarheid": <getal van 0 tot 100 — hoe compleet is deze werkgeversvraag voor een goede match?>,
+    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
     "aandachtspunten": ["lijst van zaken die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden (reizen, ploegendienst, fysiek zwaar, etc.)"],
     "vervolgvragen": ["max 5 concrete vragen over essentiële info die mist voor een goede match"]
 }}
@@ -146,7 +156,7 @@ Combineer het BESTAANDE PROFIEL met de NIEUWE ANTWOORDEN om een VERBETERD, RIJKE
 
 Instructies:
 - Integreer de nieuwe informatie naadloos in het profiel — niet als apart blokje, maar verweven.
-- Update de betrouwbaarheidsscore omhoog als de antwoorden cruciale gaten vullen.
+- Update de dossiercompleetheid omhoog als de antwoorden cruciale gaten vullen.
 - Voeg nieuwe inzichten toe aan persoonlijkheid, drijfveren, impliciete kwaliteiten etc.
 - Genereer NIEUWE vervolgvragen als er NOG steeds belangrijke gaten zijn (max 5).
 - Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
@@ -167,7 +177,7 @@ Combineer het BESTAANDE PROFIEL met de NIEUWE ANTWOORDEN om een VERBETERD, RIJKE
 
 Instructies:
 - Integreer de nieuwe informatie naadloos — niet als apart blokje, maar verweven.
-- Update de betrouwbaarheidsscore omhoog als de antwoorden cruciale gaten vullen.
+- Update de dossiercompleetheid omhoog als de antwoorden cruciale gaten vullen.
 - Voeg nieuwe inzichten toe aan gezochte persoonlijkheid, verborgen behoeften, etc.
 - Genereer NIEUWE vervolgvragen als er NOG steeds belangrijke gaten zijn (max 5).
 - Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
@@ -217,7 +227,7 @@ Antwoord alleen in dit JSON-format:
   "onderbouwing": "één zin",
   "personality_axes": {{"Analytisch": <0-100>, "Sociaal": <0-100>, "Creatief": <0-100>, "Gestructureerd": <0-100>, "Ondernemend": <0-100>}},
   "aandachtspunten": ["punt 1"],
-  "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog"
+  "dossier_compleetheid": "Laag|Gemiddeld|Hoog"
 }}""",
     },
     "standaard": {
@@ -270,7 +280,7 @@ Antwoord in exact dit JSON-format (geen andere tekst):
     "groei_potentieel": <getal 0-100>,
     "motivatie_alignment": <getal 0-100>
   }},
-  "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog",
+  "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
   "vervolgvragen": ["Diepgaande vraag 1 om missende info boven water te krijgen", "vraag 2"]
 }}""",
     },
@@ -324,7 +334,7 @@ Antwoord in exact dit JSON-format (geen andere tekst):
     "groei_potentieel": <getal 0-100>,
     "motivatie_alignment": <getal 0-100>
   }},
-  "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog",
+  "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
   "vervolgvragen": ["Diepgaande vraag 1 om missende info boven water te krijgen", "vraag 2"]
 }}""",
     },

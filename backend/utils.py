@@ -98,7 +98,7 @@ def formatteer_directory_response(base_dir: str):
             "doc_count": len(docs),
             "docs": docs,
             "has_profile": bool(profiel),
-            "profile_score": profiel.get("profiel_betrouwbaarheid", 0) if profiel else 0,
+            "profile_score": profiel.get("dossier_compleetheid", profiel.get("profiel_betrouwbaarheid", 0)) if profiel else 0,
             "last_generated": laatst_gen,
             "profile_data": profiel
         })
