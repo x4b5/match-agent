@@ -6,6 +6,31 @@
   let employers = $state(data.employers || []);
   let newEmployerName = $state("");
   let isCreating = $state(false);
+  let searchQuery = $state("");
+  let sortOption = $state("alpha-asc");
+  let filterProfile = $state("all");
+
+  let filteredEmployers = $derived(
+    (() => {
+      let result = employers.filter((e: any) =>
+        e.naam.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+      if (filterProfile === "present")
+        result = result.filter((e: any) => e.has_profile);
+      if (filterProfile === "missing")
+        result = result.filter((e: any) => !e.has_profile);
+
+      return result.sort((a: any, b: any) => {
+        if (sortOption === "alpha-asc") return a.naam.localeCompare(b.naam);
+        if (sortOption === "alpha-desc") return b.naam.localeCompare(a.naam);
+        if (sortOption === "score-desc")
+          return (b.profile_score || 0) - (a.profile_score || 0);
+        if (sortOption === "score-asc")
+          return (a.profile_score || 0) - (b.profile_score || 0);
+        return 0;
+      });
+    })(),
+  );
 
   async function createEmployer() {
     if (!newEmployerName.trim()) return;
@@ -85,6 +110,53 @@
 </div>
 
 <div style="margin-top: 2rem;">
+  {#if employers.length > 0}
+    <div
+      style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 250px;"
+      >
+        <span
+          class="material-icons"
+          style="color: var(--text-secondary); font-size: 1.8rem;">search</span
+        >
+        <input
+          type="text"
+          class="input-field"
+          style="flex: 1;"
+          placeholder="Zoek werkgeversvraag op naam..."
+          bind:value={searchQuery}
+        />
+      </div>
+
+      <div
+        style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;"
+      >
+        <select
+          class="input-field"
+          bind:value={filterProfile}
+          style="min-width: 150px; padding: 0.6rem 1rem;"
+        >
+          <option value="all">Alle profielen</option>
+          <option value="present">Profiel aanwezig</option>
+          <option value="missing">Profiel ontbreekt</option>
+        </select>
+
+        <select
+          class="input-field"
+          bind:value={sortOption}
+          style="min-width: 150px; padding: 0.6rem 1rem;"
+        >
+          <option value="alpha-asc">Alfabetisch (A-Z)</option>
+          <option value="alpha-desc">Alfabetisch (Z-A)</option>
+          <option value="score-desc">Betrouwbaarheid (Hoog-Laag)</option>
+          <option value="score-asc">Betrouwbaarheid (Laag-Hoog)</option>
+        </select>
+      </div>
+    </div>
+  {/if}
+
   {#if employers.length === 0}
     <div
       class="card"
@@ -92,8 +164,15 @@
     >
       Geen werkgeversvragen gevonden. Maak een nieuw dossier aan.
     </div>
+  {:else if filteredEmployers.length === 0}
+    <div
+      class="card"
+      style="text-align: center; color: var(--text-secondary); padding: 2rem;"
+    >
+      Geen werkgeversvragen gevonden voor "{searchQuery}".
+    </div>
   {:else}
-    {#each employers as employer}
+    {#each filteredEmployers as employer}
       <div
         class="card"
         style="display: flex; justify-content: space-between; align-items: center;"

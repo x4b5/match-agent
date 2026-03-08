@@ -5,17 +5,17 @@
 ```bash
 # Clone de repo
 git clone <repo-url>
-cd matchflix
+cd match-agent
 
 # Maak een virtual environment
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 
-# Installeer dependencies
+# Installeer Python dependencies
 pip install -r requirements.txt
 
-# Kopieer environment variabelen
-cp .env.example .env
+# Installeer frontend dependencies
+cd frontend && npm install && cd ..
 
 # Zorg dat Ollama draait
 ollama serve
@@ -25,16 +25,13 @@ ollama pull qwen3.5:27b
 ## Development workflow
 
 ```bash
-# Start je werkdag (registreert starttijd)
-bash start-day.sh
-
-# Draai het script
-python3 paper_agent.py --cv cv_sarah_de_vries.txt
+# Start backend + frontend
+./start.sh
 
 # Format code (optioneel, vereist ruff)
 ruff format .
 
-# Commit (post-commit hook logt automatisch uren)
+# Commit
 git add -A
 git commit -m "beschrijving van wijziging"
 ```

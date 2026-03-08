@@ -7,11 +7,29 @@
   let newCandidateName = $state("");
   let isCreating = $state(false);
   let searchQuery = $state("");
+  let sortOption = $state("alpha-asc");
+  let filterProfile = $state("all");
 
   let filteredCandidates = $derived(
-    candidates.filter((c) =>
-      c.naam.toLowerCase().includes(searchQuery.toLowerCase()),
-    ),
+    (() => {
+      let result = candidates.filter((c: any) =>
+        c.naam.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+      if (filterProfile === "present")
+        result = result.filter((c: any) => c.has_profile);
+      if (filterProfile === "missing")
+        result = result.filter((c: any) => !c.has_profile);
+
+      return result.sort((a: any, b: any) => {
+        if (sortOption === "alpha-asc") return a.naam.localeCompare(b.naam);
+        if (sortOption === "alpha-desc") return b.naam.localeCompare(a.naam);
+        if (sortOption === "score-desc")
+          return (b.profile_score || 0) - (a.profile_score || 0);
+        if (sortOption === "score-asc")
+          return (a.profile_score || 0) - (b.profile_score || 0);
+        return 0;
+      });
+    })(),
   );
 
   async function createCandidate() {
@@ -94,19 +112,48 @@
 <div style="margin-top: 2rem;">
   {#if candidates.length > 0}
     <div
-      style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;"
+      style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;"
     >
-      <span
-        class="material-icons"
-        style="color: var(--text-secondary); font-size: 1.8rem;">search</span
+      <div
+        style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 250px;"
       >
-      <input
-        type="text"
-        class="input-field"
-        style="flex: 1;"
-        placeholder="Zoek kandidaat op naam..."
-        bind:value={searchQuery}
-      />
+        <span
+          class="material-icons"
+          style="color: var(--text-secondary); font-size: 1.8rem;">search</span
+        >
+        <input
+          type="text"
+          class="input-field"
+          style="flex: 1;"
+          placeholder="Zoek kandidaat op naam..."
+          bind:value={searchQuery}
+        />
+      </div>
+
+      <div
+        style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;"
+      >
+        <select
+          class="input-field"
+          bind:value={filterProfile}
+          style="min-width: 150px; padding: 0.6rem 1rem;"
+        >
+          <option value="all">Alle profielen</option>
+          <option value="present">Profiel aanwezig</option>
+          <option value="missing">Profiel ontbreekt</option>
+        </select>
+
+        <select
+          class="input-field"
+          bind:value={sortOption}
+          style="min-width: 150px; padding: 0.6rem 1rem;"
+        >
+          <option value="alpha-asc">Alfabetisch (A-Z)</option>
+          <option value="alpha-desc">Alfabetisch (Z-A)</option>
+          <option value="score-desc">Betrouwbaarheid (Hoog-Laag)</option>
+          <option value="score-asc">Betrouwbaarheid (Laag-Hoog)</option>
+        </select>
+      </div>
     </div>
   {/if}
 

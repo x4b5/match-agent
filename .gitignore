@@ -15,6 +15,16 @@ env/
 # Environment variables
 .env
 
+# Database
+*.db
+*.sqlite
+
+# Node
+node_modules/
+
+# Streamlit (legacy)
+.streamlit/
+
 # OS
 .DS_Store
 Thumbs.db
