@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0] — 2025-03-08
+
+### Added
+- SvelteKit web interface met streaming match-resultaten
+- FastAPI backend met API routes
+- SQLite database voor kandidaten, werkgeversvragen en matches
+- Meerdere match-modi (quick, standaard, diepgaand)
+- Start-script voor backend + frontend (`start.sh`)
+
+### Changed
+- Architectuur: van Streamlit monoliet naar FastAPI + SvelteKit
+- Profiel extractie verplaatst naar backend services
+
+### Removed
+- Streamlit frontend (`app.py`)
+- CLI interface (`paper_agent.py`)
+
 ## [0.1.0] — 2025-03-07
 
 ### Added

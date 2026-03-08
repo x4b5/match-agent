@@ -1,0 +1,191 @@
+<script lang="ts">
+  import type { PageData } from "./$types";
+
+  let { data } = $props<{ data: PageData }>();
+
+  let candidates = $state(data.candidates || []);
+  let newCandidateName = $state("");
+  let isCreating = $state(false);
+  let searchQuery = $state("");
+
+  let filteredCandidates = $derived(
+    candidates.filter((c) =>
+      c.naam.toLowerCase().includes(searchQuery.toLowerCase()),
+    ),
+  );
+
+  async function createCandidate() {
+    if (!newCandidateName.trim()) return;
+    isCreating = true;
+    try {
+      const res = await fetch(
+        `/api/candidates/?name=${encodeURIComponent(newCandidateName)}`,
+        {
+          method: "POST",
+        },
+      );
+      if (res.ok) {
+        newCandidateName = "";
+        await refreshCandidates();
+      } else {
+        alert("Fout bij aanmaken");
+      }
+    } finally {
+      isCreating = false;
+    }
+  }
+
+  async function deleteCandidate(name: string) {
+    if (!confirm(`Weet je zeker dat je ${name} wilt verwijderen?`)) return;
+    const res = await fetch(`/api/candidates/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) await refreshCandidates();
+  }
+
+  async function refreshCandidates() {
+    const res = await fetch("/api/candidates/");
+    candidates = await res.json();
+  }
+
+  async function generateProfile(name: string) {
+    const res = await fetch(
+      `/api/candidates/${encodeURIComponent(name)}/generate-profile`,
+      { method: "POST" },
+    );
+    if (res.ok) {
+      alert("Profiel generatie gestart in de achtergrond.");
+    } else {
+      alert("Fout bij starten generatie");
+    }
+  }
+</script>
+
+<div class="page-hero">
+  <h1>
+    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px;"
+      >group</span
+    > Kandidaten Beheren
+  </h1>
+  <p>Beheer dossiers, documenten en LLM-profielen voor kandidaten.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom: 1rem;">
+    <span class="material-icons" style="vertical-align: middle;"
+      >add_circle</span
+    > Nieuw dossier aanmaken
+  </h3>
+  <div style="display: flex; gap: 1rem;">
+    <input
+      type="text"
+      class="input-field"
+      style="flex: 1;"
+      placeholder="Bijv. jan_jansen"
+      bind:value={newCandidateName}
+      onkeydown={(e) => e.key === "Enter" && createCandidate()}
+    />
+    <button class="btn-primary" onclick={createCandidate} disabled={isCreating}>
+      {isCreating ? "Bezig..." : "Aanmaken"}
+    </button>
+  </div>
+</div>
+
+<div style="margin-top: 2rem;">
+  {#if candidates.length > 0}
+    <div
+      style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;"
+    >
+      <span
+        class="material-icons"
+        style="color: var(--text-secondary); font-size: 1.8rem;">search</span
+      >
+      <input
+        type="text"
+        class="input-field"
+        style="flex: 1;"
+        placeholder="Zoek kandidaat op naam..."
+        bind:value={searchQuery}
+      />
+    </div>
+  {/if}
+
+  {#if candidates.length === 0}
+    <div
+      class="card"
+      style="text-align: center; color: var(--text-secondary); padding: 2rem;"
+    >
+      Geen kandidaten gevonden. Maak een nieuw dossier aan.
+    </div>
+  {:else if filteredCandidates.length === 0}
+    <div
+      class="card"
+      style="text-align: center; color: var(--text-secondary); padding: 2rem;"
+    >
+      Geen kandidaten gevonden voor "{searchQuery}".
+    </div>
+  {:else}
+    {#each filteredCandidates as candidate}
+      <div
+        class="card"
+        style="display: flex; justify-content: space-between; align-items: center;"
+      >
+        <div>
+          <h2
+            style="margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;"
+          >
+            {candidate.naam}
+            {#if candidate.has_profile}
+              <span
+                class="status-dot-container online"
+                style="font-size: 0.6rem;">✓ Profiel</span
+              >
+            {:else}
+              <span
+                class="status-dot-container offline"
+                style="font-size: 0.6rem; color: #FFAB00; border-color: rgba(255,171,0,0.3); background: rgba(255,171,0,0.15);"
+                >⚠ Ontbreekt</span
+              >
+            {/if}
+          </h2>
+          <div
+            style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;"
+          >
+            {candidate.doc_count} documenten
+            {#if candidate.has_profile}
+              | Betrouwbaarheid: <strong
+                style="color: {candidate.profile_score > 75
+                  ? 'var(--neon-green)'
+                  : candidate.profile_score > 40
+                    ? '#FFAB00'
+                    : 'var(--neon-pink)'}">{candidate.profile_score}%</strong
+              >
+            {/if}
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button
+            class="btn-primary"
+            onclick={() => generateProfile(candidate.naam)}
+          >
+            <span
+              class="material-icons"
+              style="font-size: 1rem; vertical-align: middle;"
+              >auto_awesome</span
+            > Genereer
+          </button>
+          <button
+            class="btn-secondary"
+            onclick={() => deleteCandidate(candidate.naam)}
+            style="color: var(--neon-pink); border-color: rgba(255,64,129,0.3);"
+          >
+            <span
+              class="material-icons"
+              style="font-size: 1rem; vertical-align: middle;">delete</span
+            >
+          </button>
+        </div>
+      </div>
+    {/each}
+  {/if}
+</div>

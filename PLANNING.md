@@ -1,6 +1,6 @@
-# Planning — PaperStrip
+# Planning — MATCHFLIX
 
-## Fase 1: MVP (huidige status) ✅
+## Fase 1: MVP ✅
 
 - [x] CV's inlezen uit iCloud-map
 - [x] Vacatures inlezen uit iCloud-map
@@ -9,17 +9,18 @@
 - [x] Tekstrapport genereren per kandidaat
 - [x] CLI met `--cv` filter
 
-## Fase 2: Verbeteringen
+## Fase 2: Web & Database ✅
 
-- [ ] Batch-modus met samenvattend overzicht
+- [x] Web-interface (SvelteKit + FastAPI)
+- [x] Database voor historische matches
+- [x] Streaming match-resultaten
+- [x] Meerdere match-modi
 - [ ] PDF-ondersteuning voor CV's
-- [ ] Meerdere modellen vergelijken
-- [ ] Match-drempel instellen via CLI
 - [ ] Caching van eerdere analyses
 
 ## Fase 3: Uitbreiding
 
-- [ ] Web-interface (FastAPI of Streamlit)
-- [ ] Database voor historische matches
+- [ ] Batch-modus met samenvattend overzicht
+- [ ] Meerdere modellen vergelijken
 - [ ] Automatische ranking per vacature
 - [ ] Export naar Excel/CSV

@@ -1,4 +1,4 @@
-# PaperStrip — Agent Kompas
+# MATCHFLIX — Agent Kompas
 
 ## Doel
 
@@ -12,19 +12,24 @@ Match kandidaten uit een kandidatenpool met werkgeversvragen, 100% lokaal via Ol
 
 ## Techstack
 
-- **Taal**: Python 3
+- **Taal**: Python 3 (backend), TypeScript (frontend)
 - **LLM**: Ollama (bijv. Qwen 3.5:27b en qwen3:8b) — lokaal
-- **UI**: Streamlit (`app.py`)
+- **Backend**: FastAPI (`backend/`)
+- **Frontend**: SvelteKit (`frontend/`)
 
 ## Repo map
 
 ```
-paper_agent.py     # CLI Runner voor de matching engine
-app.py             # Streamlit frontend (streamlit run app.py)
-config.py          # Configuratie: paden, modellen, AI-prompts
-profiel_agent.py   # Extractie van gestructureerde JSON profielen
+backend/           # FastAPI backend (uvicorn backend.main:app)
+  main.py          # FastAPI app entry point
+  config.py        # Configuratie: paden, modellen, AI-prompts
+  database.py      # Database models en connectie
+  services/        # Matching engine, profiel extractie
+  api/             # API routes
+frontend/          # SvelteKit frontend
+  src/             # Svelte componenten en routes
 requirements.txt   # Python dependencies
-scripts/           # Utility scripts
+start.sh           # Start backend + frontend
 ```
 
 ## Werkregels
@@ -36,17 +41,13 @@ scripts/           # Utility scripts
 
 ## Gebruik & UI
 
-Start de web interface (eenvoudigste manier):
+Start de web interface:
 
 ```bash
 ./start.sh
 ```
 
-Of via de CLI matching:
-
-```bash
-python3 paper_agent.py
-```
+Dit start zowel de FastAPI backend (poort 8000) als de SvelteKit frontend.
 
 ## Conventies
 

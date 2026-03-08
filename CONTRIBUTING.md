@@ -5,7 +5,7 @@
 ```bash
 # Clone de repo
 git clone <repo-url>
-cd paperstrip
+cd matchflix
 
 # Maak een virtual environment
 python3 -m venv venv
