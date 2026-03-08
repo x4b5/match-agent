@@ -18,14 +18,20 @@ from backend.services.ollama_service import (
     OllamaError
 )
 from backend.database import bewaar_embedding
+from backend.schemas import (
+    KandidaatProfiel, 
+    WerkgeversvraagProfiel, 
+    QuickScanMatchResult, 
+    StandaardMatchResult
+)
 
 async def profileer_kandidaat(tekst: str) -> dict:
     prompt = PROFIEL_KANDIDAAT_PROMPT.format(tekst=tekst)
-    return await vraag_ollama_json(PROFIEL_MODEL, prompt, temperature=0.1)
+    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
 
 async def profileer_werkgeversvraag(tekst: str) -> dict:
     prompt = PROFIEL_WERKGEVERSVRAAG_PROMPT.format(tekst=tekst)
-    return await vraag_ollama_json(PROFIEL_MODEL, prompt, temperature=0.1)
+    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
 
 def _verkort_tekst(tekst: str, max_lengte: int) -> tuple[str, bool]:
     if len(tekst) <= max_lengte:
@@ -61,9 +67,12 @@ async def match_kandidaat(cv_tekst: str, vacature_tekst: str, modus: str | None 
     model = params["model_override"] or OLLAMA_MODEL
     prompt = params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst)
     
+    schema = QuickScanMatchResult if modus == "quick_scan" else StandaardMatchResult
+    
     result = await vraag_ollama_json(
         model=model,
         prompt=prompt,
+        schema=schema,
         temperature=params["temperature"],
         num_predict=params["num_predict"],
         num_ctx=params["num_ctx"],
@@ -103,9 +112,10 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
         yield chunk
         
     # after stream, attempt to parse the entire response block to validate format
-    from backend.services.ollama_service import _parse_json_antwoord
+    from backend.services.ollama_service import _validate_json_antwoord
     
-    resultaat = _parse_json_antwoord(volledig_antwoord)
+    schema = QuickScanMatchResult if modus == "quick_scan" else StandaardMatchResult
+    resultaat = _validate_json_antwoord(volledig_antwoord, schema)
     if resultaat:
         if "match_percentage" in resultaat:
             resultaat["match_percentage"] = int(round(resultaat["match_percentage"]))

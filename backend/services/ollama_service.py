@@ -26,26 +26,29 @@ async def genereer_embedding(tekst: str) -> list[float]:
     result = await _post_ollama(OLLAMA_EMBED_URL, payload, timeout=120)
     return result.get("embedding", [])
 
-def _parse_json_antwoord(antwoord: str) -> dict | None:
-    try:
-        return json.loads(antwoord)
-    except (json.JSONDecodeError, ValueError):
-        pass
-    json_match = re.search(r"\{.*\}", antwoord, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
-    return None
+from pydantic import BaseModel
 
-async def vraag_ollama_json(model: str, prompt: str, temperature: float = 0.3, num_predict: int = 2048, num_ctx: int = 8192, think: bool = False, max_retries: int = 1) -> dict:
+def _validate_json_antwoord(antwoord: str, schema: BaseModel | None) -> dict | None:
+    try:
+        data = json.loads(antwoord)
+        if schema:
+            # Validate and format with Pydantic
+            validated = schema(**data)
+            return validated.model_dump()
+        return data
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"JSON Parse Error: {e}")
+        return None
+    except Exception as e:
+        print(f"Pydantic Validation Error: {e}")
+        return None
+
+async def vraag_ollama_json(model: str, prompt: str, schema: BaseModel | None = None, temperature: float = 0.3, num_predict: int = 2048, num_ctx: int = 8192, think: bool = False, max_retries: int = 1) -> dict:
     payload = {
         "model": model,
         "prompt": prompt,
         "system": SYSTEM_PROMPT,
         "stream": False,
-        "format": "json",
         "options": {
             "temperature": temperature,
             "num_predict": num_predict,
@@ -53,12 +56,18 @@ async def vraag_ollama_json(model: str, prompt: str, temperature: float = 0.3, n
         },
         "think": think,
     }
+    
+    # Use native structured outputs if schema provided
+    if schema:
+        payload["format"] = schema.model_json_schema()
+    else:
+        payload["format"] = "json"
 
     for poging in range(max_retries + 1):
         try:
             resp = await _post_ollama(OLLAMA_URL, payload, timeout=600)
             antwoord = resp.get("response", "")
-            resultaat = _parse_json_antwoord(antwoord)
+            resultaat = _validate_json_antwoord(antwoord, schema)
             if resultaat:
                 return resultaat
         except OllamaError as e:

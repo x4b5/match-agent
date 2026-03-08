@@ -55,6 +55,14 @@
       >
         <span class="material-icons">gps_fixed</span> Match Starten
       </a>
+      <a
+        href="/history"
+        class="nav-link {page.url.pathname.startsWith('/history')
+          ? 'active'
+          : ''}"
+      >
+        <span class="material-icons">history</span> Historie
+      </a>
       <hr
         style="border: 0; height: 1px; background: var(--glass-border); margin: 0.5rem 0;"
       />
