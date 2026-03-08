@@ -7,6 +7,9 @@
   let selectedEmployer = $state(data.employers?.[0]?.naam || "");
   let selectedMode = $state("quick_scan");
   let matchType = $state("individual"); // 'individual' or 'batch'
+  let selectedCandidates: Set<string> = $state(
+    new Set(data.candidates.map((c: any) => c.naam)),
+  );
 
   let isMatching = $state(false);
   let matchResult = $state("");
@@ -16,6 +19,30 @@
   let errorMsg = $state("");
   let currentStep = $state(0);
   let showRawOutput = $state(false);
+  let batchCandidateSearch = $state("");
+
+  let filteredBatchCandidates = $derived(
+    data.candidates.filter((c: any) =>
+      c.naam.toLowerCase().includes(batchCandidateSearch.toLowerCase()),
+    ),
+  );
+
+  function toggleCandidate(name: string) {
+    if (selectedCandidates.has(name)) {
+      selectedCandidates.delete(name);
+    } else {
+      selectedCandidates.add(name);
+    }
+    selectedCandidates = new Set(selectedCandidates);
+  }
+
+  function selectAll() {
+    selectedCandidates = new Set(data.candidates.map((c: any) => c.naam));
+  }
+
+  function selectNone() {
+    selectedCandidates = new Set();
+  }
 
   async function startMatch() {
     if (
@@ -25,9 +52,15 @@
       toasts.add("Selecteer kandidaat én vacature.", "warning");
       return;
     }
-    if (matchType === "batch" && !selectedEmployer) {
-      toasts.add("Selecteer een vacature voor de batch analyse.", "warning");
-      return;
+    if (matchType === "batch") {
+      if (!selectedEmployer) {
+        toasts.add("Selecteer een vacature voor de batch analyse.", "warning");
+        return;
+      }
+      if (selectedCandidates.size === 0) {
+        toasts.add("Selecteer minimaal één kandidaat.", "warning");
+        return;
+      }
     }
 
     isMatching = true;
@@ -49,6 +82,8 @@
     };
     if (matchType === "individual") {
       body.kandidaat_naam = selectedCandidate;
+    } else {
+      body.kandidaat_namen = Array.from(selectedCandidates);
     }
 
     try {
@@ -246,16 +281,61 @@
           </select>
         </div>
       {:else}
-        <div
-          style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem; color: var(--text-secondary);"
-        >
-          <span
-            class="material-icons"
-            style="font-size: 1rem; vertical-align: middle; color: var(--neon-cyan);"
-            >info</span
+        <div class="input-group" style="animation: slideDown 0.3s ease;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;"
           >
-          In batch-modus wordt de vacature vergeleken met alle
-          <strong>{data.candidates.length}</strong> kandidaten met een voltooid profiel.
+            <label class="input-label" style="margin: 0;"
+              >Selecteer Kandidaten</label
+            >
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-text" onclick={selectAll} disabled={isMatching}
+                >Alles</button
+              >
+              <button
+                class="btn-text"
+                onclick={selectNone}
+                disabled={isMatching}>Niets</button
+              >
+            </div>
+          </div>
+
+          <div class="candidate-search-wrapper" style="margin-bottom: 0.5rem;">
+            <div style="position: relative;">
+              <span
+                class="material-icons"
+                style="position: absolute; left: 10px; top: 10px; font-size: 1.1rem; color: var(--text-secondary);"
+                >search</span
+              >
+              <input
+                type="text"
+                class="input-field"
+                style="padding-left: 35px; height: 38px; font-size: 0.85rem;"
+                placeholder="Zoek kandidaat..."
+                bind:value={batchCandidateSearch}
+              />
+            </div>
+          </div>
+
+          <div class="candidate-select-list">
+            {#each filteredBatchCandidates as c}
+              <label
+                class="candidate-select-item"
+                class:selected={selectedCandidates.has(c.naam)}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCandidates.has(c.naam)}
+                  onchange={() => toggleCandidate(c.naam)}
+                  disabled={isMatching}
+                />
+                <span class="cand-details">
+                  <span class="cand-name">{c.naam}</span>
+                  <span class="cand-score">{c.profile_score}%</span>
+                </span>
+              </label>
+            {/each}
+          </div>
         </div>
       {/if}
 
@@ -645,6 +725,23 @@
     </div>
   {/if}
 
+  <!-- Aandachtspunten -->
+  {#if finalMatchData.aandachtspunten?.length}
+    <div class="card">
+      <h3 class="section-title">
+        <span class="material-icons" style="color: var(--neon-pink);"
+          >priority_high</span
+        >
+        Aandachtspunten
+      </h3>
+      <ul class="result-list result-list-neutral">
+        {#each finalMatchData.aandachtspunten as punt}
+          <li>{punt}</li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+
   <!-- Toggle raw output + actions -->
   <div
     style="display: flex; gap: 1rem; margin-top: 1rem; justify-content: space-between; align-items: center;"
@@ -935,6 +1032,75 @@
   .btn-icon-secondary:hover {
     background: var(--surface-3);
     border-color: var(--neon-cyan);
+  }
+
+  .candidate-select-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 1.5rem;
+  }
+
+  .candidate-select-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .candidate-select-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .candidate-select-item.selected {
+    background: rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.2);
+  }
+
+  .cand-details {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cand-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .cand-score {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .btn-text {
+    background: transparent;
+    border: none;
+    color: var(--neon-cyan);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 4px;
+    opacity: 0.8;
+  }
+
+  .btn-text:hover {
+    opacity: 1;
+    text-decoration: underline;
   }
 
   @keyframes slideDown {

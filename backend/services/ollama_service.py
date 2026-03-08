@@ -101,6 +101,15 @@ async def stream_ollama_json(model: str, prompt: str, temperature: float = 0.3, 
                     if line:
                         try:
                             chunk = json.loads(line)
+                            
+                            # Log reason if finished
+                            if chunk.get("done"):
+                                reason = chunk.get("done_reason")
+                                if reason == "length":
+                                    print(f"WARNING: Ollama stream gestopt door token limiet (length).")
+                                elif reason:
+                                    print(f"Ollama stream klaar. Reden: {reason}")
+
                             fragment = chunk.get("response", "")
                             if fragment:
                                 yield {"type": "token", "data": fragment}

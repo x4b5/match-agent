@@ -170,6 +170,7 @@ def create_document_router(
             "profile_data": profiel,
             "waarschuwingen": waarschuwingen,
             "profile_score": (profiel or {}).get("profiel_betrouwbaarheid", 0),
+            "aandachtspunten": (profiel or {}).get("aandachtspunten", []),
             "vervolgvragen": (profiel or {}).get("vervolgvragen", []),
             "exists_on_disk": exists_on_disk
         }

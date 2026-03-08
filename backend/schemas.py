@@ -19,6 +19,7 @@ class KandidaatProfiel(BaseModel):
     beschikbaarheid_en_locatie: str = Field(description="Praktische zaken (indien genoemd in tekst)")
     opleiding_en_ervaring_samenvatting: str = Field(description="Korte samenvatting van achtergrond")
     profiel_betrouwbaarheid: int = Field(ge=0, le=100, description="Hoe compleet is dit profiel?")
+    aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij dit profiel")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
 
 class WerkgeversvraagProfiel(BaseModel):
@@ -37,6 +38,7 @@ class WerkgeversvraagProfiel(BaseModel):
     werktijden_en_omstandigheden: str = Field(description="Praktische zaken t.a.v. werktijden of fysieke omstandigheden")
     belangrijkste_taak: str = Field(description="Wat deze persoon vooral gaat doen")
     profiel_betrouwbaarheid: int = Field(ge=0, le=100, description="Hoe compleet is deze werkgeversvraag?")
+    aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij deze vraag")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
 
 class EvalueerProfielResult(BaseModel):
@@ -64,6 +66,7 @@ class QuickScanMatchResult(BaseModel):
     verrassings_element: str
     onderbouwing: str
     personality_axes: PersonalityAxes
+    aandachtspunten: List[str] = Field(default_factory=list)
     match_betrouwbaarheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
 
 class StandaardMatchResult(BaseModel):
@@ -77,7 +80,7 @@ class StandaardMatchResult(BaseModel):
     gedeelde_waarden: List[str]
     groeipotentieel: str
     cultuur_fit: str
-    aandachtspunten: str
+    aandachtspunten: List[str]
     boodschap_aan_kandidaat: str
     match_narratief: str = Field(description="Kort, inspirerend verhaal dat de match tot leven brengt")
     onderbouwing: str

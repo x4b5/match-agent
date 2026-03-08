@@ -57,6 +57,7 @@ Geef je analyse in exact dit JSON-format (geen andere tekst, alleen JSON):
     "Ondernemend": <getal 0-100>
   }},
   "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog",
+  "aandachtspunten": ["punt 1", "punt 2"],
   "vervolgvragen": ["kritieke vraag 1 om dossier completer te maken", "vraag 2"]
 }}"""
 
@@ -89,6 +90,7 @@ Belangrijke instructies:
     "beschikbaarheid_en_locatie": "Praktische zaken (indien genoemd in tekst)",
     "opleiding_en_ervaring_samenvatting": "Korte samenvatting van achtergrond (niet leidend voor match)",
     "profiel_betrouwbaarheid": <getal van 0 tot 100 — hoe compleet is dit profiel voor een goede match?>,
+    "aandachtspunten": ["lijst van punten die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden"],
     "vervolgvragen": ["max 5 concrete vragen over essentiële info die mist voor een goede match"]
 }}
 
@@ -119,6 +121,7 @@ Belangrijke instructies:
     "werktijden_en_omstandigheden": "Praktische zaken t.a.v. werktijden of fysieke omstandigheden",
     "belangrijkste_taak": "Wat deze persoon vooral gaat doen",
     "profiel_betrouwbaarheid": <getal van 0 tot 100 — hoe compleet is deze werkgeversvraag voor een goede match?>,
+    "aandachtspunten": ["lijst van zaken die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden (reizen, ploegendienst, fysiek zwaar, etc.)"],
     "vervolgvragen": ["max 5 concrete vragen over essentiële info die mist voor een goede match"]
 }}
 
@@ -191,7 +194,7 @@ MATCH_MODI = {
     "quick_scan": {
         "label": "Quick scan",
         "beschrijving": "Snel overzicht met globale match (verkort input, sneller model)",
-        "num_predict": 640,
+        "num_predict": 1024,
         "num_ctx": 8192,
         "temperature": 0.4,
         "model_override": QUICK_SCAN_MODEL,
@@ -213,13 +216,14 @@ Antwoord alleen in dit JSON-format:
   "verrassings_element": "één zin",
   "onderbouwing": "één zin",
   "personality_axes": {{"Analytisch": <0-100>, "Sociaal": <0-100>, "Creatief": <0-100>, "Gestructureerd": <0-100>, "Ondernemend": <0-100>}},
+  "aandachtspunten": ["punt 1"],
   "match_betrouwbaarheid": "Laag|Gemiddeld|Hoog"
 }}""",
     },
     "standaard": {
         "label": "Standaard",
         "beschrijving": "Uitgebreide analyse op het snelle model (volledige profielen, geen thinking)",
-        "num_predict": 1536,
+        "num_predict": 3072,
         "num_ctx": 8192,
         "temperature": 0.3,
         "model_override": STANDAARD_MODEL,
@@ -248,7 +252,7 @@ Antwoord in exact dit JSON-format (geen andere tekst):
   "gedeelde_waarden": ["punt 1 (welke waarden komen overeen?)", "..."],
   "groeipotentieel": "Waar kan deze kandidaat nog in groeien bij deze werkgever?",
   "cultuur_fit": "Waarom passen ze bij elkaar qua karakter en bedrijfscultuur?",
-  "aandachtspunten": "Waar moet extra begeleiding op worden ingezet?",
+  "aandachtspunten": ["p1", "p2"],
   "boodschap_aan_kandidaat": "Een korte, motiverende boodschap gericht aan de kandidaat zelf: waarom is deze rol iets voor jou? Spreek de kandidaat direct aan.",
   "match_narratief": "Een kort, inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt. Maak het persoonlijk en activerend.",
   "onderbouwing": "uitgebreide toelichting: waarom is dit een interessante match qua karakter and passie? Wat voegt deze onverwachte kandidaat toe?",
@@ -273,7 +277,7 @@ Antwoord in exact dit JSON-format (geen andere tekst):
     "diepte_analyse": {
         "label": "Diepte-analyse",
         "beschrijving": "Uitgebreide analyse met gedetailleerde onderbouwing (denkmodus aan)",
-        "num_predict": 2048,
+        "num_predict": 4096,
         "num_ctx": 8192,
         "temperature": 0.2,
         "model_override": None,
@@ -302,7 +306,7 @@ Antwoord in exact dit JSON-format (geen andere tekst):
   "gedeelde_waarden": ["punt 1 (welke waarden komen overeen?)", "..."],
   "groeipotentieel": "Waar kan deze kandidaat nog in groeien bij deze werkgever?",
   "cultuur_fit": "Waarom passen ze bij elkaar qua karakter en bedrijfscultuur?",
-  "aandachtspunten": "Waar moet extra begeleiding op worden extra ingezet?",
+  "aandachtspunten": ["p1", "p2"],
   "boodschap_aan_kandidaat": "Een korte, motiverende boodschap gericht aan de kandidaat zelf: waarom is deze rol iets voor jou? Spreek de kandidaat direct aan.",
   "match_narratief": "Een kort, inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt. Maak het persoonlijk en activerend.",
   "onderbouwing": "uitgebreide toelichting: waarom is dit een interessante match qua karakter and passie? Wat voegt deze onverwachte kandidaat toe?",

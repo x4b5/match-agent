@@ -42,6 +42,7 @@ class BatchMatchRequest(BaseModel):
     limit: int = 10
     use_prefilter: bool = True
     force_refresh: bool = False
+    kandidaat_namen: list[str] | None = None
 
 
 async def _krijg_profiel(naam: str, is_kandidaat: bool = True):
@@ -264,8 +265,10 @@ async def batch_match(req: BatchMatchRequest):
     async def batch_generator():
         kandidaten_lijst = []
 
+        if req.kandidaat_namen:
+            kandidaten_lijst = req.kandidaat_namen
         # Stap 1: Pre-filter met embeddings als gewenst
-        if req.use_prefilter:
+        elif req.use_prefilter:
             vector = await genereer_embedding(vac_json)
             if vector:
                 top = await haal_top_matches_vector(vector, limit=req.limit)
@@ -281,7 +284,9 @@ async def batch_match(req: BatchMatchRequest):
             kandidaten_lijst = [
                 d["naam"] for d in alle_docs
                 if d.get("profiel_dict")
-            ][:req.limit]
+            ]
+            if not req.kandidaat_namen:
+                kandidaten_lijst = kandidaten_lijst[:req.limit]
 
         total = len(kandidaten_lijst)
         alle_resultaten = []
