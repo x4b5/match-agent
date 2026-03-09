@@ -487,6 +487,11 @@ async def maak_task_db(task_id: str, task_type: str, naam: str):
 
 async def update_task_db(task_id: str, **kwargs):
     """Update velden van een bestaande task in de database."""
+    ALLOWED_COLUMNS = {"status", "progress", "error"}
+    for k in kwargs:
+        if k not in ALLOWED_COLUMNS:
+            raise ValueError(f"Ongeldige kolom in update_task_db: {k}")
+
     import time
     if not kwargs:
         return
