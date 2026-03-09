@@ -389,9 +389,26 @@ def create_document_router(
         
         versie_info = await update_profiel_na_verrijking(document_id, nieuw_profiel)
         
-        doel_pad = os.path.join(get_base_dir(), name)
         if os.path.exists(doel_pad):
             opslaan_profiel(doel_pad, nieuw_profiel)
+        
+        # Herbereken embeddings zodat het systeem "leert" van de nieuwe info
+        try:
+            # Gebruik de verrijkte JSON als basis voor nieuwe embeddings
+            full_text_for_embedding = json.dumps(nieuw_profiel, ensure_ascii=False)
+            embedding = await genereer_embedding(full_text_for_embedding)
+            
+            skills_tekst = ", ".join(nieuw_profiel.get("hard_skills", []) + nieuw_profiel.get("soft_skills", []))
+            cultuur_tekst = f"{nieuw_profiel.get('gewenste_bedrijfscultuur', '')} {nieuw_profiel.get('onderliggende_motivatie', '')}"
+            
+            embedding_skills = await genereer_embedding(skills_tekst) if skills_tekst else None
+            embedding_cultuur = await genereer_embedding(cultuur_tekst) if cultuur_tekst else None
+            
+            await bewaar_embedding(document_id, doc_type, name, embedding, embedding_skills, embedding_cultuur)
+            logger.info(f"Embeddings herberekened voor {name} na verrijking.")
+        except Exception as e:
+            logger.error(f"Fout bij herberekenen embeddings voor {name}: {e}")
+            # We gaan door, want het profiel is wel opgeslagen
         
         return {
             "message": f"Profiel verrijkt naar versie {versie_info['versie']}.",

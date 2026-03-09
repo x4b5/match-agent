@@ -213,11 +213,12 @@ VERRIJK_KANDIDAAT_PROMPT = """Je hebt al een profiel van een kandidaat gemaakt. 
 Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter profiel.
 
 Aanwijzingen:
+- DE NIEUWE ANTWOORDEN ZIJN LEIDEND. Als een antwoord informatie geeft die in het bestaande profiel nog op "Onbekend" of "Niet genoemd" staat, mOET je dit veld nu bijwerken met de nieuwe informatie.
 - Verwerk de nieuwe informatie soepel in het hele profiel. Maak er geen los stukje van onderaan, maar weef het erdoorheen.
-- Verhoog de score voor de dossiercompleetheid als de antwoorden belangrijke gaten vullen.
-- Voeg nieuwe inzichten toe over iemands karakter, talenten en drijfveren.
+- Verhoog de score voor de dossiercompleetheid (dossier_compleetheid) aanzienlijk als de antwoorden belangrijke gaten vullen.
+- Voeg nieuwe inzichten toe over iemands karakter, talenten en drijfveren op basis van de antwoorden.
 - Bedenk nieuwe vervolgvragen voor de kandidaat als er nog steeds belangrijke zaken ontbreken (maximaal 5).
-- Als het profiel nu helemaal compleet is, mag het lijstje met vervolgvragen leeg blijven.
+- Als het profiel nu helemaal compleet is, mag het lijstje met vervolgvragen leeg blijven of een lege lijst zijn [].
 
 BESTAAND PROFIEL:
 {profiel_json}
@@ -234,8 +235,9 @@ VERRIJK_WERKGEVERSVRAAG_PROMPT = """Je hebt al een profiel gemaakt van een werkg
 Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter profiel.
 
 Aanwijzingen:
+- DE NIEUWE ANTWOORDEN ZIJN LEIDEND. Als een antwoord informatie geeft die in het bestaande profiel nog op "Onbekend" of "Niet genoemd" staat, MOET je dit veld nu bijwerken met de nieuwe informatie.
 - Verwerk de nieuwe informatie soepel in het hele verhaal. Maak er geen los blokje van, maar weef het erdoorheen.
-- Verhoog de score voor de dossiercompleetheid als de antwoorden belangrijke gaten vullen.
+- Verhoog de score voor de dossiercompleetheid (dossier_compleetheid) aanzienlijk als de antwoorden belangrijke gaten vullen.
 - Voeg nieuwe inzichten toe over het gezochte karakter, de werksfeer en behoeften.
 - Bedenk nieuwe vervolgvragen voor de werkgever als er nog steeds belangrijke zaken ontbreken (maximaal 5).
 - Als het profiel nu helemaal compleet is, mag het lijstje met vervolgvragen leeg blijven.
