@@ -169,6 +169,15 @@
             [...generatingNames].filter((n) => n !== name),
           );
           delete detailCache[name];
+          // Herlaad detail als het panel open staat
+          if (expandedName === name) {
+            try {
+              const res = await fetch(`/api/candidates/${encodeURIComponent(name)}`);
+              if (res.ok) {
+                detailCache[name] = await res.json();
+              }
+            } catch {}
+          }
           toasts.add(`Profiel voor "${name}" is klaar!`, "success");
         }
       }, 3000);
@@ -335,13 +344,13 @@
             >
               {candidate.doc_count} documenten
               {#if candidate.has_profile}
-                | Dossiercompleetheid: <strong
+                | Dossiercompleetheid: {#if candidate.profile_score != null}<strong
                   style="color: {candidate.profile_score > 75
                     ? 'var(--neon-green)'
                     : candidate.profile_score > 40
                       ? '#FFAB00'
                       : 'var(--neon-pink)'}">{candidate.profile_score}%</strong
-                >
+                >{:else}<span style="color: var(--text-secondary); font-style: italic;">Onbekend — genereer opnieuw</span>{/if}
               {/if}
               <span
                 style="margin-left: 0.5rem; font-size: 0.7rem; color: var(--text-secondary); opacity: 0.6;"

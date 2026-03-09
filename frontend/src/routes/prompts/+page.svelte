@@ -15,6 +15,12 @@
     PROFIEL_KANDIDAAT_PROMPT: string;
     PROFIEL_WERKGEVERSVRAAG_PROMPT: string;
     MATCH_MODI: Record<string, MatchMode>;
+    GLOBAL_MODELS: {
+      OLLAMA_MODEL: string;
+      PROFIEL_MODEL: string;
+      EMBEDDING_MODEL: string;
+    };
+    SEED: number;
   }
 
   let { data }: { data: { prompts: PromptsData | null } } = $props();
@@ -41,6 +47,44 @@
 
   {#if data.prompts}
     <div class="prompts-grid">
+      <!-- Actieve Modellen & Instellingen -->
+      <section class="prompt-card wide settings-card">
+        <div class="card-header">
+          <span class="material-icons">settings</span>
+          <h2>Actieve Modellen & Globale Instellingen</h2>
+        </div>
+        <div class="card-body">
+          <p class="instruction">
+            Overkoepelende backeng-configuratie voor het AI-systeem.
+          </p>
+          <div class="settings-grid">
+            <div class="setting-item">
+              <span class="setting-label">Match LLM (Standaard)</span>
+              <span class="setting-value model-tag"
+                >{data.prompts.GLOBAL_MODELS.OLLAMA_MODEL}</span
+              >
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">Profiel Extractie LLM</span>
+              <span class="setting-value model-tag"
+                >{data.prompts.GLOBAL_MODELS.PROFIEL_MODEL}</span
+              >
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">Semantische Vector LLM</span>
+              <span class="setting-value model-tag"
+                >{data.prompts.GLOBAL_MODELS.EMBEDDING_MODEL}</span
+              >
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">Determinisme (Vaste Seed)</span>
+              <span class="setting-value param-tag"
+                >Seed: {data.prompts.SEED}</span
+              >
+            </div>
+          </div>
+        </div>
+      </section>
       <!-- System Prompt -->
       <section class="prompt-card wide">
         <div class="card-header">
@@ -80,7 +124,8 @@
           <p class="instruction">
             Stap 2: extra inzichten op basis van de kern-analyse.
           </p>
-          <pre><code>{formatPrompt(data.prompts.VERDIEPING_MATCH_PROMPT)}</code></pre>
+          <pre><code>{formatPrompt(data.prompts.VERDIEPING_MATCH_PROMPT)}</code
+            ></pre>
         </div>
       </section>
 
@@ -128,6 +173,7 @@
                 >Model: {mode.model_override || "Standaard"}</span
               >
               <span class="tag">Temp: {mode.temperature}</span>
+              <span class="tag">Seed: {data.prompts.SEED}</span>
               <span class="tag">Reasoning: {mode.think ? "Aan" : "Uit"}</span>
             </div>
             <pre><code>{formatPrompt(mode.prompt)}</code></pre>
@@ -248,6 +294,50 @@
     padding: 2px 8px;
     border-radius: 4px;
     color: var(--text-secondary);
+  }
+
+  .settings-card {
+    border-color: rgba(0, 255, 170, 0.3);
+    background: linear-gradient(
+      180deg,
+      rgba(0, 255, 170, 0.03) 0%,
+      var(--glass-bg) 100%
+    );
+  }
+
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .setting-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .setting-value {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .model-tag {
+    color: var(--neon-cyan);
+    font-family: "Fira Code", monospace;
+  }
+
+  .param-tag {
+    color: #ff9d00;
+    font-family: "Fira Code", monospace;
   }
 
   pre {

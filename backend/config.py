@@ -1,7 +1,11 @@
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# --- Paden ---
 ICLOUD_BASE = os.path.expanduser(
-    "~/Library/Mobile Documents/com~apple~CloudDocs/matchflix"
+    os.getenv("MATCHFLIX_ICLOUD_BASE", "~/Library/Mobile Documents/com~apple~CloudDocs/matchflix")
 )
 
 KANDIDATEN_DIR = os.path.join(ICLOUD_BASE, "kandidaten")
@@ -13,11 +17,20 @@ CACHE_DIR = os.path.join(ICLOUD_BASE, ".match_cache")
 CV_DIR = KANDIDATEN_DIR
 VACATURE_DIR = WERKGEVERSVRAGEN_DIR
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_EMBED_URL = "http://localhost:11434/api/embeddings"
-OLLAMA_MODEL = "qwen3.5:27b"
-PROFIEL_MODEL = "qwen3:8b"
-EMBEDDING_MODEL = "nomic-embed-text"
+# --- Database ---
+_DB_DEFAULT = os.path.expanduser("~/Library/Application Support/matchflix/matchflix.db")
+DB_PATH = os.path.expanduser(os.getenv("MATCHFLIX_DB_PATH", _DB_DEFAULT))
+
+# --- Logging ---
+LOG_LEVEL = os.getenv("MATCHFLIX_LOG_LEVEL", "INFO")
+
+# --- Ollama ---
+OLLAMA_BASE_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_URL = f"{OLLAMA_BASE_URL}/api/generate"
+OLLAMA_EMBED_URL = f"{OLLAMA_BASE_URL}/api/embeddings"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:27b")
+PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:8b")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert die kandidaten en werkgeversvragen verbindt.
 Je focus ligt sterk op potentieel, persoonlijke eigenschappen, karakter en drijfveren, in plaats van een rigide check op diploma's of exacte werkervaring.
@@ -106,6 +119,7 @@ Belangrijke instructies:
 - Focus nadrukkelijk op wie de persoon IS, niet alleen wat ze GEDAAN hebben.
 - Leid impliciete kwaliteiten af uit de werkgeschiedenis (bijv. horeca -> stressbestendig).
 - KRITISCH: Blijf bij de feiten. Als informatie NIET in de tekst staat, vul dan "Niet genoemd" in of laat de lijst leeg. Hallucineer GEEN karaktereigenschappen of hobby's die niet logisch herleidbaar zijn.
+- UITZONDERING: Het veld "verrassende_functies" is WEL creatief en speculatief bedoeld. Hier mag je wél buiten de tekst denken. Leid af uit persoonlijkheid, kwaliteiten en werkstijl welke functies/rollen verrassend goed zouden passen — ook als de kandidaat daar niet de opleiding of ervaring voor heeft. Vul dit veld ALTIJD met minimaal 3 suggesties.
 - BEOORDELING DOSSIERCOMPLEETHEID: Wees EXTREEM streng!
     - 0-20: Zeer weinig info (alleen naam/snipet).
     - 20-40: Alleen korte intake-notities of 1-2 korte alinea's. Zonder CV is de score ALTIJD < 40%.
@@ -130,6 +144,7 @@ Belangrijke instructies:
     "soft_skills": ["lijst", "van", "soft skills"],
     "beschikbaarheid_en_locatie": "Praktische zaken (indien genoemd in tekst)",
     "opleiding_en_ervaring_samenvatting": "Korte samenvatting van achtergrond (niet leidend voor match)",
+    "verrassende_functies": ["3-5 concrete functies/rollen waar deze persoon qua persoonlijkheid en talent goed bij zou passen, maar waar hij/zij zelf misschien niet aan denkt. Bijv. een beveiliger met empathie → zorgcoördinator, een barista met organisatietalent → eventmanager. Denk creatief!"],
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
     "aandachtspunten": ["lijst van punten die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden"],
     "vervolgvragen": ["max 5 CONCRETE VRAGEN AAN DE KANDIDAAT over essentiële info die mist (bijv. drijfveren, werkstijl, beperkingen)"]
@@ -167,6 +182,7 @@ Belangrijke instructies:
     "begeleiding_en_inwerkperiode": "Hoe nieuwe collega's worden opgevangen (vooral als ze uit een andere sector komen)",
     "must_have_skills": ["lijst", "van", "echt onmisbare skills"],
     "nice_to_have_skills": ["lijst", "van", "mooi meegenomen, maar trainbare skills"],
+    "taken": ["lijst", "van", "de belangrijkste taken en verantwoordelijkheden van de rol"],
     "werktijden_en_omstandigheden": "Praktische zaken t.a.v. werktijden of fysieke omstandigheden",
     "belangrijkste_taak": "Wat deze persoon vooral gaat doen",
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
@@ -239,8 +255,8 @@ Genereer het VOLLEDIGE bijgewerkte profiel in hetzelfde JSON-format als het orig
 # Elke modus definieert welke stappen worden uitgevoerd:
 #   stappen: ["kern"] = alleen kern-prompt, ["kern", "verdieping"] = kern + verdieping
 
-QUICK_SCAN_MODEL = "qwen3:4b"
-STANDAARD_MODEL = "qwen3:8b"
+QUICK_SCAN_MODEL = os.getenv("QUICK_SCAN_MODEL", "qwen3:4b")
+STANDAARD_MODEL = os.getenv("STANDAARD_MODEL", "qwen3:8b")
 
 MATCH_MODI = {
     "quick_scan": {

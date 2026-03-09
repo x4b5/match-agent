@@ -15,7 +15,7 @@ from backend.database import (
     bewaar_match, haal_top_matches_vector, haal_top_vacatures_vector, haal_document,
     haal_laatste_matches, haal_cached_match, haal_alle_documenten
 )
-from backend.services.ollama_service import genereer_embedding
+from backend.services.llm_instance import get_provider
 
 router = APIRouter(prefix="/matching", tags=["Matching"])
 
@@ -112,7 +112,7 @@ async def reverse_search(req: ReverseSearchRequest):
         raise HTTPException(status_code=400, detail=f"Kandidaat profiel niet gevonden voor {req.kandidaat_naam}")
     
     cand_json = json.dumps(cand_profiel, ensure_ascii=False)
-    vector = await genereer_embedding(cand_json)
+    vector = await get_provider().generate_embedding(cand_json)
     
     if not vector:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren.")
@@ -149,7 +149,7 @@ async def semantic_search(req: SemanticSearchRequest):
         raise HTTPException(status_code=400, detail=f"Vacature profiel niet gevonden voor {req.vacature_naam}")
 
     vac_json = json.dumps(vac_profiel, ensure_ascii=False)
-    vector = await genereer_embedding(vac_json)
+    vector = await get_provider().generate_embedding(vac_json)
 
     if not vector:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren voor vacature.")
@@ -274,7 +274,7 @@ async def batch_match(req: BatchMatchRequest):
             kandidaten_lijst = req.kandidaat_namen
         # Stap 1: Pre-filter met embeddings als gewenst
         elif req.use_prefilter:
-            vector = await genereer_embedding(vac_json)
+            vector = await get_provider().generate_embedding(vac_json)
             if vector:
                 top = await haal_top_matches_vector(vector, limit=req.limit)
                 kandidaten_lijst = [m["naam"] for m in top]

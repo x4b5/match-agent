@@ -16,12 +16,8 @@ from backend.config import (
     VERDIEPING_MATCH_PROMPT,
     MATCH_PROMPT
 )
-from backend.services.ollama_service import (
-    genereer_embedding,
-    vraag_ollama_json,
-    stream_ollama_json,
-    OllamaError
-)
+from backend.services.llm_instance import get_provider
+from backend.services.ollama_service import OllamaError
 from backend.database import bewaar_embedding
 from backend.schemas import (
     KandidaatProfiel,
@@ -34,13 +30,19 @@ from backend.schemas import (
 
 logger = logging.getLogger("matchflix.agents")
 
+
+async def genereer_embedding(tekst: str) -> list[float]:
+    """Wrapper voor embedding generatie via de actieve LLM-provider."""
+    return await get_provider().generate_embedding(tekst)
+
+
 async def profileer_kandidaat(tekst: str) -> dict:
     prompt = PROFIEL_KANDIDAAT_PROMPT.format(tekst=tekst)
-    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
 
 async def profileer_werkgeversvraag(tekst: str) -> dict:
     prompt = PROFIEL_WERKGEVERSVRAAG_PROMPT.format(tekst=tekst)
-    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
+    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
 
 async def verrijk_kandidaat_profiel(profiel_json: str, antwoorden_json: str, ruwe_tekst: str) -> dict:
     prompt = VERRIJK_KANDIDAAT_PROMPT.format(
@@ -48,7 +50,7 @@ async def verrijk_kandidaat_profiel(profiel_json: str, antwoorden_json: str, ruw
         antwoorden_json=antwoorden_json,
         ruwe_tekst=ruwe_tekst
     )
-    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
 
 async def verrijk_werkgeversvraag_profiel(profiel_json: str, antwoorden_json: str, ruwe_tekst: str) -> dict:
     prompt = VERRIJK_WERKGEVERSVRAAG_PROMPT.format(
@@ -56,7 +58,7 @@ async def verrijk_werkgeversvraag_profiel(profiel_json: str, antwoorden_json: st
         antwoorden_json=antwoorden_json,
         ruwe_tekst=ruwe_tekst
     )
-    return await vraag_ollama_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
+    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
 
 def _verkort_tekst(tekst: str, max_lengte: int) -> tuple[str, bool]:
     if len(tekst) <= max_lengte:
@@ -88,7 +90,7 @@ def _modus_params(modus: str | None) -> dict:
 async def _doe_kern_match(model: str, cv_tekst: str, vacature_tekst: str, params: dict) -> dict:
     """Stap 1: kern-match met 8 velden."""
     prompt = params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst)
-    return await vraag_ollama_json(
+    return await get_provider().generate_json(
         model=model,
         prompt=prompt,
         schema=KernMatchResult,
@@ -106,7 +108,7 @@ async def _doe_verdieping(model: str, kern_result: dict, cv_tekst: str, vacature
         cv_tekst=cv_tekst,
         vacature_tekst=vacature_tekst
     )
-    return await vraag_ollama_json(
+    return await get_provider().generate_json(
         model=model,
         prompt=prompt,
         schema=VerdiepingMatchResult,
@@ -159,7 +161,7 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
     yield {"type": "phase", "data": "kern_analyse"}
     kern_schema = KernMatchResult
     volledig_antwoord = ""
-    async for chunk in stream_ollama_json(
+    async for chunk in get_provider().generate_json_stream(
         model=model,
         prompt=params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst),
         schema=kern_schema,
@@ -176,7 +178,7 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
             volledig_antwoord += fragment
         yield chunk
 
-    from backend.services.ollama_service import _validate_json_antwoord, _extract_json_from_thinking
+    from backend.services.ollama_service import _validate_json_antwoord, _extract_json_from_thinking  # noqa: E402
 
     if params["think"]:
         volledig_antwoord = _extract_json_from_thinking(volledig_antwoord)

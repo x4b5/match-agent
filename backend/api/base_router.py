@@ -85,7 +85,7 @@ def create_document_router(
                 "doc_count": fysieke_info.get("doc_count", 0),
                 "docs": fysieke_info.get("docs", []),
                 "has_profile": doc["profiel_compleet"],
-                "profile_score": doc["profiel_dict"].get("dossier_compleetheid", doc["profiel_dict"].get("profiel_betrouwbaarheid", 0)) if doc["profiel_dict"] else 0,
+                "profile_score": doc["profiel_dict"].get("dossier_compleetheid", doc["profiel_dict"].get("profiel_betrouwbaarheid")) if doc["profiel_dict"] else None,
                 "profile_data": doc["profiel_dict"],
                 "waarschuwingen": doc.get("waarschuwingen_list", []),
                 "exists_on_disk": bestaat_fysiek,
@@ -169,7 +169,7 @@ def create_document_router(
             "has_profile": bool(profiel),
             "profile_data": profiel,
             "waarschuwingen": waarschuwingen,
-            "profile_score": (profiel or {}).get("dossier_compleetheid", (profiel or {}).get("profiel_betrouwbaarheid", 0)),
+            "profile_score": (profiel or {}).get("dossier_compleetheid", (profiel or {}).get("profiel_betrouwbaarheid")),
             "aandachtspunten": (profiel or {}).get("aandachtspunten", []),
             "vervolgvragen": (profiel or {}).get("vervolgvragen", []),
             "exists_on_disk": exists_on_disk

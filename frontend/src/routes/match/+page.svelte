@@ -342,7 +342,7 @@
         >
           <option value="">Selecteer vacature...</option>
           {#each data.employers as e}
-            <option value={e.naam}>{e.naam} (Score: {e.profile_score}%)</option>
+            <option value={e.naam}>{e.naam}{e.profile_score != null ? ` (Score: ${e.profile_score}%)` : ''}</option>
           {/each}
         </select>
       </div>
@@ -359,7 +359,7 @@
             <option value="">Selecteer kandidaat...</option>
             {#each data.candidates as c}
               <option value={c.naam}
-                >{c.naam} (Score: {c.profile_score}%)</option
+                >{c.naam}{c.profile_score != null ? ` (Score: ${c.profile_score}%)` : ''}</option
               >
             {/each}
           </select>
@@ -415,7 +415,7 @@
                 />
                 <span class="cand-details">
                   <span class="cand-name">{c.naam}</span>
-                  <span class="cand-score">{c.profile_score}%</span>
+                  <span class="cand-score">{c.profile_score != null ? `${c.profile_score}%` : '—'}</span>
                 </span>
               </label>
             {/each}

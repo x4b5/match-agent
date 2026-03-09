@@ -6,12 +6,14 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+from backend.config import LOG_LEVEL
 from backend.database import init_db
+from backend.services.llm_instance import init_provider
 from backend.api import status, candidates, employers, matching, gdpr, tasks
 
 # ── Structured Logging ──
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -26,6 +28,7 @@ _rate_store: dict[str, list[float]] = defaultdict(list)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 MATCHFLIX backend opgestart")
+    init_provider()
     await init_db()
     yield
     logger.info("🛑 MATCHFLIX backend afgesloten")

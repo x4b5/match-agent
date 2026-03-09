@@ -4,11 +4,9 @@ import os
 import math
 import logging
 from datetime import datetime
-from backend.config import ICLOUD_BASE
+from backend.config import ICLOUD_BASE, DB_PATH
 
 logger = logging.getLogger("matchflix.db")
-APP_SUPPORT_BASE = os.path.expanduser("~/Library/Application Support/matchflix")
-DB_PATH = os.path.join(APP_SUPPORT_BASE, "matchflix.db")
 
 
 async def _get_connection() -> aiosqlite.Connection:

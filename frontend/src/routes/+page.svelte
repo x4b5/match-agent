@@ -1,23 +1,28 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  export let data: PageData;
+  let { data } = $props<{ data: PageData }>();
 
-  $: online = data.ollama?.online || false;
-  $: models = data.ollama?.models || [];
-  $: candidatesCount = data.candidates?.length || 0;
-  $: candidatesProfiled =
-    data.candidates?.filter((c: any) => c.has_profile).length || 0;
-  $: employersProfiled =
-    data.employers?.filter((e: any) => e.has_profile).length || 0;
+  let online = $derived(data.ollama?.online || false);
+  let models = $derived(data.ollama?.models || []);
+  let candidatesCount = $derived(data.candidates?.length || 0);
+  let candidatesProfiled = $derived(
+    data.candidates?.filter((c: any) => c.has_profile).length || 0,
+  );
+  let employersCount = $derived(data.employers?.length || 0);
+  let employersProfiled = $derived(
+    data.employers?.filter((e: any) => e.has_profile).length || 0,
+  );
 
-  $: candidatesPercent =
+  let candidatesPercent = $derived(
     candidatesCount > 0
       ? Math.round((candidatesProfiled / candidatesCount) * 100)
-      : 0;
-  $: employersPercent =
+      : 0,
+  );
+  let employersPercent = $derived(
     employersCount > 0
       ? Math.round((employersProfiled / employersCount) * 100)
-      : 0;
+      : 0,
+  );
 </script>
 
 <div class="page-hero">
