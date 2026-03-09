@@ -29,7 +29,11 @@ BEOORDELING DOSSIERCOMPLEETHEID:
 Geef bij elke match een score voor dossiercompleetheid:
 - HOOG: Er is voldoende detail over zowel de kandidaat als de vacature om een gefundeerde match te maken op persoonlijkheid en potentieel.
 - GEMIDDELD: Er zijn enkele aannames nodig of bepaalde nuances ontbreken.
-- LAAG: Essentiële informatie over karakter, drijfveren of specifieke werkstijl ontbreekt. Benoem in dit geval concrete 'vervolgvragen' die gesteld moeten worden om het dossier completer te maken."""
+- LAAG: Essentiële informatie over karakter, drijfveren of specifieke werkstijl ontbreekt. Benoem in dit geval concrete 'vervolgvragen' die gesteld moeten worden om het dossier completer te maken.
+
+JSON-INTEGRITEIT:
+Je output moet ALTIJD een volledig, valide en niet-geaborteerd JSON-object zijn dat exact voldoet aan het gevraagde schema. Sla GEEN velden over. Een onvolledig JSON-object is onbruikbaar.
+"""
 
 MATCH_PROMPT = """Analyseer de match tussen dit kandidaatprofiel en deze werkgeversvraag met een focus op persoonlijkheid en potentieel.
 Geef een match percentage van 0 tot 100 gebaseerd op karakter, drijfveren en potentieel.
@@ -95,8 +99,10 @@ Belangrijke instructies:
     "opleiding_en_ervaring_samenvatting": "Korte samenvatting van achtergrond (niet leidend voor match)",
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
     "aandachtspunten": ["lijst van punten die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden"],
-    "vervolgvragen": ["max 5 concrete vragen over essentiële info die mist voor een goede match"]
+    "vervolgvragen": ["max 5 CONCRETE VRAGEN AAN DE KANDIDAAT over essentiële info die mist (bijv. drijfveren, werkstijl, beperkingen)"]
 }}
+
+BELANGRIJK: Zorg dat het veld "dossier_compleetheid" ALTIJD aanwezig is en een getal bevat. Stop pas nadat het JSON-object volledig is afgesloten met }}.
 
 KANDIDAATTEKST:
 {tekst}"""
@@ -132,8 +138,10 @@ Belangrijke instructies:
     "belangrijkste_taak": "Wat deze persoon vooral gaat doen",
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
     "aandachtspunten": ["lijst van zaken die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden (reizen, ploegendienst, fysiek zwaar, etc.)"],
-    "vervolgvragen": ["max 5 concrete vragen over essentiële info die mist voor een goede match"]
+    "vervolgvragen": ["max 5 CONCRETE VRAGEN AAN DE WERKGEVER/RECRUITER over ontbrekende details van de rol of teamcultuur"]
 }}
+
+BELANGRIJK: Zorg dat het veld "dossier_compleetheid" ALTIJD aanwezig is en een getal bevat. Stop pas nadat het JSON-object volledig is afgesloten met }}.
 
 WERKGEVERSVRAAG:
 {tekst}"""
@@ -158,7 +166,7 @@ Instructies:
 - Integreer de nieuwe informatie naadloos in het profiel — niet als apart blokje, maar verweven.
 - Update de dossiercompleetheid omhoog als de antwoorden cruciale gaten vullen.
 - Voeg nieuwe inzichten toe aan persoonlijkheid, drijfveren, impliciete kwaliteiten etc.
-- Genereer NIEUWE vervolgvragen als er NOG steeds belangrijke gaten zijn (max 5).
+- Genereer NIEUWE vervolgvragen (AAN DE KANDIDAAT) als er NOG steeds belangrijke gaten zijn (max 5).
 - Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
 
 BESTAAND PROFIEL:
@@ -179,7 +187,7 @@ Instructies:
 - Integreer de nieuwe informatie naadloos — niet als apart blokje, maar verweven.
 - Update de dossiercompleetheid omhoog als de antwoorden cruciale gaten vullen.
 - Voeg nieuwe inzichten toe aan gezochte persoonlijkheid, verborgen behoeften, etc.
-- Genereer NIEUWE vervolgvragen als er NOG steeds belangrijke gaten zijn (max 5).
+- Genereer NIEUWE vervolgvragen (AAN DE WERKGEVER/RECRUITER) als er NOG steeds belangrijke gaten zijn (max 5).
 - Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
 
 BESTAAND PROFIEL:

@@ -20,3 +20,14 @@ async def get_ollama_status():
                     return {"online": False, "models": []}
     except Exception:
         return {"online": False, "models": []}
+@router.get("/prompts")
+async def get_prompts():
+    """Haal de geconfigureerde AI prompts op voor transparantie."""
+    from backend import config
+    return {
+        "SYSTEM_PROMPT": config.SYSTEM_PROMPT,
+        "MATCH_PROMPT": config.MATCH_PROMPT,
+        "PROFIEL_KANDIDAAT_PROMPT": config.PROFIEL_KANDIDAAT_PROMPT,
+        "PROFIEL_WERKGEVERSVRAAG_PROMPT": config.PROFIEL_WERKGEVERSVRAAG_PROMPT,
+        "MATCH_MODI": config.MATCH_MODI
+    }

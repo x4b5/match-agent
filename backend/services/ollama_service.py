@@ -40,7 +40,10 @@ def _validate_json_antwoord(antwoord: str, schema: BaseModel | None) -> dict | N
         print(f"JSON Parse Error: {e}")
         return None
     except Exception as e:
-        print(f"Pydantic Validation Error: {e}")
+        print(f"Pydantic Validation Error for {schema.__name__ if schema else 'Unknown'}: {e}")
+        if hasattr(e, 'errors'):
+            for err in e.errors():
+                print(f"  - Field {err.get('loc')}: {err.get('msg')} (type={err.get('type')})")
         return None
 
 async def vraag_ollama_json(model: str, prompt: str, schema: BaseModel | None = None, temperature: float = 0.3, num_predict: int = 2048, num_ctx: int = 8192, think: bool = False, max_retries: int = 1) -> dict:

@@ -62,6 +62,14 @@
         <span class="material-icons">gps_fixed</span> Match Starten
       </a>
       <a
+        href="/prompts"
+        class="nav-link {page.url.pathname.startsWith('/prompts')
+          ? 'active'
+          : ''}"
+      >
+        <span class="material-icons">code</span> Prompts & Openheid
+      </a>
+      <a
         href="/history"
         class="nav-link {page.url.pathname.startsWith('/history')
           ? 'active'
