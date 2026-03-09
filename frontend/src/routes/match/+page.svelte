@@ -561,18 +561,20 @@
         >
         Persoonlijkheidsprofiel
       </h3>
-      <div class="breakdown-grid">
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
         {#each Object.entries(finalMatchData.personality_axes) as [key, value]}
-          <div class="breakdown-item">
-            <div class="breakdown-label">{key}</div>
-            <div class="breakdown-bar-track">
-              <div
-                class="breakdown-bar-fill"
-                style="width: {value}%; background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));"
-              ></div>
+          <div
+            style="border-left: 2px solid var(--neon-purple); padding-left: 1rem;"
+          >
+            <div
+              style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;"
+            >
+              {key}
             </div>
-            <div class="breakdown-value" style="color: var(--neon-purple);">
-              {value}%
+            <div
+              style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;"
+            >
+              {value}
             </div>
           </div>
         {/each}

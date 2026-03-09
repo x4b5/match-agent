@@ -5,12 +5,10 @@
   $: online = data.ollama?.online || false;
   $: models = data.ollama?.models || [];
   $: candidatesCount = data.candidates?.length || 0;
-  $: employersCount = data.employers?.length || 0;
-
   $: candidatesProfiled =
-    data.candidates?.filter((c) => c.has_profile).length || 0;
+    data.candidates?.filter((c: any) => c.has_profile).length || 0;
   $: employersProfiled =
-    data.employers?.filter((e) => e.has_profile).length || 0;
+    data.employers?.filter((e: any) => e.has_profile).length || 0;
 
   $: candidatesPercent =
     candidatesCount > 0

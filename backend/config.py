@@ -35,8 +35,10 @@ JSON-INTEGRITEIT:
 Je output moet ALTIJD een volledig, valide en niet-geaborteerd JSON-object zijn dat exact voldoet aan het gevraagde schema. Sla GEEN velden over. Een onvolledig JSON-object is onbruikbaar.
 """
 
-MATCH_PROMPT = """Analyseer de match tussen dit kandidaatprofiel en deze werkgeversvraag met een focus op persoonlijkheid en potentieel.
-Geef een match percentage van 0 tot 100 gebaseerd op karakter, drijfveren en potentieel.
+# --- Gesplitste Match-prompts ---
+# Kern-prompt: 8 velden — betrouwbaar op elk quantisatieniveau
+KERN_MATCH_PROMPT = """Analyseer de match tussen dit kandidaatprofiel en deze werkgeversvraag.
+Focus op persoonlijkheid, potentieel en karakter — niet op exacte diploma's of functietitels.
 
 KANDIDAATPROFIEL:
 {cv_tekst}
@@ -44,26 +46,57 @@ KANDIDAATPROFIEL:
 WERKGEVERSVRAAGPROFIEL:
 {vacature_tekst}
 
-Geef je analyse in exact dit JSON-format (geen andere tekst, alleen JSON):
+Antwoord in exact dit JSON-format (geen andere tekst, alleen JSON):
 {{
-  "match_percentage": <getal van 0 tot 100>,
-  "matchende_punten": ["punt1", "punt2"],
-  "ontbrekende_punten": ["punt1", "punt2"],
-  "overbruggings_advies": ["Concreet advies per ontbrekend punt: bijv. 'Volg cursus X voor skill Y'", "..."],
-  "verrassings_element": "Waarom zou je deze match niet verwachten, maar is het toch een goede fit?",
-  "cultuur_fit": "waarom de persoon qua karakter en waarden wel of niet past",
-  "onderbouwing": "korte toelichting waarom deze persoon goed zou passen qua karakter en drijfveren",
-  "personality_axes": {{
-    "Analytisch": <getal 0-100>,
-    "Sociaal": <getal 0-100>,
-    "Creatief": <getal 0-100>,
-    "Gestructureerd": <getal 0-100>,
-    "Ondernemend": <getal 0-100>
-  }},
+  "match_percentage": <getal van 0 tot 100 — weeg persoonlijkheid en potentieel het zwaarst>,
+  "matchende_punten": ["max 3 concrete, specifieke punten waarop kandidaat en vraag matchen"],
+  "ontbrekende_punten": ["max 3 concrete punten die ontbreken of een risico vormen"],
+  "verrassings_element": "Wat maakt deze match onverwacht interessant? Eén concrete observatie.",
+  "onderbouwing": "Waarom past deze persoon qua karakter en drijfveren? 2-3 zinnen.",
+  "cultuur_fit": "Past deze persoon bij de bedrijfscultuur en het team? Waarom wel/niet?",
   "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
-  "aandachtspunten": ["punt 1", "punt 2"],
-  "vervolgvragen": ["kritieke vraag 1 om dossier completer te maken", "vraag 2"]
+  "vervolgvragen": ["max 3 kritieke vragen om de match beter te beoordelen"]
 }}"""
+
+# Verdieping-prompt: ontvangt kern-resultaat als context, genereert extra inzichten
+VERDIEPING_MATCH_PROMPT = """Je hebt zojuist een kern-analyse gemaakt van een match. Verdiep deze nu met extra inzichten.
+
+KERN-ANALYSE:
+{kern_json}
+
+KANDIDAATPROFIEL:
+{cv_tekst}
+
+WERKGEVERSVRAAGPROFIEL:
+{vacature_tekst}
+
+Genereer de verdieping in exact dit JSON-format (geen andere tekst, alleen JSON):
+{{
+  "overbruggings_advies": ["Per ontbrekend punt: concreet advies hoe te overbruggen (cursus, training, begeleiding)"],
+  "gespreksstarters": ["3 concrete interviewvragen die de recruiter kan stellen om deze match te verkennen"],
+  "risico_mitigatie": "Hoe kunnen de risico's worden beperkt? Welke begeleiding is nodig?",
+  "gedeelde_waarden": ["Welke waarden delen kandidaat en werkgever?"],
+  "groeipotentieel": "Waar kan deze kandidaat groeien bij deze werkgever?",
+  "boodschap_aan_kandidaat": "Korte, motiverende boodschap gericht aan de kandidaat: waarom is deze rol iets voor jou?",
+  "match_narratief": "Een inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt.",
+  "personality_axes": {{
+    "Analytisch": "Kwalitatieve beschrijving mét citaat als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.",
+    "Sociaal": "idem",
+    "Creatief": "idem",
+    "Gestructureerd": "idem",
+    "Ondernemend": "idem"
+  }},
+  "score_breakdown": {{
+    "persoonlijkheid_fit": <getal 0-100>,
+    "cultuur_fit": <getal 0-100>,
+    "skills_overlap": <getal 0-100>,
+    "groei_potentieel": <getal 0-100>,
+    "motivatie_alignment": <getal 0-100>
+  }}
+}}"""
+
+# Backwards compat alias
+MATCH_PROMPT = KERN_MATCH_PROMPT
 
 # --- Prompts voor Profiel-extractie ---
 PROFIEL_KANDIDAAT_PROMPT = """Extraheer een gestructureerd profiel uit deze kandidaattekst.
@@ -203,99 +236,41 @@ Genereer het VOLLEDIGE bijgewerkte profiel in hetzelfde JSON-format als het orig
 
 
 # --- Match-modi ---
+# Elke modus definieert welke stappen worden uitgevoerd:
+#   stappen: ["kern"] = alleen kern-prompt, ["kern", "verdieping"] = kern + verdieping
 
-# Modellen per gebruik
 QUICK_SCAN_MODEL = "qwen3:4b"
 STANDAARD_MODEL = "qwen3:8b"
 
 MATCH_MODI = {
     "quick_scan": {
         "label": "Quick scan",
-        "beschrijving": "Snel overzicht met globale match (verkort input, sneller model)",
-        "num_predict": 1024,
+        "beschrijving": "Snel overzicht met alleen de kern-match (8 velden, snel model)",
+        "num_predict": 2048,
         "num_ctx": 8192,
         "temperature": 0.4,
         "model_override": QUICK_SCAN_MODEL,
         "max_tekst_lengte": 1500,
         "think": False,
-        "prompt": """Match dit kandidaatprofiel met dit werkgeversvraagprofiel. Focus op persoonlijkheid, kwaliteiten en potentieel. Wees kort en bondig.
-
-KANDIDAAT:
-{cv_tekst}
-
-WERKGEVERSVRAAG:
-{vacature_tekst}
-
-Antwoord alleen in dit JSON-format:
-{{
-  "match_percentage": <0-100>,
-  "matchende_punten": ["punt 1", "punt 2"],
-  "ontbrekende_punten": ["punt 1"],
-  "verrassings_element": "één zin",
-  "onderbouwing": "één zin",
-  "personality_axes": {{"Analytisch": <0-100>, "Sociaal": <0-100>, "Creatief": <0-100>, "Gestructureerd": <0-100>, "Ondernemend": <0-100>}},
-  "aandachtspunten": ["punt 1"],
-  "dossier_compleetheid": "Laag|Gemiddeld|Hoog"
-}}""",
+        "stappen": ["kern"],
+        "prompt": KERN_MATCH_PROMPT,
     },
     "standaard": {
         "label": "Standaard",
-        "beschrijving": "Uitgebreide analyse op het snelle model (volledige profielen, geen thinking)",
-        "num_predict": 3072,
+        "beschrijving": "Kern-match + verdieping in twee stappen (betrouwbaarder dan alles tegelijk)",
+        "num_predict": -1,
         "num_ctx": 8192,
         "temperature": 0.3,
         "model_override": STANDAARD_MODEL,
         "max_tekst_lengte": None,
         "think": False,
-        "prompt": """Maak een grondige analyse van de match tussen dit kandidaatprofiel en dit werkgeversvraagprofiel.
-Focus sterk op *out-of-the-box* denken: zoek de fit op basis van persoonlijkheid, drijfveren, zachte skills en overdraagbare kwaliteiten. Opleiding en exacte functietitels uit het verleden zijn ondergeschikt aan potentieel.
-Laat zien waarom deze persoon in deze baan zou floreren, ook als het geen voor de hand liggende stap is. Inspireer de werkgever om breder te kijken.
-Het match_percentage moet een getal tussen 0 en 100 zijn en weegt het zwaarst op personality en potentieel.
-
-KANDIDAATPROFIEL:
-{cv_tekst}
-
-WERKGEVERSVRAAGPROFIEL:
-{vacature_tekst}
-
-Antwoord in exact dit JSON-format (geen andere tekst):
-{{
-  "match_percentage": <getal van 0 tot 100>,
-  "matchende_punten": ["gedetailleerd punt 1 (bijv. gedeelde kernwaarde)", "punt 2 (overdraagbare skill)", "..."],
-  "ontbrekende_punten": ["gedetailleerd punt 1 (bijv. kennis die nog opgedaan moet worden)", "..."],
-  "overbruggings_advies": ["Concreet advies per ontbrekend punt over hoe dit te overbruggen (cursus, training, begeleiding)", "..."],
-  "verrassings_element": "Waarom zou je deze match niet verwachten, maar is het toch een goede fit? Wat maakt het bijzonder?",
-  "gespreksstarters": ["Concrete interviewvraag 1 die de recruiter kan stellen om deze match te verkennen", "Vraag 2", "Vraag 3"],
-  "risico_mitigatie": "Hoe kunnen de ontbrekende punten worden opgelost? Welke begeleiding of training is nodig?",
-  "gedeelde_waarden": ["punt 1 (welke waarden komen overeen?)", "..."],
-  "groeipotentieel": "Waar kan deze kandidaat nog in groeien bij deze werkgever?",
-  "cultuur_fit": "Waarom passen ze bij elkaar qua karakter en bedrijfscultuur?",
-  "aandachtspunten": ["p1", "p2"],
-  "boodschap_aan_kandidaat": "Een korte, motiverende boodschap gericht aan de kandidaat zelf: waarom is deze rol iets voor jou? Spreek de kandidaat direct aan.",
-  "match_narratief": "Een kort, inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt. Maak het persoonlijk en activerend.",
-  "onderbouwing": "uitgebreide toelichting: waarom is dit een interessante match qua karakter and passie? Wat voegt deze onverwachte kandidaat toe?",
-  "personality_axes": {{
-    "Analytisch": <getal 0-100>,
-    "Sociaal": <getal 0-100>,
-    "Creatief": <getal 0-100>,
-    "Gestructureerd": <getal 0-100>,
-    "Ondernemend": <getal 0-100>
-  }},
-  "score_breakdown": {{
-    "persoonlijkheid_fit": <getal 0-100>,
-    "cultuur_fit": <getal 0-100>,
-    "skills_overlap": <getal 0-100>,
-    "groei_potentieel": <getal 0-100>,
-    "motivatie_alignment": <getal 0-100>
-  }},
-  "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
-  "vervolgvragen": ["Diepgaande vraag 1 om missende info boven water te krijgen", "vraag 2"]
-}}""",
+        "stappen": ["kern", "verdieping"],
+        "prompt": KERN_MATCH_PROMPT,
     },
     "diepte_analyse": {
         "label": "Diepte-analyse",
-        "beschrijving": "Uitgebreide analyse met gedetailleerde onderbouwing (denkmodus aan)",
-        "num_predict": 4096,
+        "beschrijving": "Kern-match + verdieping met thinking mode (27b model, diepere analyse)",
+        "num_predict": -1,
         "num_ctx": 8192,
         "temperature": 0.2,
         "model_override": None,
@@ -329,11 +304,11 @@ Antwoord in exact dit JSON-format (geen andere tekst):
   "match_narratief": "Een kort, inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt. Maak het persoonlijk en activerend.",
   "onderbouwing": "uitgebreide toelichting: waarom is dit een interessante match qua karakter and passie? Wat voegt deze onverwachte kandidaat toe?",
   "personality_axes": {{
-    "Analytisch": <getal 0-100>,
-    "Sociaal": <getal 0-100>,
-    "Creatief": <getal 0-100>,
-    "Gestructureerd": <getal 0-100>,
-    "Ondernemend": <getal 0-100>
+    "Analytisch": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
+    "Sociaal": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
+    "Creatief": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
+    "Gestructureerd": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
+    "Ondernemend": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>"
   }},
   "score_breakdown": {{
     "persoonlijkheid_fit": <getal 0-100>,

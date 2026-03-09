@@ -93,24 +93,13 @@ class TestWerkgeversvraagProfiel:
 class TestPersonalityAxes:
     def test_geldige_axes(self):
         axes = PersonalityAxes(
-            Analytisch=75, Sociaal=60, Creatief=85,
-            Gestructureerd=40, Ondernemend=55
+            Analytisch="Zeer sterk, blijkt uit '10 jaar data-analyse'", 
+            Sociaal="Niet af te leiden uit dossier", 
+            Creatief="Hoog - ontwerpt eigen oplossingen",
+            Gestructureerd="Redelijk", 
+            Ondernemend="Niet af te leiden uit dossier"
         )
-        assert axes.Analytisch == 75
-
-    def test_waarde_boven_100(self):
-        with pytest.raises(ValidationError):
-            PersonalityAxes(
-                Analytisch=150, Sociaal=60, Creatief=85,
-                Gestructureerd=40, Ondernemend=55
-            )
-
-    def test_negatieve_waarde(self):
-        with pytest.raises(ValidationError):
-            PersonalityAxes(
-                Analytisch=-5, Sociaal=60, Creatief=85,
-                Gestructureerd=40, Ondernemend=55
-            )
+        assert axes.Analytisch == "Zeer sterk, blijkt uit '10 jaar data-analyse'"
 
 
 class TestQuickScanMatchResult:
@@ -122,8 +111,8 @@ class TestQuickScanMatchResult:
             verrassings_element="Horeca-achtergrond geeft klantgerichtheid",
             onderbouwing="Past goed qua karakter",
             personality_axes=PersonalityAxes(
-                Analytisch=50, Sociaal=80, Creatief=60,
-                Gestructureerd=70, Ondernemend=40
+                Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
+                Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
             ),
             dossier_compleetheid="Hoog"
         )
@@ -137,8 +126,8 @@ class TestQuickScanMatchResult:
                 matchende_punten=[], ontbrekende_punten=[],
                 verrassings_element="", onderbouwing="",
                 personality_axes=PersonalityAxes(
-                    Analytisch=50, Sociaal=80, Creatief=60,
-                    Gestructureerd=70, Ondernemend=40
+                    Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
+                    Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
                 ),
                 dossier_compleetheid="Zeer Hoog"  # Ongeldig!
             )
@@ -151,8 +140,8 @@ class TestQuickScanMatchResult:
                 matchende_punten=[], ontbrekende_punten=[],
                 verrassings_element="", onderbouwing="",
                 personality_axes=PersonalityAxes(
-                    Analytisch=50, Sociaal=80, Creatief=60,
-                    Gestructureerd=70, Ondernemend=40
+                    Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
+                    Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
                 ),
                 dossier_compleetheid="Hoog"
             )
@@ -176,8 +165,8 @@ class TestStandaardMatchResult:
             match_narratief="Een verrassende match die inspireert.",
             onderbouwing="Sterk karakter en overdraagbare skills",
             personality_axes=PersonalityAxes(
-                Analytisch=50, Sociaal=80, Creatief=60,
-                Gestructureerd=70, Ondernemend=40
+                Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
+                Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
             ),
             score_breakdown=ScoreBreakdown(
                 persoonlijkheid_fit=85, cultuur_fit=78,

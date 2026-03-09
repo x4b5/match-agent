@@ -111,10 +111,13 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
     model = params["model_override"] or OLLAMA_MODEL
     prompt = params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst)
     
+    schema = QuickScanMatchResult if modus == "quick_scan" else StandaardMatchResult
+
     volledig_antwoord = ""
     async for chunk in stream_ollama_json(
         model=model,
         prompt=prompt,
+        schema=schema,
         temperature=params["temperature"],
         num_predict=params["num_predict"],
         num_ctx=params["num_ctx"],
@@ -130,9 +133,10 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
         yield chunk
         
     # after stream, attempt to parse the entire response block to validate format
-    from backend.services.ollama_service import _validate_json_antwoord
-    
-    schema = QuickScanMatchResult if modus == "quick_scan" else StandaardMatchResult
+    from backend.services.ollama_service import _validate_json_antwoord, _extract_json_from_thinking
+
+    if params["think"]:
+        volledig_antwoord = _extract_json_from_thinking(volledig_antwoord)
     resultaat = _validate_json_antwoord(volledig_antwoord, schema)
     if resultaat:
         if "match_percentage" in resultaat:
