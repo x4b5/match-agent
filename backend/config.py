@@ -148,7 +148,7 @@ Belangrijke aanwijzingen:
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier om een goede match te maken?>,
     "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten of die een risico kunnen zijn"],
     "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE KANDIDAAT over belangrijke informatie die nog ontbreekt (bijvoorbeeld over werkstijl of wat iemand écht motiveert)"],
-    "cultuur_vragen": ["3 PRIKKELENDE, verhalende vragen over cultuur en persoonlijkheid. Denk aan: 'Wat is de laatste keer dat je een regel brak om iets voor elkaar te krijgen?' of 'Wanneer was je voor het laatst echt trots op een fout?'. Wees creatief en diepgaand!"]
+    "cultuur_vragen": ["3 KORTE, SIMPELE, verhalende vragen over cultuur en persoonlijkheid. Schrijf op B1-niveau (begrijpelijk voor iedereen). Vermijd moeilijke woorden of formele taal. Denk aan: 'Wanneer baalde je echt van een fout, maar leerde je er toch van?' of 'Heb je wel eens iets geks gedaan om een klant blij te maken?'. Schrijf zoals je tegen een vriend praat."]
 }}
 
 BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop direct nadat je het JSON-object hebt afgesloten met }}.
