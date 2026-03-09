@@ -7,7 +7,8 @@ from datetime import datetime
 from backend.config import ICLOUD_BASE
 
 logger = logging.getLogger("matchflix.db")
-DB_PATH = os.path.join(ICLOUD_BASE, "matchflix.db")
+APP_SUPPORT_BASE = os.path.expanduser("~/Library/Application Support/matchflix")
+DB_PATH = os.path.join(APP_SUPPORT_BASE, "matchflix.db")
 
 
 async def _get_connection() -> aiosqlite.Connection:
@@ -21,7 +22,13 @@ async def _get_connection() -> aiosqlite.Connection:
 
 async def init_db():
     """Initialiseer de database tabellen asynchroon."""
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     os.makedirs(ICLOUD_BASE, exist_ok=True)
+    
+    if "Mobile Documents" in DB_PATH:
+        print("\033[93mWAARSCHUWING: Database pad bevat 'Mobile Documents'. Dit kan leiden tot corruptie in iCloud!\033[0m", flush=True)
+        logger.warning("Database pad bevat 'Mobile Documents'. Dit kan leiden tot corruptie in iCloud!")
+        
     conn = await _get_connection()
     try:
         await conn.execute("""

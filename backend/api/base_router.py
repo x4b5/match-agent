@@ -279,7 +279,7 @@ def create_document_router(
                     document_id=uuid_val,
                     doc_type=doc_type,
                     naam=naam,
-                    ruwe_tekst=gecombineerde_tekst,
+                    ruwe_tekst=geschoonde_tekst,
                     profiel_dict=resultaat if isinstance(resultaat, dict) else None,
                     waarschuwingen=waarschuwingen,
                     content_hash=content_hash
