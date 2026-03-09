@@ -195,8 +195,6 @@ async def run_match(req: MatchRequest):
     vacature_id = vac_profiel.get("id", req.vacature_naam)
     vacature_titel = vac_profiel.get("titel", req.vacature_naam)
     
-    logger.info(f"Match {req.kandidaat_naam} ↔ {req.vacature_naam}: {result.get('match_percentage', '?')}% ({model_versie}, {duur_ms}ms)")
-
     await bewaar_match(
         kandidaat_naam=req.kandidaat_naam,
         kandidaat_id=kandidaat_id,
@@ -206,7 +204,8 @@ async def run_match(req: MatchRequest):
         modus=req.modus,
         resultaat_dict=result,
         model_versie=model_versie,
-        duur_ms=duur_ms
+        duur_ms=duur_ms,
+        temperature=modi.get("temperature") if modi else None
     )
     return {"message": "Match voltooid", "result": result}
 
@@ -231,12 +230,17 @@ async def stream_match(req: MatchRequest):
         vacature_titel = vac_profiel.get("titel", req.vacature_naam)
         final_result = None
 
+        modi = MATCH_MODI.get(req.modus, {})
+        stappen = modi.get("stappen", ["kern"])
+        yield json.dumps({"type": "phase", "data": "profielen_geladen", "stappen": stappen}, ensure_ascii=False)
+
         async for chunk in match_kandidaat_stream(cv_json, vac_json, modus=req.modus):
             if chunk.get("type") == "result":
                 final_result = chunk.get("data")
             yield json.dumps(chunk, ensure_ascii=False)
 
         if final_result:
+            modi = MATCH_MODI.get(req.modus)
             await bewaar_match(
                 kandidaat_naam=req.kandidaat_naam,
                 kandidaat_id=kandidaat_id,
@@ -244,7 +248,8 @@ async def stream_match(req: MatchRequest):
                 vacature_id=vacature_id,
                 percentage=final_result.get("match_percentage", 0),
                 modus=req.modus,
-                resultaat_dict=final_result
+                resultaat_dict=final_result,
+                temperature=modi.get("temperature") if modi else None
             )
 
     return EventSourceResponse(event_generator())
@@ -331,6 +336,7 @@ async def batch_match(req: BatchMatchRequest):
                     result = chunk.get("data", {})
                     alle_resultaten.append({"naam": naam, **result})
 
+                    modi = MATCH_MODI.get(req.modus)
                     await bewaar_match(
                         kandidaat_naam=naam,
                         kandidaat_id=kandidaat_id,
@@ -338,7 +344,8 @@ async def batch_match(req: BatchMatchRequest):
                         vacature_id=vacature_id,
                         percentage=result.get("match_percentage", 0),
                         modus=req.modus,
-                        resultaat_dict=result
+                        resultaat_dict=result,
+                        temperature=modi.get("temperature") if modi else None
                     )
 
                     yield json.dumps({

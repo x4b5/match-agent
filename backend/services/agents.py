@@ -156,6 +156,7 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
     stappen = params["stappen"]
 
     # Stap 1: Kern-match (streamed)
+    yield {"type": "phase", "data": "kern_analyse"}
     kern_schema = KernMatchResult
     volledig_antwoord = ""
     async for chunk in stream_ollama_json(
@@ -190,7 +191,7 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
 
     # Stap 2: Verdieping (niet-streamed, maar resultaat wordt meegegeven)
     if "verdieping" in stappen:
-        yield {"type": "phase", "data": "Verdieping genereren..."}
+        yield {"type": "phase", "data": "verdieping"}
         try:
             verdieping = await _doe_verdieping(model, kern_result, cv_tekst, vacature_tekst, params)
             kern_result.update(verdieping)

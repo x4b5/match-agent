@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import { toasts } from "$lib/toast";
+  import { onDestroy } from "svelte";
   let { data } = $props<{ data: PageData }>();
 
   let selectedCandidate = $state(data.candidates?.[0]?.naam || "");
@@ -21,11 +22,65 @@
   let showRawOutput = $state(false);
   let batchCandidateSearch = $state("");
 
+  // Voortgang & timer
+  let currentPhase = $state("");
+  let elapsedSeconds = $state(0);
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
+  let abortController: AbortController | null = null;
+  let expectedStappen: string[] = $state([]);
+
+  const PHASE_LABELS: Record<string, string> = {
+    profielen_geladen: "Profielen laden",
+    kern_analyse: "Kern-analyse",
+    verdieping: "Verdieping",
+    resultaat: "Resultaat verwerken",
+  };
+  const PHASE_ICONS: Record<string, string> = {
+    profielen_geladen: "folder_open",
+    kern_analyse: "psychology",
+    verdieping: "insights",
+    resultaat: "check_circle",
+  };
+
+  // Alle mogelijke fasen in volgorde
+  const ALL_PHASES = ["profielen_geladen", "kern_analyse", "verdieping", "resultaat"];
+
+  let activePhases = $derived(
+    expectedStappen.includes("verdieping")
+      ? ALL_PHASES
+      : ALL_PHASES.filter((p) => p !== "verdieping"),
+  );
+
   let filteredBatchCandidates = $derived(
     data.candidates.filter((c: any) =>
       c.naam.toLowerCase().includes(batchCandidateSearch.toLowerCase()),
     ),
   );
+
+  function startTimer() {
+    elapsedSeconds = 0;
+    timerInterval = setInterval(() => {
+      elapsedSeconds += 1;
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function formatTime(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return m > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `${s}s`;
+  }
+
+  onDestroy(() => {
+    stopTimer();
+    abortController?.abort();
+  });
 
   function toggleCandidate(name: string) {
     if (selectedCandidates.has(name)) {
@@ -42,6 +97,15 @@
 
   function selectNone() {
     selectedCandidates = new Set();
+  }
+
+  function stopMatch() {
+    abortController?.abort();
+    isMatching = false;
+    stopTimer();
+    currentPhase = "";
+    if (currentStep < 2) currentStep = 0;
+    toasts.add("Analyse gestopt.", "warning");
   }
 
   async function startMatch() {
@@ -71,6 +135,11 @@
     errorMsg = "";
     currentStep = 1;
     showRawOutput = false;
+    currentPhase = "profielen_geladen";
+    expectedStappen = selectedMode === "quick_scan" ? ["kern"] : ["kern", "verdieping"];
+
+    abortController = new AbortController();
+    startTimer();
 
     const endpoint =
       matchType === "individual"
@@ -91,6 +160,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: abortController.signal,
       });
 
       if (!res.body) throw new Error("No readable stream.");
@@ -124,20 +194,27 @@
         }
       }
     } catch (e: any) {
+      if (e.name === "AbortError") return;
       errorMsg = e.message || "Fout tijdens matchen.";
       toasts.add(errorMsg, "error");
     } finally {
       isMatching = false;
+      stopTimer();
       if (currentStep < 2) currentStep = 0;
     }
   }
 
   function handleIndividualEvent(payload: any) {
-    if (payload.type === "token") {
+    if (payload.type === "phase") {
+      currentPhase = payload.data;
+      if (payload.stappen) expectedStappen = payload.stappen;
+    } else if (payload.type === "token") {
       matchResult += payload.data;
     } else if (payload.type === "result") {
+      currentPhase = "resultaat";
       finalMatchData = payload.data;
       currentStep = 2;
+      stopTimer();
       toasts.add("Match analyse voltooid!", "success");
     } else if (payload.type === "error") {
       errorMsg = payload.data;
@@ -146,18 +223,22 @@
   }
 
   function handleBatchEvent(payload: any) {
-    if (payload.type === "match_start") {
+    if (payload.type === "phase") {
+      currentPhase = payload.data;
+    } else if (payload.type === "match_start") {
       currentBatchItem = payload.data;
-      matchResult = `Bezig met analyseren van: ${payload.data.naam} (${payload.data.index}/${payload.data.total})...\n\n`;
+      currentPhase = "kern_analyse";
+      matchResult = `Analyseren: ${payload.data.naam} (${payload.data.index}/${payload.data.total})...\n\n`;
     } else if (payload.type === "token") {
       matchResult += payload.data;
     } else if (payload.type === "match_result") {
-      // Just record it, final list comes at the end or we can push to living list
-      // batchResults = [...batchResults, { ...payload.data.result, naam: payload.data.naam }];
+      // Recorded, final list comes at batch_complete
     } else if (payload.type === "batch_complete") {
+      currentPhase = "resultaat";
       batchResults = payload.data;
-      finalMatchData = { isBatch: true }; // Trigger result view
+      finalMatchData = { isBatch: true };
       currentStep = 2;
+      stopTimer();
       toasts.add("Batch analyse voltooid!", "success");
     } else if (payload.type === "error") {
       toasts.add(payload.data, "error");
@@ -179,6 +260,9 @@
     errorMsg = "";
     currentStep = 0;
     showRawOutput = false;
+    currentPhase = "";
+    elapsedSeconds = 0;
+    expectedStappen = [];
   }
 
   function selectBatchDetail(item: any) {
@@ -380,8 +464,49 @@
           >analytics</span
         >
         Live Analyse
+        {#if isMatching}
+          <span class="timer-badge">{formatTime(elapsedSeconds)}</span>
+        {/if}
       </h3>
-      <div class="stream-box">
+
+      {#if isMatching || currentPhase}
+        <!-- Stappenbalk -->
+        <div class="phase-tracker">
+          {#each activePhases as phase, idx}
+            {@const phaseIdx = activePhases.indexOf(phase)}
+            {@const currentIdx = activePhases.indexOf(currentPhase)}
+            {@const isDone = currentIdx > phaseIdx || currentPhase === "resultaat"}
+            {@const isActive = phase === currentPhase && currentPhase !== "resultaat"}
+            <div
+              class="phase-step"
+              class:phase-done={isDone}
+              class:phase-active={isActive}
+            >
+              <span class="material-icons phase-icon">
+                {#if isDone}
+                  check_circle
+                {:else}
+                  {PHASE_ICONS[phase] || "radio_button_unchecked"}
+                {/if}
+              </span>
+              <span class="phase-label">{PHASE_LABELS[phase] || phase}</span>
+            </div>
+            {#if idx < activePhases.length - 1}
+              <div class="phase-connector" class:phase-connector-done={isDone}></div>
+            {/if}
+          {/each}
+        </div>
+
+        <!-- Stop knop -->
+        {#if isMatching}
+          <button class="btn-stop" onclick={stopMatch}>
+            <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">stop</span>
+            Stop analyse
+          </button>
+        {/if}
+      {/if}
+
+      <div class="stream-box" style="margin-top: 0.75rem;">
         {#if matchResult}
           <span style="color: var(--text-primary);">{matchResult}</span>
         {:else if isMatching}
@@ -391,7 +516,7 @@
               style="font-size: 2.5rem; color: var(--neon-cyan); opacity: 0.6;"
               >settings</span
             >
-            <span>Verbinden met AI model...</span>
+            <span>{PHASE_LABELS[currentPhase] || "Verbinden met AI model..."}</span>
           </div>
         {:else}
           <div class="stream-placeholder">
@@ -1114,5 +1239,113 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* Timer badge */
+  .timer-badge {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: "JetBrains Mono", monospace;
+    color: var(--neon-cyan);
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    padding: 2px 10px;
+    border-radius: 12px;
+  }
+
+  /* Phase tracker */
+  .phase-tracker {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0.75rem 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .phase-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+  }
+
+  .phase-icon {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    opacity: 0.4;
+    transition: all 0.3s ease;
+  }
+
+  .phase-done .phase-icon {
+    color: var(--neon-green);
+    opacity: 1;
+  }
+
+  .phase-active .phase-icon {
+    color: var(--neon-cyan);
+    opacity: 1;
+    animation: phasePulse 1.5s ease infinite;
+  }
+
+  .phase-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    transition: all 0.3s ease;
+  }
+
+  .phase-done .phase-label {
+    color: var(--neon-green);
+    opacity: 0.8;
+  }
+
+  .phase-active .phase-label {
+    color: var(--neon-cyan);
+    opacity: 1;
+    font-weight: 600;
+  }
+
+  .phase-connector {
+    flex: 1;
+    height: 2px;
+    background: var(--glass-border);
+    margin: 0 0.5rem;
+    transition: background 0.5s ease;
+    min-width: 20px;
+  }
+
+  .phase-connector-done {
+    background: var(--neon-green);
+    box-shadow: 0 0 6px rgba(0, 255, 136, 0.3);
+  }
+
+  @keyframes phasePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Stop knop */
+  .btn-stop {
+    align-self: flex-end;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    background: rgba(255, 64, 129, 0.1);
+    border: 1px solid rgba(255, 64, 129, 0.3);
+    color: var(--neon-pink);
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-stop:hover {
+    background: rgba(255, 64, 129, 0.2);
+    border-color: var(--neon-pink);
   }
 </style>

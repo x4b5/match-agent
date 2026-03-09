@@ -43,7 +43,8 @@ async def init_db():
                 modus TEXT,
                 model_versie TEXT,
                 duur_ms INTEGER,
-                resultaat_json TEXT
+                resultaat_json TEXT,
+                temperature REAL
             )
         """)
         
@@ -106,6 +107,11 @@ async def init_db():
             pass  # Kolom bestaat al
         
         try:
+            await conn.execute("ALTER TABLE matches ADD COLUMN temperature REAL")
+        except Exception:
+            pass  # Kolom bestaat al
+        
+        try:
             await conn.execute("ALTER TABLE documenten ADD COLUMN content_hash TEXT")
         except Exception:
             pass  # Kolom bestaat al
@@ -118,13 +124,13 @@ async def init_db():
 
 # ── Matches ──
 
-async def bewaar_match(kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, percentage, modus, resultaat_dict, model_versie=None, duur_ms=None):
+async def bewaar_match(kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, percentage, modus, resultaat_dict, model_versie=None, duur_ms=None, temperature=None):
     """Sla een match resultaat op in de database."""
     conn = await _get_connection()
     try:
         await conn.execute("""
-            INSERT INTO matches (kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, match_percentage, modus, model_versie, duur_ms, resultaat_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO matches (kandidaat_naam, kandidaat_id, vacature_titel, vacature_id, match_percentage, modus, model_versie, duur_ms, resultaat_json, temperature)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             kandidaat_naam, 
             kandidaat_id, 
@@ -134,7 +140,8 @@ async def bewaar_match(kandidaat_naam, kandidaat_id, vacature_titel, vacature_id
             modus, 
             model_versie,
             duur_ms,
-            json.dumps(resultaat_dict, ensure_ascii=False)
+            json.dumps(resultaat_dict, ensure_ascii=False),
+            temperature
         ))
         await conn.commit()
     finally:

@@ -272,7 +272,7 @@ MATCH_MODI = {
         "beschrijving": "Kern-match + verdieping met thinking mode (27b model, diepere analyse)",
         "num_predict": -1,
         "num_ctx": 8192,
-        "temperature": 0.2,
+        "temperature": 0.1,
         "model_override": None,
         "max_tekst_lengte": None,
         "think": True,

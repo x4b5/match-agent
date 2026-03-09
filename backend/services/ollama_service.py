@@ -67,7 +67,7 @@ def _bewaar_debug_output(antwoord: str, poging: int, model: str):
         f"Ruwe output ({len(antwoord)} chars): {antwoord[:500]}{'...' if len(antwoord) > 500 else ''}"
     )
 
-async def vraag_ollama_json(model: str, prompt: str, schema: BaseModel | None = None, temperature: float = 0.3, num_predict: int = 2048, num_ctx: int = 8192, think: bool = False, max_retries: int = 2) -> dict:
+async def vraag_ollama_json(model: str, prompt: str, schema: BaseModel | None = None, temperature: float = 0.1, num_predict: int = 2048, num_ctx: int = 8192, think: bool = False, max_retries: int = 2) -> dict:
     # Thinking mode is incompatibel met structured output (Ollama issue #10929).
     # Bij think=True: gebruik format:"json" en parse handmatig met Pydantic.
     use_structured = schema and not think
@@ -81,6 +81,7 @@ async def vraag_ollama_json(model: str, prompt: str, schema: BaseModel | None = 
             "temperature": temperature,
             "num_predict": num_predict,
             "num_ctx": num_ctx,
+            "seed": 42,
         },
         "think": think,
     }
@@ -135,7 +136,7 @@ async def vraag_ollama_json(model: str, prompt: str, schema: BaseModel | None = 
         f"Controleer of het model geladen is en voldoende context heeft."
     )
 
-async def stream_ollama_json(model: str, prompt: str, schema: BaseModel | None = None, temperature: float = 0.3, num_predict: int = 2048, num_ctx: int = 8192, think: bool = False):
+async def stream_ollama_json(model: str, prompt: str, schema: BaseModel | None = None, temperature: float = 0.1, num_predict: int = 2048, num_ctx: int = 8192, think: bool = False):
     # Thinking mode is incompatibel met structured output
     use_structured = schema and not think
 
@@ -148,6 +149,7 @@ async def stream_ollama_json(model: str, prompt: str, schema: BaseModel | None =
             "temperature": temperature,
             "num_predict": num_predict,
             "num_ctx": num_ctx,
+            "seed": 42,
         },
         "think": think,
     }
