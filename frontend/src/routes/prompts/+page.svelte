@@ -10,7 +10,8 @@
 
   interface PromptsData {
     SYSTEM_PROMPT: string;
-    MATCH_PROMPT: string;
+    KERN_MATCH_PROMPT: string;
+    VERDIEPING_MATCH_PROMPT: string;
     PROFIEL_KANDIDAAT_PROMPT: string;
     PROFIEL_WERKGEVERSVRAAG_PROMPT: string;
     MATCH_MODI: Record<string, MatchMode>;
@@ -52,6 +53,34 @@
             bepaalt.
           </p>
           <pre><code>{formatPrompt(data.prompts.SYSTEM_PROMPT)}</code></pre>
+        </div>
+      </section>
+
+      <!-- Kern-Match Prompt -->
+      <section class="prompt-card">
+        <div class="card-header">
+          <span class="material-icons">compare_arrows</span>
+          <h2>Kern-Match Prompt</h2>
+        </div>
+        <div class="card-body">
+          <p class="instruction">
+            Stap 1: de 8 belangrijkste match-velden — betrouwbaar op elk model.
+          </p>
+          <pre><code>{formatPrompt(data.prompts.KERN_MATCH_PROMPT)}</code></pre>
+        </div>
+      </section>
+
+      <!-- Verdieping Prompt -->
+      <section class="prompt-card">
+        <div class="card-header">
+          <span class="material-icons">insights</span>
+          <h2>Verdieping Prompt</h2>
+        </div>
+        <div class="card-body">
+          <p class="instruction">
+            Stap 2: extra inzichten op basis van de kern-analyse.
+          </p>
+          <pre><code>{formatPrompt(data.prompts.VERDIEPING_MATCH_PROMPT)}</code></pre>
         </div>
       </section>
 

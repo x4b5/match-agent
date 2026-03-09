@@ -248,7 +248,7 @@ MATCH_MODI = {
         "beschrijving": "Snel overzicht met alleen de kern-match (8 velden, snel model)",
         "num_predict": 2048,
         "num_ctx": 8192,
-        "temperature": 0.4,
+        "temperature": 0.1,
         "model_override": QUICK_SCAN_MODEL,
         "max_tekst_lengte": 1500,
         "think": False,
@@ -260,7 +260,7 @@ MATCH_MODI = {
         "beschrijving": "Kern-match + verdieping in twee stappen (betrouwbaarder dan alles tegelijk)",
         "num_predict": -1,
         "num_ctx": 8192,
-        "temperature": 0.3,
+        "temperature": 0.1,
         "model_override": STANDAARD_MODEL,
         "max_tekst_lengte": None,
         "think": False,
@@ -276,49 +276,7 @@ MATCH_MODI = {
         "model_override": None,
         "max_tekst_lengte": None,
         "think": True,
-        "prompt": """Maak een grondige analyse van de match tussen dit kandidaatprofiel en dit werkgeversvraagprofiel.
-Focus sterk op *out-of-the-box* denken: zoek de fit op basis van persoonlijkheid, drijfveren, zachte skills en overdraagbare kwaliteiten. Opleiding en exacte functietitels uit het verleden zijn ondergeschikt aan potentieel.
-Laat zien waarom deze persoon in deze baan zou floreren, ook als het geen voor de hand liggende stap is. Inspireer de werkgever om breder te kijken.
-Het match_percentage moet een getal tussen 0 en 100 zijn en weegt het zwaarst op personality en potentieel.
-
-KANDIDAATPROFIEL:
-{cv_tekst}
-
-WERKGEVERSVRAAGPROFIEL:
-{vacature_tekst}
-
-Antwoord in exact dit JSON-format (geen andere tekst):
-{{
-  "match_percentage": <getal van 0 tot 100>,
-  "matchende_punten": ["gedetailleerd punt 1 (bijv. gedeelde kernwaarde)", "punt 2 (overdraagbare skill)", "..."],
-  "ontbrekende_punten": ["gedetailleerd punt 1 (bijv. kennis die nog opgedaan moet worden)", "..."],
-  "overbruggings_advies": ["Concreet advies per ontbrekend punt over hoe dit te overbruggen (cursus, training, begeleiding)", "..."],
-  "verrassings_element": "Waarom zou je deze match niet verwachten, maar is het toch een goede fit? Wat maakt het bijzonder?",
-  "gespreksstarters": ["Concrete interviewvraag 1 die de recruiter kan stellen om deze match te verkennen", "Vraag 2", "Vraag 3"],
-  "risico_mitigatie": "Hoe kunnen de ontbrekende punten worden opgelost? Welke begeleiding of training is nodig?",
-  "gedeelde_waarden": ["punt 1 (welke waarden komen overeen?)", "..."],
-  "groeipotentieel": "Waar kan deze kandidaat nog in groeien bij deze werkgever?",
-  "cultuur_fit": "Waarom passen ze bij elkaar qua karakter en bedrijfscultuur?",
-  "aandachtspunten": ["p1", "p2"],
-  "boodschap_aan_kandidaat": "Een korte, motiverende boodschap gericht aan de kandidaat zelf: waarom is deze rol iets voor jou? Spreek de kandidaat direct aan.",
-  "match_narratief": "Een kort, inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt. Maak het persoonlijk en activerend.",
-  "onderbouwing": "uitgebreide toelichting: waarom is dit een interessante match qua karakter and passie? Wat voegt deze onverwachte kandidaat toe?",
-  "personality_axes": {{
-    "Analytisch": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
-    "Sociaal": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
-    "Creatief": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
-    "Gestructureerd": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>",
-    "Ondernemend": "<beschrijving + citaat of 'Niet af te leiden uit dossier'>"
-  }},
-  "score_breakdown": {{
-    "persoonlijkheid_fit": <getal 0-100>,
-    "cultuur_fit": <getal 0-100>,
-    "skills_overlap": <getal 0-100>,
-    "groei_potentieel": <getal 0-100>,
-    "motivatie_alignment": <getal 0-100>
-  }},
-  "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
-  "vervolgvragen": ["Diepgaande vraag 1 om missende info boven water te krijgen", "vraag 2"]
-}}""",
+        "stappen": ["kern", "verdieping"],
+        "prompt": KERN_MATCH_PROMPT,
     },
 }

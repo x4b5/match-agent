@@ -26,7 +26,8 @@ async def get_prompts():
     from backend import config
     return {
         "SYSTEM_PROMPT": config.SYSTEM_PROMPT,
-        "MATCH_PROMPT": config.MATCH_PROMPT,
+        "KERN_MATCH_PROMPT": config.KERN_MATCH_PROMPT,
+        "VERDIEPING_MATCH_PROMPT": config.VERDIEPING_MATCH_PROMPT,
         "PROFIEL_KANDIDAAT_PROMPT": config.PROFIEL_KANDIDAAT_PROMPT,
         "PROFIEL_WERKGEVERSVRAAG_PROMPT": config.PROFIEL_WERKGEVERSVRAAG_PROMPT,
         "MATCH_MODI": config.MATCH_MODI
