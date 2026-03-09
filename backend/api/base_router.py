@@ -247,7 +247,7 @@ def create_document_router(
                     )
                     return
                 
-                # ── Deduplicatie Check ──
+                # ── Deduplicatie Check (Hash) ──
                 from backend.utils import bereken_hash
                 content_hash = bereken_hash(inhoud)
                 
@@ -262,6 +262,20 @@ def create_document_router(
                 if pii_rapport:
                     waarschuwingen.append(f"PII gemaskeerd: {pii_rapport}")
 
+                # ── Semantische Deduplicatie Check (Embeddings) ──
+                update_task(task_id, progress="Semantische duplicate check...")
+                vector = await genereer_embedding(geschoonde_tekst)
+                if vector:
+                    from backend.database import haal_alle_embeddings, bereken_cosine_similarity
+                    bestaande_embeddings = await haal_alle_embeddings(doc_type)
+                    for emb in bestaande_embeddings:
+                        if emb["naam"] != os.path.basename(map_pad):
+                            similarity = bereken_cosine_similarity(vector, emb["vector"])
+                            if similarity > 0.92:
+                                waarschuwingen.append(f"Let op: Dit document lijkt sterk op '{emb['naam']}'. Wil je doorgaan?")
+                                logger.info(f"Semantische deduplicatie: '{os.path.basename(map_pad)}' lijkt {int(similarity * 100)}% op '{emb['naam']}'")
+                                break # Één waarschuwing is genoeg
+
                 update_task(task_id, progress="Profiel genereren via LLM...")
                 resultaat = await profiel_agent_fn(geschoonde_tekst)
 
@@ -273,7 +287,6 @@ def create_document_router(
                     uuid_val = bestaande_uuid if bestaande_uuid else zorg_voor_uuid(map_pad)
 
                     # Save embedding (op geschoonde tekst — AVG-compliant)
-                    vector = await genereer_embedding(geschoonde_tekst)
                     if vector:
                         await bewaar_embedding(uuid_val, doc_type, naam, vector)
 
