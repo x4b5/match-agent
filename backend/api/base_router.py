@@ -227,84 +227,88 @@ def create_document_router(
         os.remove(pad)
         return {"message": "Verwijderd"}
 
-    async def _generate_profile_task(map_pad: str, task_id: str):
-        update_task(task_id, status="running")
-        try:
-            gecombineerde_tekst, waarschuwingen = extract_text_sync(map_pad)
-
-            schone_tekst = gecombineerde_tekst.strip()
-            inhoud = "\n".join(
-                l for l in schone_tekst.splitlines()
-                if not l.strip().startswith("--- Inhoud uit")
-            ).strip()
-
-            if len(inhoud) < MIN_TEKST_LENGTE:
-                update_task(
-                    task_id, status="failed",
-                    error=f"Te weinig tekst voor profielgeneratie ({len(inhoud)} karakters, minimaal {MIN_TEKST_LENGTE}). Upload meer documenten."
-                )
-                return
-            
-            # ── Deduplicatie Check ──
-            from backend.utils import bereken_hash
-            content_hash = bereken_hash(inhoud)
-            
-            from backend.database import haal_document_bij_hash
-            bestaand = await haal_document_bij_hash(content_hash, doc_type)
-            if bestaand and bestaand["naam"] != os.path.basename(map_pad):
-                logger.info(f"Deduplicatie: Document met deze inhoud bestaat al als '{bestaand['naam']}'")
-                waarschuwingen.append(f"Let op: Inhoud is identiek aan bestaand item '{bestaand['naam']}'.")
-
-            update_task(task_id, progress="PII scrubbing...")
-            geschoonde_tekst, pii_rapport = scrub_pii(gecombineerde_tekst)
-            if pii_rapport:
-                waarschuwingen.append(f"PII gemaskeerd: {pii_rapport}")
-
-            update_task(task_id, progress="Profiel genereren via LLM...")
-            resultaat = await profiel_agent_fn(geschoonde_tekst)
-
-            update_task(task_id, progress="Embedding en opslag...")
+    def _generate_profile_task(map_pad: str, task_id: str):
+        import asyncio
+        async def _run_async():
+            update_task(task_id, status="running")
             try:
-                naam = os.path.basename(map_pad)
-                from backend.database import haal_uuid_bij_naam
-                bestaande_uuid = await haal_uuid_bij_naam(naam, doc_type)
-                uuid_val = bestaande_uuid if bestaande_uuid else zorg_voor_uuid(map_pad)
+                gecombineerde_tekst, waarschuwingen = extract_text_sync(map_pad)
 
-                # Save embedding (op geschoonde tekst — AVG-compliant)
-                vector = await genereer_embedding(geschoonde_tekst)
-                if vector:
-                    await bewaar_embedding(uuid_val, doc_type, naam, vector)
+                schone_tekst = gecombineerde_tekst.strip()
+                inhoud = "\n".join(
+                    l for l in schone_tekst.splitlines()
+                    if not l.strip().startswith("--- Inhoud uit")
+                ).strip()
 
-                await bewaar_document(
-                    document_id=uuid_val,
-                    doc_type=doc_type,
-                    naam=naam,
-                    ruwe_tekst=geschoonde_tekst,
-                    profiel_dict=resultaat if isinstance(resultaat, dict) else None,
-                    waarschuwingen=waarschuwingen,
-                    content_hash=content_hash
-                )
+                if len(inhoud) < MIN_TEKST_LENGTE:
+                    update_task(
+                        task_id, status="failed",
+                        error=f"Te weinig tekst voor profielgeneratie ({len(inhoud)} karakters, minimaal {MIN_TEKST_LENGTE}). Upload meer documenten."
+                    )
+                    return
+                
+                # ── Deduplicatie Check ──
+                from backend.utils import bereken_hash
+                content_hash = bereken_hash(inhoud)
+                
+                from backend.database import haal_document_bij_hash
+                bestaand = await haal_document_bij_hash(content_hash, doc_type)
+                if bestaand and bestaand["naam"] != os.path.basename(map_pad):
+                    logger.info(f"Deduplicatie: Document met deze inhoud bestaat al als '{bestaand['naam']}'")
+                    waarschuwingen.append(f"Let op: Inhoud is identiek aan bestaand item '{bestaand['naam']}'.")
 
-                # Auto-shortlist bij nieuwe vacature
-                if auto_shortlist and vector and isinstance(resultaat, dict):
-                    from backend.database import haal_top_matches_vector
-                    shortlist = await haal_top_matches_vector(vector, limit=5)
-                    if shortlist:
-                        logger.info(f"📬 Auto-shortlist voor '{naam}': {len(shortlist)} matches (top: {shortlist[0]['percentage']}%)")
+                update_task(task_id, progress="PII scrubbing...")
+                geschoonde_tekst, pii_rapport = scrub_pii(gecombineerde_tekst)
+                if pii_rapport:
+                    waarschuwingen.append(f"PII gemaskeerd: {pii_rapport}")
+
+                update_task(task_id, progress="Profiel genereren via LLM...")
+                resultaat = await profiel_agent_fn(geschoonde_tekst)
+
+                update_task(task_id, progress="Embedding en opslag...")
+                try:
+                    naam = os.path.basename(map_pad)
+                    from backend.database import haal_uuid_bij_naam
+                    bestaande_uuid = await haal_uuid_bij_naam(naam, doc_type)
+                    uuid_val = bestaande_uuid if bestaande_uuid else zorg_voor_uuid(map_pad)
+
+                    # Save embedding (op geschoonde tekst — AVG-compliant)
+                    vector = await genereer_embedding(geschoonde_tekst)
+                    if vector:
+                        await bewaar_embedding(uuid_val, doc_type, naam, vector)
+
+                    await bewaar_document(
+                        document_id=uuid_val,
+                        doc_type=doc_type,
+                        naam=naam,
+                        ruwe_tekst=geschoonde_tekst,
+                        profiel_dict=resultaat if isinstance(resultaat, dict) else None,
+                        waarschuwingen=waarschuwingen,
+                        content_hash=content_hash
+                    )
+
+                    # Auto-shortlist bij nieuwe vacature
+                    if auto_shortlist and vector and isinstance(resultaat, dict):
+                        from backend.database import haal_top_matches_vector
+                        shortlist = await haal_top_matches_vector(vector, limit=5)
+                        if shortlist:
+                            logger.info(f"📬 Auto-shortlist voor '{naam}': {len(shortlist)} matches (top: {shortlist[0]['percentage']}%)")
+
+                except Exception as e:
+                    logger.error(f"Error saving data for {doc_type} {map_pad}: {e}")
+
+                if isinstance(resultaat, dict):
+                    if waarschuwingen:
+                        resultaat["_waarschuwingen"] = waarschuwingen
+                    opslaan_profiel(map_pad, resultaat)
+
+                update_task(task_id, status="done", progress="Klaar")
 
             except Exception as e:
-                logger.error(f"Error saving data for {doc_type} {map_pad}: {e}")
+                logger.error(f"Profile generation failed for {map_pad}: {e}")
+                update_task(task_id, status="failed", error=str(e))
 
-            if isinstance(resultaat, dict):
-                if waarschuwingen:
-                    resultaat["_waarschuwingen"] = waarschuwingen
-                opslaan_profiel(map_pad, resultaat)
-
-            update_task(task_id, status="done", progress="Klaar")
-
-        except Exception as e:
-            logger.error(f"Profile generation failed for {map_pad}: {e}")
-            update_task(task_id, status="failed", error=str(e))
+        asyncio.run(_run_async())
 
     @router.post("/{name}/generate-profile")
     async def generate_profile(name: str, background_tasks: BackgroundTasks):
