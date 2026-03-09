@@ -38,11 +38,13 @@ async def genereer_embedding(tekst: str) -> list[float]:
 
 async def profileer_kandidaat(tekst: str) -> dict:
     prompt = PROFIEL_KANDIDAAT_PROMPT.format(tekst=tekst)
-    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+    result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+    return result.model_dump() if hasattr(result, "model_dump") else result
 
 async def profileer_werkgeversvraag(tekst: str) -> dict:
     prompt = PROFIEL_WERKGEVERSVRAAG_PROMPT.format(tekst=tekst)
-    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
+    result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
+    return result.model_dump() if hasattr(result, "model_dump") else result
 
 async def verrijk_kandidaat_profiel(profiel_json: str, antwoorden_json: str, ruwe_tekst: str) -> dict:
     prompt = VERRIJK_KANDIDAAT_PROMPT.format(
@@ -50,7 +52,8 @@ async def verrijk_kandidaat_profiel(profiel_json: str, antwoorden_json: str, ruw
         antwoorden_json=antwoorden_json,
         ruwe_tekst=ruwe_tekst
     )
-    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+    result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+    return result.model_dump() if hasattr(result, "model_dump") else result
 
 async def verrijk_werkgeversvraag_profiel(profiel_json: str, antwoorden_json: str, ruwe_tekst: str) -> dict:
     prompt = VERRIJK_WERKGEVERSVRAAG_PROMPT.format(
@@ -58,7 +61,8 @@ async def verrijk_werkgeversvraag_profiel(profiel_json: str, antwoorden_json: st
         antwoorden_json=antwoorden_json,
         ruwe_tekst=ruwe_tekst
     )
-    return await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
+    result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1)
+    return result.model_dump() if hasattr(result, "model_dump") else result
 
 def _verkort_tekst(tekst: str, max_lengte: int) -> tuple[str, bool]:
     if len(tekst) <= max_lengte:
@@ -90,7 +94,7 @@ def _modus_params(modus: str | None) -> dict:
 async def _doe_kern_match(model: str, cv_tekst: str, vacature_tekst: str, params: dict) -> dict:
     """Stap 1: kern-match met 8 velden."""
     prompt = params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst)
-    return await get_provider().generate_json(
+    result = await get_provider().generate_json(
         model=model,
         prompt=prompt,
         schema=KernMatchResult,
@@ -99,6 +103,7 @@ async def _doe_kern_match(model: str, cv_tekst: str, vacature_tekst: str, params
         num_ctx=params["num_ctx"],
         think=params["think"]
     )
+    return result.model_dump() if hasattr(result, "model_dump") else result
 
 async def _doe_verdieping(model: str, kern_result: dict, cv_tekst: str, vacature_tekst: str, params: dict) -> dict:
     """Stap 2: verdieping met kern-resultaat als context."""
@@ -108,7 +113,7 @@ async def _doe_verdieping(model: str, kern_result: dict, cv_tekst: str, vacature
         cv_tekst=cv_tekst,
         vacature_tekst=vacature_tekst
     )
-    return await get_provider().generate_json(
+    result = await get_provider().generate_json(
         model=model,
         prompt=prompt,
         schema=VerdiepingMatchResult,
@@ -117,6 +122,7 @@ async def _doe_verdieping(model: str, kern_result: dict, cv_tekst: str, vacature
         num_ctx=params["num_ctx"],
         think=params["think"]
     )
+    return result.model_dump() if hasattr(result, "model_dump") else result
 
 
 async def match_kandidaat(cv_tekst: str, vacature_tekst: str, modus: str | None = None) -> dict:

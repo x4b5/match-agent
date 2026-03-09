@@ -32,26 +32,26 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:27b")
 PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:8b")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
-SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert die kandidaten en werkgeversvragen verbindt.
-Je focus ligt sterk op potentieel, persoonlijke eigenschappen, karakter en drijfveren, in plaats van een rigide check op diploma's of exacte werkervaring.
-Je doel is om verrassende, inspirerende matches te maken: kandidaten tippen voor rollen die ze zelf misschien niet hadden overwogen, en werkgevers wijzen op talent dat ze normaal over het hoofd zouden zien.
-Wees creatief, objectief en eerlijk in het toekennen van het matchpercentage, waarbij cultuur- en persoonlijkheidsfit zwaar wegen.
-BELANGRIJK: Gebruik GEEN DISC-terminologie (Dominantie, Invloed, Stabiliteit, Conformisme) of kleuren-modellen; dit is niet wetenschappelijk onderbouwd. Focus op concrete talenten en kwaliteiten.
+SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert. Jij verbindt kandidaten met werkgevers.
+Kijk vooral naar wat iemand kan (potentieel), wie iemand is (karakter), en wat iemand wil (drijfveren). Kijk minder streng naar diploma's of de precieze werkervaring.
+Je doel is om verrassende en inspirerende matches te maken. Wijs kandidaten op banen nadat ze daar zelf misschien niet aan hadden gedacht. Wijs werkgevers op talent dat ze normaal over het hoofd zouden zien.
+Wees eerlijk en objectief in je oordeel over de match. De manier waarop iemand in het team past (cultuurfit) en de persoonlijkheid tellen daarbij zwaar mee.
+BELANGRIJK: Gebruik GEEN DISC-termen (zoals Dominantie of Invloed) en geen kleurenmodellen. Benoem gewoon in heldere taal de concrete talenten en kwaliteiten.
 
 BEOORDELING DOSSIERCOMPLEETHEID: 
-Geef bij elke match een score voor dossiercompleetheid:
-- HOOG: Er is voldoende detail over zowel de kandidaat als de vacature om een gefundeerde match te maken op persoonlijkheid en potentieel.
-- GEMIDDELD: Er zijn enkele aannames nodig of bepaalde nuances ontbreken.
-- LAAG: Essentiële informatie over karakter, drijfveren of specifieke werkstijl ontbreekt. Benoem in dit geval concrete 'vervolgvragen' die gesteld moeten worden om het dossier completer te maken.
+Geef bij elke match aan hoe compleet de informatie is:
+- HOOG: Er is genoeg informatie over de kandidaat en de vacature om een goede inschatting te maken van de match.
+- GEMIDDELD: Er missen kleine details, waardoor we een klein beetje moeten gissen.
+- LAAG: Belangrijke informatie ontbreekt (bijvoorbeeld over iemands karakter of de sfeer op de werkvloer). Bedenk in dat geval goede 'vervolgvragen' die we nog moeten stellen om meer helderheid te krijgen.
 
-JSON-INTEGRITEIT:
-Je output moet ALTIJD een volledig, valide en niet-geaborteerd JSON-object zijn dat exact voldoet aan het gevraagde schema. Sla GEEN velden over. Een onvolledig JSON-object is onbruikbaar.
+BELANGRIJK VOOR HET SYSTEEM:
+Je antwoord moet ALTIJD uitsluitend een kloppend JSON-object zijn. Gebruik precies de indeling die wordt gevraagd. Laat geen velden weg. Anders kan het systeem het niet verwerken.
 """
 
 # --- Gesplitste Match-prompts ---
 # Kern-prompt: 8 velden — betrouwbaar op elk quantisatieniveau
-KERN_MATCH_PROMPT = """Analyseer de match tussen dit kandidaatprofiel en deze werkgeversvraag.
-Focus op persoonlijkheid, potentieel en karakter — niet op exacte diploma's of functietitels.
+KERN_MATCH_PROMPT = """Bekijk hoe goed deze kandidaat en de werkgeversvraag bij elkaar passen.
+Let vooral op persoonlijkheid, potentieel en karakter. Bekijk de match minder op diploma's en de precieze functietitels.
 
 KANDIDAATPROFIEL:
 {cv_tekst}
@@ -59,20 +59,20 @@ KANDIDAATPROFIEL:
 WERKGEVERSVRAAGPROFIEL:
 {vacature_tekst}
 
-Antwoord in exact dit JSON-format (geen andere tekst, alleen JSON):
+Geef je antwoord in exact de volgende JSON-opmaak (schrijf geen extra test eromheen, alleen de JSON):
 {{
-  "match_percentage": <getal van 0 tot 100 — weeg persoonlijkheid en potentieel het zwaarst>,
-  "matchende_punten": ["max 3 concrete, specifieke punten waarop kandidaat en vraag matchen"],
-  "ontbrekende_punten": ["max 3 concrete punten die ontbreken of een risico vormen"],
-  "verrassings_element": "Wat maakt deze match onverwacht interessant? Eén concrete observatie.",
-  "onderbouwing": "Waarom past deze persoon qua karakter en drijfveren? 2-3 zinnen.",
-  "cultuur_fit": "Past deze persoon bij de bedrijfscultuur en het team? Waarom wel/niet?",
+  "match_percentage": <getal van 0 tot 100 — laat persoonlijkheid en talent hierin het zwaarst meewegen>,
+  "matchende_punten": ["maximaal 3 hele duidelijke punten waarop de kandidaat en vacature goed samengaan"],
+  "ontbrekende_punten": ["maximaal 3 punten die we eigenlijk missen of die een drempel/risico vormen"],
+  "verrassings_element": "Wat maakt deze combinatie slim of onverwacht? Noem één leuk of pakkend punt.",
+  "onderbouwing": "Leg in 2 of 3 zinnen uit waarom de drijfveren en karakters van beide partijen klikken.",
+  "cultuur_fit": "Zal deze persoon passen bij de sfeer in dit bedrijf/team? Waarom wel of niet?",
   "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
-  "vervolgvragen": ["max 3 kritieke vragen om de match beter te beoordelen"]
+  "vervolgvragen": ["maximaal 3 belangrijke vragen di we nog moeten stellen om zekerder te zijn van deze match"]
 }}"""
 
 # Verdieping-prompt: ontvangt kern-resultaat als context, genereert extra inzichten
-VERDIEPING_MATCH_PROMPT = """Je hebt zojuist een kern-analyse gemaakt van een match. Verdiep deze nu met extra inzichten.
+VERDIEPING_MATCH_PROMPT = """Je hebt onlangs een eerste scan gemaakt van een match. Voeg hier nu nog meer diepgang en inzichten aan toe.
 
 KERN-ANALYSE:
 {kern_json}
@@ -83,17 +83,17 @@ KANDIDAATPROFIEL:
 WERKGEVERSVRAAGPROFIEL:
 {vacature_tekst}
 
-Genereer de verdieping in exact dit JSON-format (geen andere tekst, alleen JSON):
+Geef je uitgebreide analyse in exact deze JSON-opmaak (alleen de JSON-code overnemen):
 {{
-  "overbruggings_advies": ["Per ontbrekend punt: concreet advies hoe te overbruggen (cursus, training, begeleiding)"],
-  "gespreksstarters": ["3 concrete interviewvragen die de recruiter kan stellen om deze match te verkennen"],
-  "risico_mitigatie": "Hoe kunnen de risico's worden beperkt? Welke begeleiding is nodig?",
-  "gedeelde_waarden": ["Welke waarden delen kandidaat en werkgever?"],
-  "groeipotentieel": "Waar kan deze kandidaat groeien bij deze werkgever?",
-  "boodschap_aan_kandidaat": "Korte, motiverende boodschap gericht aan de kandidaat: waarom is deze rol iets voor jou?",
-  "match_narratief": "Een inspirerend verhaal van 3-4 zinnen dat deze match tot leven brengt.",
+  "overbruggings_advies": ["Geef voor élk ontbrekend punt een advies. Hoe vangen we dit op? (bijvoorbeeld met een cursus of meer begeleiding)"],
+  "gespreksstarters": ["3 goede interviewvragen die de recruiter kan gebruiken in het eerste gesprek"],
+  "risico_mitigatie": "Hoe houden we de risico's zo klein mogelijk? Wat voor soort inwerken/begeleiding is daarvoor handig?",
+  "gedeelde_waarden": ["Welke normen en waarden vinden zowel het bedrijf als deze persoon belangrijk?"],
+  "groeipotentieel": "Hoe en in welke richting zou deze persoon binnen dit bedrijf kunnen doorgroeien?",
+  "boodschap_aan_kandidaat": "Een kort en aanmoedigend berichtje aan de kandidaat: waarom past deze vacature nou zó goed bij jou?",
+  "match_narratief": "Een inspirerend en kort verhaaltje (3-4 zinnen) dat laat zien waarom deze combinatie een gouden zet kan zijn.",
   "personality_axes": {{
-    "Analytisch": "Kwalitatieve beschrijving mét citaat als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.",
+    "Analytisch": "Korte uitleg en geef een duidelijk voorbeeld uit de tekst. Niet zeker? Zeg dan: 'Niet af te leiden te maken uit het profiel'.",
     "Sociaal": "idem",
     "Creatief": "idem",
     "Gestructureerd": "idem",
@@ -112,132 +112,112 @@ Genereer de verdieping in exact dit JSON-format (geen andere tekst, alleen JSON)
 MATCH_PROMPT = KERN_MATCH_PROMPT
 
 # --- Prompts voor Profiel-extractie ---
-PROFIEL_KANDIDAAT_PROMPT = """Extraheer een gestructureerd profiel uit deze kandidaattekst.
-Zet de ruwe tekst om in exact dit JSON-format (geen andere tekst, alleen JSON).
+PROFIEL_KANDIDAAT_PROMPT = """Maak een overzichtelijk profiel van deze persoon op basis van de tekst.
+Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tekst eromheen).
 
-Belangrijke instructies:
-- Focus nadrukkelijk op wie de persoon IS, niet alleen wat ze GEDAAN hebben.
-- Leid impliciete kwaliteiten af uit de werkgeschiedenis (bijv. horeca -> stressbestendig).
-- KRITISCH: Blijf bij de feiten. Als informatie NIET in de tekst staat, vul dan "Niet genoemd" in of laat de lijst leeg. Hallucineer GEEN karaktereigenschappen of hobby's die niet logisch herleidbaar zijn.
-- UITZONDERING: Het veld "verrassende_functies" is WEL creatief en speculatief bedoeld. Hier mag je wél buiten de tekst denken. Leid af uit persoonlijkheid, kwaliteiten en werkstijl welke functies/rollen verrassend goed zouden passen — ook als de kandidaat daar niet de opleiding of ervaring voor heeft. Vul dit veld ALTIJD met minimaal 3 suggesties.
-- BEOORDELING DOSSIERCOMPLEETHEID: Wees EXTREEM streng!
-    - 0-20: Zeer weinig info (alleen naam/snipet).
-    - 20-40: Alleen korte intake-notities of 1-2 korte alinea's. Zonder CV is de score ALTIJD < 40%.
-    - 40-70: Goed CV met werkervaring, maar weinig inzicht in drijfveren/karakter.
-    - 70-90: Compleet dossier (CV + intake) met duidelijke persoonlijkheid en ambities.
-    - 90-100: Zeer rijk dossier met expliciete details en eventuele Q&A verrijking.
+Belangrijke aanwijzingen:
+- Focus vooral op wie deze persoon IS, niet alleen op wat ze hebben gedaan.
+- Kijk ook naar kwaliteiten die niet letterlijk worden genoemd, maar die je wel kunt afleiden (bijvoorbeeld: iemand die jarenlang in de horeca werkt, is waarschijnlijk stressbestendig).
+- BELANGRIJK: Blijf bij de feiten. Als iets niet in de tekst staat, vul dan "Niet genoemd" in of laat het lijstje leeg. Verzin geen eigenschappen of hobby's die je niet kunt bewijzen.
+- UITZONDERING: Bij het veld "verrassende_functies" mag je wél creatief zijn. Bedenk op basis van iemands karakter welke banen goed zouden passen, ook al heeft diegene daar niet de juiste papieren voor. Noem altijd minstens 3 suggesties.
+- BEOORDELING DOSSIERCOMPLEETHEID: Wees heel streng!
+    - 0-20: Bijna geen info (alleen een naam of een kort zinnetje).
+    - 20-40: Alleen korte aantekeningen of een paar regels tekst. Zonder echt CV is de score altijd lager dan 40%.
+    - 40-70: Er is een goed CV met werkervaring, maar we weten nog weinig over iemands karakter of wat diegene echt drijft.
+    - 70-90: Het dossier is compleet (CV + verslag van een gesprek). We hebben een goed beeld van de persoon en de ambities.
+    - 90-100: Een zeer uitgebreid dossier met veel details en extra antwoorden op vragen.
 
 {{
-    "naam": "Naam Kandidaat",
-    "kernrol": "Primaire huidige rol of overkoepelend profiel",
-    "persoonlijkheid": ["lijst", "van", "karaktereigenschappen en persoonskenmerken"],
-    "kwaliteiten": ["lijst", "van", "sterke punten en talenten"],
-    "impliciete_kwaliteiten": ["lijst", "van", "verborgen kwaliteiten afgeleid uit werkervaring of hobby's — dingen die niet letterlijk genoemd worden maar wel logisch zijn"],
-    "drijfveren": ["lijst", "van", "wat deze persoon motiveert of zoekt"],
-    "onderliggende_motivatie": "Wat drijft deze persoon in de kern? (bijv. zekerheid, mensen helpen, creatieve vrijheid, erkenning, groei)",
-    "ideale_werkdag": "Beschrijf in 2-3 zinnen hoe een ideale werkdag eruitziet voor deze persoon",
-    "werkstijl": "Hoe de persoon te werk gaat (bijv. zelfstandig, teamplayer, hands-on)",
-    "ambities_en_leerdoelen": ["lijst", "van", "wat de persoon wil bereiken of nog wil leren"],
-    "gewenste_bedrijfscultuur": "In wat voor soort omgeving de persoon goed gedijt",
-    "hobby_en_interesses": ["lijst", "van", "relevante bezigheden die karakter tonen"],
-    "hard_skills": ["lijst", "van", "relevante hard skills"],
-    "soft_skills": ["lijst", "van", "soft skills"],
-    "beschikbaarheid_en_locatie": "Praktische zaken (indien genoemd in tekst)",
-    "opleiding_en_ervaring_samenvatting": "Korte samenvatting van achtergrond (niet leidend voor match)",
-    "verrassende_functies": ["3-5 concrete functies/rollen waar deze persoon qua persoonlijkheid en talent goed bij zou passen, maar waar hij/zij zelf misschien niet aan denkt. Bijv. een beveiliger met empathie → zorgcoördinator, een barista met organisatietalent → eventmanager. Denk creatief!"],
-    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
-    "aandachtspunten": ["lijst van punten die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden"],
-    "vervolgvragen": ["max 5 CONCRETE VRAGEN AAN DE KANDIDAAT over essentiële info die mist (bijv. drijfveren, werkstijl, beperkingen)"]
+    "naam": "Naam van de persoon",
+    "kernrol": "Wat is iemands huidige baan of het belangrijkste profiel?",
+    "persoonlijkheid": ["Lijstje met karaktereigenschappen"],
+    "kwaliteiten": ["Lijstje met sterke punten en talenten"],
+    "impliciete_kwaliteiten": ["Lijstje met verborgen talenten die je kunt afleiden uit ervaring of hobby's"],
+    "drijfveren": ["Lijstje met wat deze persoon belangrijk vindt in werk"],
+    "onderliggende_motivatie": "Wat drijft deze persoon in de kern? (Denk aan: zekerheid, anderen helpen, vrijheid, groei, enz.)",
+    "ideale_werkdag": "Beschrijf in 2 of 3 zinnen hoe een perfecte dag op het werk eruitziet voor deze persoon.",
+    "werkstijl": "Hoe gaat deze persoon te werk? (Bijvoorbeeld: werkt graag alleen, is een echte teamplayer, of stroopt graag de mouwen op.)",
+    "ambities_en_leerdoelen": ["Lijstje van wat de persoon nog wil bereiken of leren"],
+    "gewenste_bedrijfscultuur": "In wat voor soort werkomgeving voelt deze persoon zich het prettigst?",
+    "hobby_en_interesses": ["Lijstje van relevante hobby's die iets zeggen over iemands karakter"],
+    "hard_skills": ["Lijstje met technische vaardigheden en diploma's"],
+    "soft_skills": ["Lijstje met sociale en persoonlijke vaardigheden"],
+    "beschikbaarheid_en_locatie": "Praktische zaken zoals woonplaats of uren (indien genoemd)",
+    "opleiding_en_ervaring_samenvatting": "Korte samenvatting van de achtergrond",
+    "verrassende_functies": ["3 tot 5 banen die goed passen bij iemands karakter en talent, maar waar de persoon zelf misschien niet direct aan denkt. Wees creatief!"],
+    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier om een goede match te maken?>,
+    "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten of die een risico kunnen zijn"],
+    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE KANDIDAAT over belangrijke informatie die nog ontbreekt (bijvoorbeeld over werkstijl of wat iemand écht motiveert)"],
+    "cultuur_vragen": ["3 PRIKKELENDE, verhalende vragen over cultuur en persoonlijkheid. Denk aan: 'Wat is de laatste keer dat je een regel brak om iets voor elkaar te krijgen?' of 'Wanneer was je voor het laatst echt trots op een fout?'. Wees creatief en diepgaand!"]
 }}
 
-BELANGRIJK: Zorg dat het veld "dossier_compleetheid" ALTIJD aanwezig is en een getal bevat. Stop pas nadat het JSON-object volledig is afgesloten met }}.
+BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop direct nadat je het JSON-object hebt afgesloten met }}.
 
 KANDIDAATTEKST:
 {tekst}"""
 
-PROFIEL_WERKGEVERSVRAAG_PROMPT = """Extraheer een gestructureerd profiel uit deze werkgeversvraag.
-Zet de ruwe tekst om in exact dit JSON-format (geen andere tekst, alleen JSON).
+PROFIEL_WERKGEVERSVRAAG_PROMPT = """Maak een overzichtelijk profiel van deze werkgeversvraag of vacature.
+Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tekst eromheen).
 
-Belangrijke instructies:
-- Focus niet alleen op de harde eisen, maar vooral op het TYPE PERSOON dat gezocht wordt.
-- Schets een ideale kandidaat-persona: hoe ziet de perfecte persoon eruit qua karakter en houding?
-- KRITISCH: Blijf bij de feiten uit de vacaturetekst. Als informatie NIET in de tekst staat, vul dan "Niet genoemd" in. Hallucineer GEEN bedrijfscultuur die niet beschreven is.
-- BEOORDELING DOSSIERCOMPLEETHEID: Wees EXTREEM streng!
-    - 0-20: Zeer summiere vacature (bijv. alleen functietitel en locatie).
-    - 20-40: Alleen korte notities of 1-2 korte alinea's. Zonder volledige vacaturetekst is de score ALTIJD < 40%.
-    - 40-70: Harde eisen zijn duidelijk, maar cultuur, persona en groeimogelijkheden ontbreken.
-    - 70-90: Goede vacaturetekst met info over taken, team en type persoon.
-    - 90-100: Zeer gedetailleerde omschrijving inclusief visie, succesfactoren en inwerktraject.
+Belangrijke aanwijzingen:
+- Focus niet alleen op de harde eisen, maar vooral op het TYPE PERSOON dat wordt gezocht.
+- Probeer een beeld te schetsen van de ideale kandidaat: hoe ziet de perfecte persoon eruit qua karakter en houding?
+- BELANGRIJK: Blijf bij de feiten uit de tekst. Als iets niet in de tekst staat, vul dan "Niet genoemd" in. Ga geen bedrijfscultuur verzinnen die niet in de tekst staat.
+- BEOORDELING DOSSIERCOMPLEETHEID: Wees heel streng!
+    - 0-20: Zeer korte tekst (bijvoorbeeld alleen de naam van de baan en de plaats).
+    - 20-40: Alleen korte aantekeningen of een paar zinnetjes. Zonder volledige tekst is de score altijd lager dan 40%.
+    - 40-70: De eisen zijn duidelijk, maar we weten nog niks over de sfeer, het team of de doorgroeimogelijkheden.
+    - 70-90: Een goede tekst met informatie over de taken, het team en het type persoon dat gezocht wordt.
+    - 90-100: Een zeer uitgebreid verhaal met details over de visie van het bedrijf en hoe iemand wordt ingewerkt.
 
 {{
-    "titel": "Functietitel",
-    "organisatie": "Naam Organisatie",
-    "organisatiewaarden": ["lijst", "van", "kernwaarden van het bedrijf/team"],
-    "gezochte_persoonlijkheid": ["lijst", "van", "gewenste karaktereigenschappen"],
-    "benodigde_kwaliteiten": ["lijst", "van", "belangrijkste talenten/kwaliteiten voor succes"],
-    "ideale_kandidaat_persona": "Schets in 2-3 zinnen het type mens dat hier would floreren — niet qua CV maar qua karakter en houding",
-    "verborgen_behoeften": ["lijst", "van", "belangrijke zaken die niet expliciet in de vacature staan maar wel cruciaal zijn voor succes"],
-    "team_en_cultuur": "Korte omschrijving van werkomgeving, cultuur en sfeer",
-    "ontwikkel_en_doorgroeimogelijkheden": "Wat het bedrijf te bieden heeft aan potentieel (bijv. opleiding/training)",
-    "begeleiding_en_inwerkperiode": "Hoe nieuwe collega's worden opgevangen (vooral als ze uit een andere sector komen)",
-    "must_have_skills": ["lijst", "van", "echt onmisbare skills"],
-    "nice_to_have_skills": ["lijst", "van", "mooi meegenomen, maar trainbare skills"],
-    "taken": ["lijst", "van", "de belangrijkste taken en verantwoordelijkheden van de rol"],
-    "werktijden_en_omstandigheden": "Praktische zaken t.a.v. werktijden of fysieke omstandigheden",
-    "belangrijkste_taak": "Wat deze persoon vooral gaat doen",
-    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier voor een goede match?>,
-    "aandachtspunten": ["lijst van zaken die extra aandacht verdienen of waar een kanttekening bij geplaatst kan worden (reizen, ploegendienst, fysiek zwaar, etc.)"],
-    "vervolgvragen": ["max 5 CONCRETE VRAGEN AAN DE WERKGEVER/RECRUITER over ontbrekende details van de rol of teamcultuur"]
+    "titel": "Naam van de baan",
+    "organisatie": "Naam van het bedrijf",
+    "organisatiewaarden": ["Lijstje van belangrijkste waarden van het bedrijf/team"],
+    "gezochte_persoonlijkheid": ["Lijstje van gewenste karaktereigenschappen"],
+    "benodigde_kwaliteiten": ["Lijstje van belangrijkste talenten om succesvol te zijn in deze baan"],
+    "ideale_kandidaat_persona": "Beschrijf in 2 of 3 zinnen het type persoon dat hier echt gelukkig zou worden — niet op basis van het CV, maar qua karakter and instelling.",
+    "verborgen_behoeften": ["Lijstje van belangrijke zaken die niet letterlijk in de tekst staan, maar die wel cruciaal zijn voor succes"],
+    "team_en_cultuur": "Korte beschrijving van de werkomgeving, de sfeer and het team",
+    "ontwikkel_en_doorgroeimogelijkheden": "Wat biedt het bedrijf aan groei? (Bijvoorbeeld trainingen of cursussen)",
+    "begeleiding_en_inwerkperiode": "Hoe wordt iemand opgevangen and ingewerkt? (Zeker belangrijk voor mensen uit een andere sector)",
+    "must_have_skills": ["Lijstje van vaardigheden die echt onmisbaar zijn"],
+    "nice_to_have_skills": ["Lijstje van vaardigheden die mooi meegenomen zijn, maar die je ook nog kunt leren"],
+    "taken": ["Lijstje van de belangrijkste taken and verantwoordelijkheden"],
+    "werktijden_en_omstandigheden": "Praktische zaken over uren, tijden of de werkplek",
+    "belangrijkste_taak": "Wat is de allerbelangrijkste taak in deze baan?",
+    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is de informatie om een goede match te maken?>,
+    "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten (bijvoorbeeld reistijd, ploegendienst of fysiek zwaar werk)"],
+    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE WERKGEVER over belangrijke details die nog ontbreken over de baan of het team"]
 }}
 
-BELANGRIJK: Zorg dat het veld "dossier_compleetheid" ALTIJD aanwezig is en een getal bevat. Stop pas nadat het JSON-object volledig is afgesloten met }}.
+BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop direct nadat je het JSON-object hebt afgesloten met }}.
 
 WERKGEVERSVRAAG:
 {tekst}"""
 
-EVALUEER_PROFIEL_PROMPT = """Evalueer het volgende geëxtraheerde {type_profiel} op volledigheid en kwaliteit.
-Formuleer maximaal 5 concrete vervolgvragen over essentiële informatie die mist om een goede match te kunnen maken.
-Elke vraag moet direct te beantwoorden zijn door de gebruiker.
-Zet je analyse om in exact dit JSON-format (geen andere tekst, alleen JSON).
+EVALUEER_PROFIEL_PROMPT = """Beoordeel hoe compleet en goed het volgende profiel is ({type_profiel}).
+Bedenk maximaal 5 duidelijke vragen die we nog aan de gebruiker kunnen stellen. Zo krijgen we de informatie die we nog missen om een echt goede match te maken.
+Zorg dat de vragen makkelijk te beantwoorden zijn.
+Geef je antwoord in precies deze JSON-opmaak (geen extra tekst eromheen).
 
 {{
-    "volledigheid_score": <getal van 0 tot 100, waarbij 100 perfect en compleet is>,
-    "vervolgvragen": ["Concrete vraag 1 over missende info", "Vraag 2", "...(max 5)"]
+    "volledigheid_score": <getal van 0 tot 100, waarbij 100 betekent dat alles erin staat>,
+    "vervolgvragen": ["Duidelijke vraag 1 over wat er ontbreekt", "Vraag 2", "...(maximaal 5 vragen)"]
 }}
 
 PROFIEL:
 {profiel_json}"""
 
-VERRIJK_KANDIDAAT_PROMPT = """Je hebt eerder een profiel gemaakt van een kandidaat. Nu heb je aanvullende informatie gekregen via een Q&A sessie.
-Combineer het BESTAANDE PROFIEL met de NIEUWE ANTWOORDEN om een VERBETERD, RIJKER profiel te maken.
+VERRIJK_KANDIDAAT_PROMPT = """Je hebt al een profiel van een kandidaat gemaakt. Nu heb je nieuwe informatie gekregen via extra vragen.
+Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter profiel.
 
-Instructies:
-- Integreer de nieuwe informatie naadloos in het profiel — niet als apart blokje, maar verweven.
-- Update de dossiercompleetheid omhoog als de antwoorden cruciale gaten vullen.
-- Voeg nieuwe inzichten toe aan persoonlijkheid, drijfveren, impliciete kwaliteiten etc.
-- Genereer NIEUWE vervolgvragen (AAN DE KANDIDAAT) als er NOG steeds belangrijke gaten zijn (max 5).
-- Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
-
-BESTAAND PROFIEL:
-{profiel_json}
-
-NIEUWE ANTWOORDEN (vraag → antwoord):
-{antwoorden_json}
-
-ORIGINELE TEKST (ter referentie):
-{ruwe_tekst}
-
-Genereer het VOLLEDIGE bijgewerkte profiel in hetzelfde JSON-format als het origineel."""
-
-VERRIJK_WERKGEVERSVRAAG_PROMPT = """Je hebt eerder een werkgeversvraag-profiel gemaakt. Nu heb je aanvullende informatie gekregen via een Q&A sessie.
-Combineer het BESTAANDE PROFIEL met de NIEUWE ANTWOORDEN om een VERBETERD, RIJKER profiel te maken.
-
-Instructies:
-- Integreer de nieuwe informatie naadloos — niet als apart blokje, maar verweven.
-- Update de dossiercompleetheid omhoog als de antwoorden cruciale gaten vullen.
-- Voeg nieuwe inzichten toe aan gezochte persoonlijkheid, verborgen behoeften, etc.
-- Genereer NIEUWE vervolgvragen (AAN DE WERKGEVER/RECRUITER) als er NOG steeds belangrijke gaten zijn (max 5).
-- Als het profiel nu compleet genoeg is, mag de lijst vervolgvragen leeg zijn.
+Aanwijzingen:
+- Verwerk de nieuwe informatie soepel in het hele profiel. Maak er geen los stukje van onderaan, maar weef het erdoorheen.
+- Verhoog de score voor de dossiercompleetheid als de antwoorden belangrijke gaten vullen.
+- Voeg nieuwe inzichten toe over iemands karakter, talenten en drijfveren.
+- Bedenk nieuwe vervolgvragen voor de kandidaat als er nog steeds belangrijke zaken ontbreken (maximaal 5).
+- Als het profiel nu helemaal compleet is, mag het lijstje met vervolgvragen leeg blijven.
 
 BESTAAND PROFIEL:
 {profiel_json}
@@ -245,10 +225,31 @@ BESTAAND PROFIEL:
 NIEUWE ANTWOORDEN (vraag → antwoord):
 {antwoorden_json}
 
-ORIGINELE TEKST (ter referentie):
+OORSPRONKELIJKE TEKST (voor de zekerheid):
 {ruwe_tekst}
 
-Genereer het VOLLEDIGE bijgewerkte profiel in hetzelfde JSON-format als het origineel."""
+Maak het volledige bijgewerkte profiel in precies dezelfde JSON-opmaak als het eerste profiel."""
+
+VERRIJK_WERKGEVERSVRAAG_PROMPT = """Je hebt al een profiel gemaakt van een werkgeversvraag. Nu heb je nieuwe informatie gekregen via extra vragen.
+Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter profiel.
+
+Aanwijzingen:
+- Verwerk de nieuwe informatie soepel in het hele verhaal. Maak er geen los blokje van, maar weef het erdoorheen.
+- Verhoog de score voor de dossiercompleetheid als de antwoorden belangrijke gaten vullen.
+- Voeg nieuwe inzichten toe over het gezochte karakter, de werksfeer en behoeften.
+- Bedenk nieuwe vervolgvragen voor de werkgever als er nog steeds belangrijke zaken ontbreken (maximaal 5).
+- Als het profiel nu helemaal compleet is, mag het lijstje met vervolgvragen leeg blijven.
+
+BESTAAND PROFIEL:
+{profiel_json}
+
+NIEUWE ANTWOORDEN (vraag → antwoord):
+{antwoorden_json}
+
+OORSPRONKELIJKE TEKST (voor de zekerheid):
+{ruwe_tekst}
+
+Maak het volledige bijgewerkte profiel in precies dezelfde JSON-opmaak als het eerste profiel."""
 
 
 # --- Match-modi ---

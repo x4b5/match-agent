@@ -1,7 +1,9 @@
+import typing
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 from pydantic import BaseModel
 
+T = typing.TypeVar("T", bound=BaseModel)
 
 class LLMProvider(ABC):
     """Abstracte basis voor LLM-providers (Ollama, OpenAI, etc.)."""
@@ -11,20 +13,20 @@ class LLMProvider(ABC):
         self,
         model: str,
         prompt: str,
-        schema: type[BaseModel] | None = None,
+        schema: type[T] | None = None,
         temperature: float = 0.1,
         num_predict: int = 2048,
         num_ctx: int = 8192,
         think: bool = False,
         max_retries: int = 2,
-    ) -> dict: ...
+    ) -> T | dict: ...
 
     @abstractmethod
     async def generate_json_stream(
         self,
         model: str,
         prompt: str,
-        schema: type[BaseModel] | None = None,
+        schema: type[T] | None = None,
         temperature: float = 0.1,
         num_predict: int = 2048,
         num_ctx: int = 8192,

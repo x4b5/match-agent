@@ -2,6 +2,7 @@
   import type { PageData } from "./$types";
   import { toasts } from "$lib/toast";
   import { onDestroy } from "svelte";
+  import DossierCompleetheidEnrichment from "$lib/components/DossierCompleetheidEnrichment.svelte";
   let { data } = $props<{ data: PageData }>();
 
   let selectedCandidate = $state(data.candidates?.[0]?.naam || "");
@@ -43,7 +44,12 @@
   };
 
   // Alle mogelijke fasen in volgorde
-  const ALL_PHASES = ["profielen_geladen", "kern_analyse", "verdieping", "resultaat"];
+  const ALL_PHASES = [
+    "profielen_geladen",
+    "kern_analyse",
+    "verdieping",
+    "resultaat",
+  ];
 
   let activePhases = $derived(
     expectedStappen.includes("verdieping")
@@ -136,7 +142,8 @@
     currentStep = 1;
     showRawOutput = false;
     currentPhase = "profielen_geladen";
-    expectedStappen = selectedMode === "quick_scan" ? ["kern"] : ["kern", "verdieping"];
+    expectedStappen =
+      selectedMode === "quick_scan" ? ["kern"] : ["kern", "verdieping"];
 
     abortController = new AbortController();
     startTimer();
@@ -342,7 +349,11 @@
         >
           <option value="">Selecteer vacature...</option>
           {#each data.employers as e}
-            <option value={e.naam}>{e.naam}{e.profile_score != null ? ` (Score: ${e.profile_score}%)` : ''}</option>
+            <option value={e.naam}
+              >{e.naam}{e.profile_score != null
+                ? ` (Score: ${e.profile_score}%)`
+                : ""}</option
+            >
           {/each}
         </select>
       </div>
@@ -359,7 +370,9 @@
             <option value="">Selecteer kandidaat...</option>
             {#each data.candidates as c}
               <option value={c.naam}
-                >{c.naam}{c.profile_score != null ? ` (Score: ${c.profile_score}%)` : ''}</option
+                >{c.naam}{c.profile_score != null
+                  ? ` (Score: ${c.profile_score}%)`
+                  : ""}</option
               >
             {/each}
           </select>
@@ -415,7 +428,11 @@
                 />
                 <span class="cand-details">
                   <span class="cand-name">{c.naam}</span>
-                  <span class="cand-score">{c.profile_score != null ? `${c.profile_score}%` : '—'}</span>
+                  <span class="cand-score"
+                    >{c.profile_score != null
+                      ? `${c.profile_score}%`
+                      : "—"}</span
+                  >
                 </span>
               </label>
             {/each}
@@ -475,8 +492,10 @@
           {#each activePhases as phase, idx}
             {@const phaseIdx = activePhases.indexOf(phase)}
             {@const currentIdx = activePhases.indexOf(currentPhase)}
-            {@const isDone = currentIdx > phaseIdx || currentPhase === "resultaat"}
-            {@const isActive = phase === currentPhase && currentPhase !== "resultaat"}
+            {@const isDone =
+              currentIdx > phaseIdx || currentPhase === "resultaat"}
+            {@const isActive =
+              phase === currentPhase && currentPhase !== "resultaat"}
             <div
               class="phase-step"
               class:phase-done={isDone}
@@ -492,7 +511,10 @@
               <span class="phase-label">{PHASE_LABELS[phase] || phase}</span>
             </div>
             {#if idx < activePhases.length - 1}
-              <div class="phase-connector" class:phase-connector-done={isDone}></div>
+              <div
+                class="phase-connector"
+                class:phase-connector-done={isDone}
+              ></div>
             {/if}
           {/each}
         </div>
@@ -500,7 +522,10 @@
         <!-- Stop knop -->
         {#if isMatching}
           <button class="btn-stop" onclick={stopMatch}>
-            <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">stop</span>
+            <span
+              class="material-icons"
+              style="font-size: 1rem; vertical-align: middle;">stop</span
+            >
             Stop analyse
           </button>
         {/if}
@@ -516,7 +541,9 @@
               style="font-size: 2.5rem; color: var(--neon-cyan); opacity: 0.6;"
               >settings</span
             >
-            <span>{PHASE_LABELS[currentPhase] || "Verbinden met AI model..."}</span>
+            <span
+              >{PHASE_LABELS[currentPhase] || "Verbinden met AI model..."}</span
+            >
           </div>
         {:else}
           <div class="stream-placeholder">
@@ -838,17 +865,19 @@
   {/if}
 
   <!-- Vervolgvragen -->
-  {#if finalMatchData.vervolgvragen?.length}
+  {#if finalMatchData.vervolgvragen?.length && !finalMatchData.isBatch}
     <div class="card">
-      <h3 class="section-title">
-        <span class="material-icons" style="color: #FFAB00;">help</span>
-        Vervolgvragen
-      </h3>
-      <ul class="result-list result-list-neutral">
-        {#each finalMatchData.vervolgvragen as vraag}
-          <li>{vraag}</li>
-        {/each}
-      </ul>
+      <DossierCompleetheidEnrichment
+        questions={finalMatchData.vervolgvragen}
+        name={selectedCandidate}
+        docType="candidates"
+        onSuccess={(result) => {
+          toasts.add("Kandidaat profiel verrijkt met antwoorden!", "success");
+          // Update local match data if needed or refresh
+          finalMatchData.vervolgvragen = result.vervolgvragen;
+          // Optionally we could trigger a re-match here, but for now just showing enrichment success is good
+        }}
+      />
     </div>
   {/if}
 
@@ -1323,8 +1352,13 @@
   }
 
   @keyframes phasePulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   /* Stop knop */

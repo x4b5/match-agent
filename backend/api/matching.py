@@ -114,10 +114,34 @@ async def reverse_search(req: ReverseSearchRequest):
     cand_json = json.dumps(cand_profiel, ensure_ascii=False)
     vector = await get_provider().generate_embedding(cand_json)
     
+    # Skills tekst
+    skills_delen = []
+    if "hard_skills" in cand_profiel: skills_delen.extend(cand_profiel["hard_skills"])
+    if "soft_skills" in cand_profiel: skills_delen.extend(cand_profiel["soft_skills"])
+    if "kwaliteiten" in cand_profiel: skills_delen.extend(cand_profiel["kwaliteiten"])
+    if "taken" in cand_profiel: skills_delen.extend(cand_profiel["taken"])
+    if "kernrol" in cand_profiel: skills_delen.append(cand_profiel["kernrol"])
+    skills_tekst = " ".join(filter(None, skills_delen))
+    vector_skills = await get_provider().generate_embedding(skills_tekst) if skills_tekst else None
+    
+    # Cultuur tekst
+    cultuur_delen = []
+    if "persoonlijkheid" in cand_profiel: cultuur_delen.extend(cand_profiel["persoonlijkheid"])
+    if "drijfveren" in cand_profiel: cultuur_delen.extend(cand_profiel["drijfveren"])
+    if "gewenste_bedrijfscultuur" in cand_profiel: cultuur_delen.append(cand_profiel["gewenste_bedrijfscultuur"])
+    if "organisatiewaarden" in cand_profiel: cultuur_delen.extend(cand_profiel["organisatiewaarden"])
+    cultuur_tekst = " ".join(filter(None, cultuur_delen))
+    vector_cultuur = await get_provider().generate_embedding(cultuur_tekst) if cultuur_tekst else None
+    
     if not vector:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren.")
     
-    top_vacatures = await haal_top_vacatures_vector(vector, limit=req.limit)
+    top_vacatures = await haal_top_vacatures_vector(
+        kandidaat_vector=vector, 
+        kandidaat_skills=vector_skills,
+        kandidaat_cultuur=vector_cultuur,
+        limit=req.limit
+    )
     
     enriched = []
     for vac in top_vacatures:
@@ -131,6 +155,7 @@ async def reverse_search(req: ReverseSearchRequest):
                 "vacature_naam": vac["naam"],
                 "score": vac["score"],
                 "percentage": vac["percentage"],
+                "sub_scores": vac.get("sub_scores", {}),
                 "titel": profiel.get("titel", "Onbekend"),
                 "organisatie": profiel.get("organisatie", "Onbekend"),
             })
@@ -150,11 +175,34 @@ async def semantic_search(req: SemanticSearchRequest):
 
     vac_json = json.dumps(vac_profiel, ensure_ascii=False)
     vector = await get_provider().generate_embedding(vac_json)
+    
+    # Skills tekst
+    skills_delen = []
+    if "hard_skills" in vac_profiel: skills_delen.extend(vac_profiel["hard_skills"])
+    if "must_have_skills" in vac_profiel: skills_delen.extend(vac_profiel["must_have_skills"])
+    if "benodigde_kwaliteiten" in vac_profiel: skills_delen.extend(vac_profiel["benodigde_kwaliteiten"])
+    if "taken" in vac_profiel: skills_delen.extend(vac_profiel["taken"])
+    if "titel" in vac_profiel: skills_delen.append(vac_profiel["titel"])
+    skills_tekst = " ".join(filter(None, skills_delen))
+    vector_skills = await get_provider().generate_embedding(skills_tekst) if skills_tekst else None
+    
+    # Cultuur tekst
+    cultuur_delen = []
+    if "organisatiewaarden" in vac_profiel: cultuur_delen.extend(vac_profiel["organisatiewaarden"])
+    if "gezochte_persoonlijkheid" in vac_profiel: cultuur_delen.extend(vac_profiel["gezochte_persoonlijkheid"])
+    if "team_en_cultuur" in vac_profiel: cultuur_delen.append(vac_profiel["team_en_cultuur"])
+    cultuur_tekst = " ".join(filter(None, cultuur_delen))
+    vector_cultuur = await get_provider().generate_embedding(cultuur_tekst) if cultuur_tekst else None
 
     if not vector:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren voor vacature.")
 
-    top_matches = await haal_top_matches_vector(vector, limit=req.limit)
+    top_matches = await haal_top_matches_vector(
+        vacature_vector=vector, 
+        vacature_skills=vector_skills,
+        vacature_cultuur=vector_cultuur,
+        limit=req.limit
+    )
 
     enriched_matches = []
     for match in top_matches:
@@ -164,6 +212,7 @@ async def semantic_search(req: SemanticSearchRequest):
                 "kandidaat_naam": match["naam"],
                 "score": match["score"],
                 "percentage": match["percentage"],
+                "sub_scores": match.get("sub_scores", {}),
                 "kernrol": profiel.get("kernrol", "Onbekend"),
                 "kwaliteiten": profiel.get("kwaliteiten", [])
             })

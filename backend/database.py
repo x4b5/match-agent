@@ -52,6 +52,8 @@ async def init_db():
                 doc_type TEXT,
                 naam TEXT,
                 vector_json TEXT,
+                vector_skills_json TEXT,
+                vector_cultuur_json TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -111,6 +113,16 @@ async def init_db():
         
         try:
             await conn.execute("ALTER TABLE documenten ADD COLUMN content_hash TEXT")
+        except Exception:
+            pass  # Kolom bestaat al
+            
+        try:
+            await conn.execute("ALTER TABLE embeddings ADD COLUMN vector_skills_json TEXT")
+        except Exception:
+            pass  # Kolom bestaat al
+
+        try:
+            await conn.execute("ALTER TABLE embeddings ADD COLUMN vector_cultuur_json TEXT")
         except Exception:
             pass  # Kolom bestaat al
         
@@ -182,30 +194,39 @@ async def haal_unieke_vacatures():
 
 # ── Embeddings ──
 
-async def bewaar_embedding(document_id, doc_type, naam, vector):
-    """Sla een embedding vector (list van floats) op in de database."""
+async def bewaar_embedding(document_id, doc_type, naam, vector, vector_skills=None, vector_cultuur=None):
+    """Sla embedding vectoren op (basis, plus optioneel skills en cultuur dimensies)."""
     conn = await _get_connection()
     try:
         await conn.execute("""
-            INSERT OR REPLACE INTO embeddings (document_id, doc_type, naam, vector_json)
-            VALUES (?, ?, ?, ?)
-        """, (document_id, doc_type, naam, json.dumps(vector)))
+            INSERT OR REPLACE INTO embeddings (document_id, doc_type, naam, vector_json, vector_skills_json, vector_cultuur_json)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            document_id, 
+            doc_type, 
+            naam, 
+            json.dumps(vector) if vector else None, 
+            json.dumps(vector_skills) if vector_skills else None,
+            json.dumps(vector_cultuur) if vector_cultuur else None
+        ))
         await conn.commit()
     finally:
         await conn.close()
 
 async def haal_alle_embeddings(doc_type):
-    """Haal alle embeddings op van een specifiek type (bijv. 'kandidaat')."""
+    """Haal alle embeddings op van een specifiek type inclusief sub-dimensies."""
     conn = await _get_connection()
     try:
-        cursor = await conn.execute("SELECT document_id, naam, vector_json FROM embeddings WHERE doc_type = ?", (doc_type,))
+        cursor = await conn.execute("SELECT document_id, naam, vector_json, vector_skills_json, vector_cultuur_json FROM embeddings WHERE doc_type = ?", (doc_type,))
         res = []
         rows = await cursor.fetchall()
         for row in rows:
             res.append({
                 "document_id": row["document_id"],
                 "naam": row["naam"],
-                "vector": json.loads(row["vector_json"])
+                "vector": json.loads(row["vector_json"]) if row["vector_json"] else None,
+                "vector_skills": json.loads(row["vector_skills_json"]) if row["vector_skills_json"] else None,
+                "vector_cultuur": json.loads(row["vector_cultuur_json"]) if row["vector_cultuur_json"] else None
             })
         return res
     finally:
@@ -228,35 +249,92 @@ def bereken_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
         
     return dot_product / (norm_a * norm_b)
 
-async def haal_top_matches_vector(vacature_vector: list[float], limit: int = 5) -> list[dict]:
-    """Haal de top kandidaat matches op puur gebaseerd op vector similarity."""
+async def haal_top_matches_vector(
+    vacature_vector: list[float] = None, 
+    vacature_skills: list[float] = None, 
+    vacature_cultuur: list[float] = None,
+    limit: int = 5
+) -> list[dict]:
+    """Haal de top kandidaat matches op via multi-dimensional vector similarity."""
     kandidaten = await haal_alle_embeddings("kandidaat")
     
     scored_kandidaten = []
     for kandidaat in kandidaten:
-        score = bereken_cosine_similarity(vacature_vector, kandidaat["vector"])
+        # Algemene score
+        score_algemeen = 0.0
+        if vacature_vector and kandidaat["vector"]:
+            score_algemeen = bereken_cosine_similarity(vacature_vector, kandidaat["vector"])
+            
+        # Skills score
+        score_skills = 0.0
+        if vacature_skills and kandidaat["vector_skills"]:
+            score_skills = bereken_cosine_similarity(vacature_skills, kandidaat["vector_skills"])
+            
+        # Cultuur score
+        score_cultuur = 0.0
+        if vacature_cultuur and kandidaat["vector_cultuur"]:
+            score_cultuur = bereken_cosine_similarity(vacature_cultuur, kandidaat["vector_cultuur"])
+
+        # Weeg de scores. Als we geen sub-dimensies hebben, gebruik we puur de algemene
+        if vacature_skills and vacature_cultuur and kandidaat["vector_skills"] and kandidaat["vector_cultuur"]:
+            # Combine score: 40% Skills, 40% Cultuur, 20% Algemeen (afhankelijk van wat relevant is)
+            combined_score = (score_skills * 0.4) + (score_cultuur * 0.4) + (score_algemeen * 0.2)
+        else:
+            combined_score = score_algemeen
+
         scored_kandidaten.append({
             "document_id": kandidaat["document_id"],
             "naam": kandidaat["naam"],
-            "score": score,
-            "percentage": max(0, min(100, int(score * 100))) 
+            "score": combined_score,
+            "percentage": max(0, min(100, int(combined_score * 100))),
+            "sub_scores": {
+                "algemeen": max(0, min(100, int(score_algemeen * 100))),
+                "skills": max(0, min(100, int(score_skills * 100))),
+                "cultuur": max(0, min(100, int(score_cultuur * 100)))
+            }
         })
         
     scored_kandidaten.sort(key=lambda x: x["score"], reverse=True)
     return scored_kandidaten[:limit]
 
-async def haal_top_vacatures_vector(kandidaat_vector: list[float], limit: int = 5) -> list[dict]:
-    """Reverse matching: haal de top vacatures op voor een gegeven kandidaat-vector."""
+async def haal_top_vacatures_vector(
+    kandidaat_vector: list[float] = None, 
+    kandidaat_skills: list[float] = None,
+    kandidaat_cultuur: list[float] = None,
+    limit: int = 5
+) -> list[dict]:
+    """Reverse matching: multi-dimensional vacature discovery."""
     vacatures = await haal_alle_embeddings("vacature")
     
     scored = []
     for vac in vacatures:
-        score = bereken_cosine_similarity(kandidaat_vector, vac["vector"])
+        score_algemeen = 0.0
+        if kandidaat_vector and vac["vector"]:
+            score_algemeen = bereken_cosine_similarity(kandidaat_vector, vac["vector"])
+            
+        score_skills = 0.0
+        if kandidaat_skills and vac["vector_skills"]:
+            score_skills = bereken_cosine_similarity(kandidaat_skills, vac["vector_skills"])
+            
+        score_cultuur = 0.0
+        if kandidaat_cultuur and vac["vector_cultuur"]:
+            score_cultuur = bereken_cosine_similarity(kandidaat_cultuur, vac["vector_cultuur"])
+
+        if kandidaat_skills and kandidaat_cultuur and vac["vector_skills"] and vac["vector_cultuur"]:
+            combined_score = (score_skills * 0.4) + (score_cultuur * 0.4) + (score_algemeen * 0.2)
+        else:
+            combined_score = score_algemeen
+
         scored.append({
             "document_id": vac["document_id"],
             "naam": vac["naam"],
-            "score": score,
-            "percentage": max(0, min(100, int(score * 100)))
+            "score": combined_score,
+            "percentage": max(0, min(100, int(combined_score * 100))),
+            "sub_scores": {
+                "algemeen": max(0, min(100, int(score_algemeen * 100))),
+                "skills": max(0, min(100, int(score_skills * 100))),
+                "cultuur": max(0, min(100, int(score_cultuur * 100)))
+            }
         })
     
     scored.sort(key=lambda x: x["score"], reverse=True)

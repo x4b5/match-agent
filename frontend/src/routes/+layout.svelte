@@ -59,7 +59,7 @@
           ? 'active'
           : ''}"
       >
-        <span class="material-icons">gps_fixed</span> Match Starten
+        <span class="material-icons">gps_fixed</span> Match maken
       </a>
       <a
         href="/prompts"

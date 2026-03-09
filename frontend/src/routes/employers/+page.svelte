@@ -18,6 +18,8 @@
   let editJson = $state("");
   let isSaving = $state(false);
   let detailCache: Record<string, any> = $state({});
+  let taskDetails: Record<string, { progress: string; percent: number }> =
+    $state({});
 
   let filteredEmployers = $derived(
     (() => {
@@ -161,21 +163,46 @@
         toasts.add("Fout bij starten generatie", "error");
         return;
       }
+      const responseData = await res.json();
+      const taskId = responseData.task_id;
       toasts.add(`Profiel generatie gestart voor "${name}"`, "info");
+
       const poll = setInterval(async () => {
-        const data = await fetch("/api/employers/").then((r) => r.json());
-        const updated = data.find((e: any) => e.naam === name);
-        if (updated?.has_profile) {
+        const taskRes = await fetch(`/api/tasks/${taskId}`);
+        if (!taskRes.ok) return;
+        const taskData = await taskRes.json();
+
+        // Update task details for voor visuele feedback
+        taskDetails[name] = {
+          progress: taskData.progress || "In behandeling...",
+          percent: taskData.progress_percent || 0,
+        };
+
+        if (taskData.status === "done" || taskData.status === "failed") {
           clearInterval(poll);
-          employers = data;
           generatingNames = new Set(
             [...generatingNames].filter((n) => n !== name),
           );
+          delete taskDetails[name];
+
+          if (taskData.status === "failed") {
+            toasts.add(
+              `Generatie mislukt: ${taskData.error || "Onbekende fout"}`,
+              "error",
+            );
+            return;
+          }
+
+          const data = await fetch("/api/employers/").then((r) => r.json());
+          employers = data;
           delete detailCache[name];
+
           // Herlaad detail als het panel open staat
           if (expandedName === name) {
             try {
-              const res = await fetch(`/api/employers/${encodeURIComponent(name)}`);
+              const res = await fetch(
+                `/api/employers/${encodeURIComponent(name)}`,
+              );
               if (res.ok) {
                 detailCache[name] = await res.json();
               }
@@ -190,6 +217,7 @@
           generatingNames = new Set(
             [...generatingNames].filter((n) => n !== name),
           );
+          delete taskDetails[name];
           toasts.add(
             `Time-out bij generatie van "${name}". Probeer opnieuw.`,
             "warning",
@@ -199,6 +227,7 @@
     } catch {
       toasts.add("Fout bij starten generatie", "error");
       generatingNames = new Set([...generatingNames].filter((n) => n !== name));
+      delete taskDetails[name];
     }
   }
 
@@ -348,12 +377,15 @@
               {employer.doc_count} documenten
               {#if employer.has_profile}
                 | Dossiercompleetheid: {#if employer.profile_score != null}<strong
-                  style="color: {employer.profile_score > 75
-                    ? 'var(--neon-green)'
-                    : employer.profile_score > 40
-                      ? '#FFAB00'
-                      : 'var(--neon-pink)'}">{employer.profile_score}%</strong
-                >{:else}<span style="color: var(--text-secondary); font-style: italic;">Onbekend — genereer opnieuw</span>{/if}
+                    style="color: {employer.profile_score > 75
+                      ? 'var(--neon-green)'
+                      : employer.profile_score > 40
+                        ? '#FFAB00'
+                        : 'var(--neon-pink)'}">{employer.profile_score}%</strong
+                  >{:else}<span
+                    style="color: var(--text-secondary); font-style: italic;"
+                    >Onbekend — genereer opnieuw</span
+                  >{/if}
               {/if}
               <span
                 style="margin-left: 0.5rem; font-size: 0.7rem; color: var(--text-secondary); opacity: 0.6;"
@@ -363,6 +395,30 @@
                   : "details te bekijken"}
               </span>
             </div>
+            {#if generatingNames.has(employer.naam) && taskDetails[employer.naam]}
+              <div style="margin-top: 1rem; margin-left: 1.6rem;">
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"
+                >
+                  <span
+                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 500;"
+                  >
+                    {taskDetails[employer.naam].progress}
+                  </span>
+                  <span
+                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 600;"
+                  >
+                    {taskDetails[employer.naam].percent}%
+                  </span>
+                </div>
+                <div class="progress-bar" style="height: 4px;">
+                  <div
+                    class="progress-bar-fill"
+                    style="width: {taskDetails[employer.naam].percent}%;"
+                  ></div>
+                </div>
+              </div>
+            {/if}
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
             {#if confirmingDelete === employer.naam}

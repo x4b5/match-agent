@@ -22,6 +22,7 @@ class KandidaatProfiel(BaseModel):
     dossier_compleetheid: int = Field(ge=0, le=100, validation_alias=AliasChoices("dossier_compleetheid", "profiel_betrouwbaarheid"), description="Hoe compleet is dit dossier?")
     aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij dit profiel")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
+    cultuur_vragen: List[str] = Field(default_factory=list, max_length=3, description="3 prikkelende vragen over cultuur en persoonlijkheid")
 
 class WerkgeversvraagProfiel(BaseModel):
     titel: str = Field(description="Functietitel")

@@ -172,6 +172,7 @@ def create_document_router(
             "profile_score": (profiel or {}).get("dossier_compleetheid", (profiel or {}).get("profiel_betrouwbaarheid")),
             "aandachtspunten": (profiel or {}).get("aandachtspunten", []),
             "vervolgvragen": (profiel or {}).get("vervolgvragen", []),
+            "cultuur_vragen": (profiel or {}).get("cultuur_vragen", []),
             "exists_on_disk": exists_on_disk
         }
 
@@ -229,10 +230,12 @@ def create_document_router(
 
     def _generate_profile_task(map_pad: str, task_id: str):
         import asyncio
+        from fastapi.concurrency import run_in_threadpool
+
         async def _run_async():
-            update_task(task_id, status="running")
+            update_task(task_id, status="running", progress="Starten...", progress_percent=5)
             try:
-                gecombineerde_tekst, waarschuwingen = extract_text_sync(map_pad)
+                gecombineerde_tekst, waarschuwingen = await run_in_threadpool(extract_text_sync, map_pad)
 
                 schone_tekst = gecombineerde_tekst.strip()
                 inhoud = "\n".join(
@@ -257,13 +260,13 @@ def create_document_router(
                     logger.info(f"Deduplicatie: Document met deze inhoud bestaat al als '{bestaand['naam']}'")
                     waarschuwingen.append(f"Let op: Inhoud is identiek aan bestaand item '{bestaand['naam']}'.")
 
-                update_task(task_id, progress="PII scrubbing...")
+                update_task(task_id, progress="Persoonlijke gegevens anonimiseren...", progress_percent=20)
                 geschoonde_tekst, pii_rapport = scrub_pii(gecombineerde_tekst)
                 if pii_rapport:
                     waarschuwingen.append(f"PII gemaskeerd: {pii_rapport}")
 
                 # ── Semantische Deduplicatie Check (Embeddings) ──
-                update_task(task_id, progress="Semantische duplicate check...")
+                update_task(task_id, progress="Controleren op dubbele documenten...", progress_percent=40)
                 vector = await genereer_embedding(geschoonde_tekst)
                 if vector:
                     from backend.database import haal_alle_embeddings, bereken_cosine_similarity
@@ -276,19 +279,51 @@ def create_document_router(
                                 logger.info(f"Semantische deduplicatie: '{os.path.basename(map_pad)}' lijkt {int(similarity * 100)}% op '{emb['naam']}'")
                                 break # Één waarschuwing is genoeg
 
-                update_task(task_id, progress="Profiel genereren via LLM...")
+                update_task(task_id, progress="Profiel genereren via AI (LLM)...", progress_percent=60)
                 resultaat = await profiel_agent_fn(geschoonde_tekst)
 
-                update_task(task_id, progress="Embedding en opslag...")
+                update_task(task_id, progress="Gegevens opslaan en indexeren...", progress_percent=90)
                 try:
                     naam = os.path.basename(map_pad)
                     from backend.database import haal_uuid_bij_naam
                     bestaande_uuid = await haal_uuid_bij_naam(naam, doc_type)
                     uuid_val = bestaande_uuid if bestaande_uuid else zorg_voor_uuid(map_pad)
 
+                    vector_skills = None
+                    vector_cultuur = None
+
+                    # Extra dimensies genereren
+                    if isinstance(resultaat, dict):
+                        # Skills tekst
+                        skills_delen = []
+                        if "hard_skills" in resultaat: skills_delen.extend(resultaat["hard_skills"])
+                        if "soft_skills" in resultaat: skills_delen.extend(resultaat["soft_skills"])
+                        if "kwaliteiten" in resultaat: skills_delen.extend(resultaat["kwaliteiten"])
+                        if "taken" in resultaat: skills_delen.extend(resultaat["taken"])
+                        if "kernrol" in resultaat: skills_delen.append(resultaat["kernrol"])
+                        if "must_have_skills" in resultaat: skills_delen.extend(resultaat["must_have_skills"])
+                        if "benodigde_kwaliteiten" in resultaat: skills_delen.extend(resultaat["benodigde_kwaliteiten"])
+                        
+                        skills_tekst = " ".join(filter(None, skills_delen))
+                        if skills_tekst:
+                            vector_skills = await genereer_embedding(skills_tekst)
+                            
+                        # Cultuur tekst
+                        cultuur_delen = []
+                        if "persoonlijkheid" in resultaat: cultuur_delen.extend(resultaat["persoonlijkheid"])
+                        if "drijfveren" in resultaat: cultuur_delen.extend(resultaat["drijfveren"])
+                        if "gewenste_bedrijfscultuur" in resultaat: cultuur_delen.append(resultaat["gewenste_bedrijfscultuur"])
+                        if "organisatiewaarden" in resultaat: cultuur_delen.extend(resultaat["organisatiewaarden"])
+                        if "gezochte_persoonlijkheid" in resultaat: cultuur_delen.extend(resultaat["gezochte_persoonlijkheid"])
+                        if "team_en_cultuur" in resultaat: cultuur_delen.append(resultaat["team_en_cultuur"])
+
+                        cultuur_tekst = " ".join(filter(None, cultuur_delen))
+                        if cultuur_tekst:
+                            vector_cultuur = await genereer_embedding(cultuur_tekst)
+
                     # Save embedding (op geschoonde tekst — AVG-compliant)
                     if vector:
-                        await bewaar_embedding(uuid_val, doc_type, naam, vector)
+                        await bewaar_embedding(uuid_val, doc_type, naam, vector, vector_skills, vector_cultuur)
 
                     await bewaar_document(
                         document_id=uuid_val,
@@ -315,7 +350,7 @@ def create_document_router(
                         resultaat["_waarschuwingen"] = waarschuwingen
                     opslaan_profiel(map_pad, resultaat)
 
-                update_task(task_id, status="done", progress="Klaar")
+                update_task(task_id, status="done", progress="Klaar", progress_percent=100)
 
             except Exception as e:
                 logger.error(f"Profile generation failed for {map_pad}: {e}")
@@ -363,6 +398,7 @@ def create_document_router(
             "versie": versie_info["versie"],
             "nieuwe_score": nieuw_profiel.get("dossier_compleetheid", nieuw_profiel.get("profiel_betrouwbaarheid", 0)),
             "vervolgvragen": nieuw_profiel.get("vervolgvragen", []),
+            "cultuur_vragen": nieuw_profiel.get("cultuur_vragen", []),
             "profiel": nieuw_profiel
         }
 

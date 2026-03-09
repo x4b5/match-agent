@@ -31,7 +31,7 @@
       >bar_chart</span
     > Dashboard
   </h1>
-  <p>Overzicht van je matching-omgeving</p>
+  <p>Overzicht van het matchingsysteem</p>
 </div>
 
 {#if data.error}
@@ -39,7 +39,7 @@
     style="background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.3); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; color: #ff5252; display: flex; align-items: center; gap: 10px;"
   >
     <span class="material-icons">error_outline</span>
-    <div><strong>Opgelet:</strong> {data.error}</div>
+    <div><strong>Let op:</strong> {data.error}</div>
   </div>
 {/if}
 
@@ -60,7 +60,7 @@
     <div
       style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;"
     >
-      Ollama
+      AI-systeem (Ollama)
     </div>
     <div class="metric-value">{online ? "Actief" : "Inactief"}</div>
   </div>
@@ -70,7 +70,7 @@
     <div
       style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;"
     >
-      Actieve Modellen
+      AI-modellen
     </div>
     <div class="metric-value" style="font-size: 2.2rem;">
       {models.length > 0 ? models.length : "—"}
@@ -79,7 +79,7 @@
       <div
         style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);"
       >
-        Beschikbaar: {models.join(", ")}
+        Geïnstalleerd: {models.join(", ")}
       </div>
     {/if}
   </div>
@@ -89,18 +89,18 @@
     <div
       style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;"
     >
-      Systeem Lokatie
+      Systeemlocatie
     </div>
     <div class="metric-value" style="font-size: 2.2rem;">Lokaal</div>
     <div
       style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);"
     >
-      Geen cloud afhankelijkheden.
+      Draait volledig lokaal.
     </div>
   </div>
 </div>
 
-<h2 style="font-size: 1.3rem; margin-bottom: 1rem;">Data Overzicht</h2>
+<h2 style="font-size: 1.3rem; margin-bottom: 1rem;">Dossiers en Gegevens</h2>
 
 <div class="grid-2">
   <!-- Candidates Overview -->
@@ -130,7 +130,7 @@
             class="material-icons"
             style="font-size: 1rem; vertical-align: middle;">auto_awesome</span
           >
-          {candidatesProfiled} met LLM-profiel
+          {candidatesProfiled} met AI-profiel
         </span>
         <span
           style="font-size: 0.75rem; color: {candidatesPercent > 0
@@ -176,7 +176,7 @@
             class="material-icons"
             style="font-size: 1rem; vertical-align: middle;">auto_awesome</span
           >
-          {employersProfiled} met LLM-profiel
+          {employersProfiled} met AI-profiel
         </span>
         <span
           style="font-size: 0.75rem; color: {employersPercent > 0
@@ -211,6 +211,6 @@
   </a>
   <a href="/match" class="quick-action">
     <span class="material-icons">play_circle</span>
-    <span>Nieuwe match starten</span>
+    <span>Nieuwe match maken</span>
   </a>
 </div>

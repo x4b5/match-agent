@@ -18,6 +18,8 @@
   let editJson = $state("");
   let isSaving = $state(false);
   let detailCache: Record<string, any> = $state({});
+  let taskDetails: Record<string, { progress: string; percent: number }> =
+    $state({});
 
   let filteredCandidates = $derived(
     (() => {
@@ -158,21 +160,46 @@
         toasts.add("Fout bij starten generatie", "error");
         return;
       }
+      const responseData = await res.json();
+      const taskId = responseData.task_id;
       toasts.add(`Profiel generatie gestart voor "${name}"`, "info");
+
       const poll = setInterval(async () => {
-        const data = await fetch("/api/candidates/").then((r) => r.json());
-        const updated = data.find((c: any) => c.naam === name);
-        if (updated?.has_profile) {
+        const taskRes = await fetch(`/api/tasks/${taskId}`);
+        if (!taskRes.ok) return;
+        const taskData = await taskRes.json();
+
+        // Update task details for visual feedback
+        taskDetails[name] = {
+          progress: taskData.progress || "In behandeling...",
+          percent: taskData.progress_percent || 0,
+        };
+
+        if (taskData.status === "done" || taskData.status === "failed") {
           clearInterval(poll);
-          candidates = data;
           generatingNames = new Set(
             [...generatingNames].filter((n) => n !== name),
           );
+          delete taskDetails[name];
+
+          if (taskData.status === "failed") {
+            toasts.add(
+              `Generatie mislukt: ${taskData.error || "Onbekende fout"}`,
+              "error",
+            );
+            return;
+          }
+
+          const data = await fetch("/api/candidates/").then((r) => r.json());
+          candidates = data;
           delete detailCache[name];
+
           // Herlaad detail als het panel open staat
           if (expandedName === name) {
             try {
-              const res = await fetch(`/api/candidates/${encodeURIComponent(name)}`);
+              const res = await fetch(
+                `/api/candidates/${encodeURIComponent(name)}`,
+              );
               if (res.ok) {
                 detailCache[name] = await res.json();
               }
@@ -196,6 +223,7 @@
     } catch {
       toasts.add("Fout bij starten generatie", "error");
       generatingNames = new Set([...generatingNames].filter((n) => n !== name));
+      delete taskDetails[name];
     }
   }
 
@@ -345,12 +373,16 @@
               {candidate.doc_count} documenten
               {#if candidate.has_profile}
                 | Dossiercompleetheid: {#if candidate.profile_score != null}<strong
-                  style="color: {candidate.profile_score > 75
-                    ? 'var(--neon-green)'
-                    : candidate.profile_score > 40
-                      ? '#FFAB00'
-                      : 'var(--neon-pink)'}">{candidate.profile_score}%</strong
-                >{:else}<span style="color: var(--text-secondary); font-style: italic;">Onbekend — genereer opnieuw</span>{/if}
+                    style="color: {candidate.profile_score > 75
+                      ? 'var(--neon-green)'
+                      : candidate.profile_score > 40
+                        ? '#FFAB00'
+                        : 'var(--neon-pink)'}"
+                    >{candidate.profile_score}%</strong
+                  >{:else}<span
+                    style="color: var(--text-secondary); font-style: italic;"
+                    >Onbekend — genereer opnieuw</span
+                  >{/if}
               {/if}
               <span
                 style="margin-left: 0.5rem; font-size: 0.7rem; color: var(--text-secondary); opacity: 0.6;"
@@ -360,6 +392,30 @@
                   : "details te bekijken"}
               </span>
             </div>
+            {#if generatingNames.has(candidate.naam) && taskDetails[candidate.naam]}
+              <div style="margin-top: 1rem; margin-left: 1.6rem;">
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"
+                >
+                  <span
+                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 500;"
+                  >
+                    {taskDetails[candidate.naam].progress}
+                  </span>
+                  <span
+                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 600;"
+                  >
+                    {taskDetails[candidate.naam].percent}%
+                  </span>
+                </div>
+                <div class="progress-bar" style="height: 4px;">
+                  <div
+                    class="progress-bar-fill"
+                    style="width: {taskDetails[candidate.naam].percent}%;"
+                  ></div>
+                </div>
+              </div>
+            {/if}
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
             {#if confirmingDelete === candidate.naam}
@@ -538,9 +594,10 @@
                   </tbody>
                 </table>
 
-                {#if detail.vervolgvragen && detail.vervolgvragen.length > 0 && editingName !== candidate.naam}
+                {#if (detail.vervolgvragen?.length > 0 || detail.cultuur_vragen?.length > 0) && editingName !== candidate.naam}
                   <DossierCompleetheidEnrichment
                     questions={detail.vervolgvragen}
+                    cultuurQuestions={detail.cultuur_vragen}
                     name={candidate.naam}
                     docType="candidates"
                     onSuccess={(result) => {
@@ -549,6 +606,7 @@
                         profile_data: result.profiel,
                         profile_score: result.nieuwe_score,
                         vervolgvragen: result.vervolgvragen,
+                        cultuur_vragen: result.cultuur_vragen,
                       };
                       // Update the main list as well
                       const idx = candidates.findIndex(
