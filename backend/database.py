@@ -42,7 +42,9 @@ async def init_db():
                 model_versie TEXT,
                 duur_ms INTEGER,
                 resultaat_json TEXT,
-                temperature REAL
+                temperature REAL,
+                feedback_tekst TEXT,
+                feedback_verwerkt BOOLEAN DEFAULT 0
             )
         """)
         
@@ -82,6 +84,7 @@ async def init_db():
                 type TEXT,
                 naam TEXT,
                 progress TEXT,
+                progress_percent INTEGER DEFAULT 0,
                 error TEXT,
                 started_at REAL,
                 updated_at REAL
@@ -108,6 +111,16 @@ async def init_db():
         
         try:
             await conn.execute("ALTER TABLE matches ADD COLUMN temperature REAL")
+        except Exception:
+            pass  # Kolom bestaat al
+        
+        try:
+            await conn.execute("ALTER TABLE matches ADD COLUMN feedback_verwerkt BOOLEAN DEFAULT 0")
+        except Exception:
+            pass  # Kolom bestaat al
+        
+        try:
+            await conn.execute("ALTER TABLE matches ADD COLUMN feedback_tekst TEXT")
         except Exception:
             pass  # Kolom bestaat al
         
@@ -153,6 +166,17 @@ async def bewaar_match(kandidaat_naam, kandidaat_id, vacature_titel, vacature_id
             json.dumps(resultaat_dict, ensure_ascii=False),
             temperature
         ))
+        await conn.commit()
+    finally:
+        await conn.close()
+async def bewaar_match_feedback(match_id: int, feedback: str):
+    """Sla feedback op voor een specifieke match."""
+    conn = await _get_connection()
+    try:
+        await conn.execute(
+            "UPDATE matches SET feedback_tekst = ?, feedback_verwerkt = 0 WHERE id = ?",
+            (feedback, match_id)
+        )
         await conn.commit()
     finally:
         await conn.close()
@@ -561,8 +585,8 @@ async def maak_task_db(task_id: str, task_type: str, naam: str):
     conn = await _get_connection()
     try:
         await conn.execute("""
-            INSERT OR REPLACE INTO taken (id, status, type, naam, progress, error, started_at, updated_at)
-            VALUES (?, 'pending', ?, ?, NULL, NULL, ?, ?)
+            INSERT OR REPLACE INTO taken (id, status, type, naam, progress, progress_percent, error, started_at, updated_at)
+            VALUES (?, 'pending', ?, ?, NULL, 0, NULL, ?, ?)
         """, (task_id, task_type, naam, time.time(), time.time()))
         await conn.commit()
     finally:
@@ -570,7 +594,7 @@ async def maak_task_db(task_id: str, task_type: str, naam: str):
 
 async def update_task_db(task_id: str, **kwargs):
     """Update velden van een bestaande task in de database."""
-    ALLOWED_COLUMNS = {"status", "progress", "error"}
+    ALLOWED_COLUMNS = {"status", "progress", "progress_percent", "error"}
     for k in kwargs:
         if k not in ALLOWED_COLUMNS:
             raise ValueError(f"Ongeldige kolom in update_task_db: {k}")

@@ -594,10 +594,11 @@
                   </tbody>
                 </table>
 
-                {#if (detail.vervolgvragen?.length > 0 || detail.cultuur_vragen?.length > 0) && editingName !== candidate.naam}
+                {#if (detail.vervolgvragen?.length > 0 || detail.cultuur_vragen?.length > 0 || detail.stellingen?.length > 0) && editingName !== candidate.naam}
                   <DossierCompleetheidEnrichment
                     questions={detail.vervolgvragen}
                     cultuurQuestions={detail.cultuur_vragen}
+                    stellingen={detail.stellingen}
                     name={candidate.naam}
                     docType="candidates"
                     onSuccess={(result) => {
@@ -607,6 +608,7 @@
                         profile_score: result.nieuwe_score,
                         vervolgvragen: result.vervolgvragen,
                         cultuur_vragen: result.cultuur_vragen,
+                        stellingen: result.stellingen,
                       };
                       // Update the main list as well
                       const idx = candidates.findIndex(

@@ -257,3 +257,72 @@ def extract_text_sync(map_pad: str) -> tuple[str, list[str]]:
             waarschuwingen.append(f"Kon {doc} niet lezen: {e}")
 
     return gecombineerde_tekst, waarschuwingen
+
+async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
+    """Verwerkt feedback op een match en werkt het kandidaatprofiel bij."""
+    from backend.database import _get_connection, update_profiel_na_verrijking, bewaar_embedding
+    from backend.config import VERWERK_MATCH_FEEDBACK_PROMPT, PROFIEL_MODEL, KANDIDATEN_DIR
+    from backend.utils import opslaan_profiel
+
+    conn = await _get_connection()
+    try:
+        # 1. Haal match en bijbehorend profiel op
+        cursor = await conn.execute("""
+            SELECT m.resultaat_json, d.document_id, d.profiel_json, d.naam
+            FROM matches m
+            JOIN documenten d ON d.naam = m.kandidaat_naam
+            WHERE m.id = ?
+        """, (match_id,))
+        row = await cursor.fetchone()
+        if not row:
+            raise ValueError(f"Match met ID {match_id} niet gevonden of geen bijbehorend document.")
+
+        match_json = row[0]
+        doc_id = row[1]
+        profiel_json = row[2]
+        naam = row[3]
+
+        # 2. Laat LLM het profiel bijwerken op basis van feedback
+        prompt = VERWERK_MATCH_FEEDBACK_PROMPT.format(
+            profiel_json=profiel_json,
+            match_json=match_json,
+            feedback_tekst=feedback_tekst
+        )
+        
+        result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1)
+        nieuw_profiel = result.model_dump() if hasattr(result, "model_dump") else result
+
+        # 3. Update profiel in database
+        versie_info = await update_profiel_na_verrijking(doc_id, nieuw_profiel)
+
+        # 4. Synchroniseer met iCloud JSON bestand
+        doel_pad = os.path.join(KANDIDATEN_DIR, naam)
+        if os.path.exists(doel_pad):
+            opslaan_profiel(doel_pad, nieuw_profiel)
+
+        # 5. Herbereken embeddings (Echt leren!)
+        try:
+            full_text = json.dumps(nieuw_profiel, ensure_ascii=False)
+            vector = await genereer_embedding(full_text)
+            
+            skills_tekst = ", ".join(nieuw_profiel.get("hard_skills", []) + nieuw_profiel.get("soft_skills", []))
+            cultuur_tekst = f"{nieuw_profiel.get('gewenste_bedrijfscultuur', '')} {nieuw_profiel.get('onderliggende_motivatie', '')}"
+            
+            vec_skills = await genereer_embedding(skills_tekst) if skills_tekst else None
+            vec_cultuur = await genereer_embedding(cultuur_tekst) if cultuur_tekst else None
+            
+            await bewaar_embedding(doc_id, "kandidaat", naam, vector, vec_skills, vec_cultuur)
+            logger.info(f"Embeddings herberekened voor {naam} na match-feedback.")
+        except Exception as e:
+            logger.error(f"Fout bij herberekenen embeddings na feedback voor {naam}: {e}")
+
+        # 6. Markeer feedback als verwerkt
+        await conn.execute(
+            "UPDATE matches SET feedback_verwerkt = 1 WHERE id = ?",
+            (match_id,)
+        )
+        await conn.commit()
+
+        return nieuw_profiel
+    finally:
+        await conn.close()

@@ -4,11 +4,18 @@
 
 Match kandidaten uit een kandidatenpool met werkgeversvragen, 100% lokaal via Ollama. De focus ligt op potentieel, persoonlijkheid, drijfveren en verrassende combinaties in plaats van een rigide check op diploma's en harde werkervaring. Geen data verlaat de machine.
 
+## Sterke Punten
+
+- **100% Lokaal & Privacy**: De volledige verwerking (Ollama) en opslag (SQLite/Lokale mappen) gebeurt direct op de machine van de gebruiker. Geen data verlaat de omgeving, wat zorgt voor maximale privacy en veiligheid.
+- **AI-Gedreven Matchmaking**: Maakt gebruik van geavanceerde LLM's (zoals Qwen 3.5:27b) voor een multi-dimensionale analyse van matches op basis van persoonlijkheid, cultuur, skills, groei en motivatie. Bevat een 'diepte-analyse' met thinking-modellen.
+- **Continu Lerend**: Een recursieve feedback-loop van recruiters verrijkt kandidaatprofielen en verbetert toekomstige matches direct op basis van menselijke inzichten.
+- **Focus op Potentieel**: Prioriteert karakter, drijfveren en overdraagbare vaardigheden boven een rigide check op diploma's of functietitels. Het ontdekt verrassende combinaties die recruiters anders over het hoofd zouden zien.
+
 ## Kernbegrippen
 
-- **Kandidaatprofiel**: een gestructureerd JSON-profiel dat de persoonlijkheid, kwaliteiten, drijfveren en skills van een kandidaat beschrijft.
-- **Werkgeversvraag**: elke context van een werkgever (vacature, project, cultuurbehoefte) vertaald naar gezochte persoonlijkheid, teamcultuur en onmisbare talenten.
-- **Matching**: het ontdekken van een out-of-the-box fit tussen kandidaten en werkgevers, die mensen inspireert om verder te kijken dan hun huidige zoekveld.
+- **Kandidaatprofiel**: Een AI-geëxtraheerd, gestructureerd profiel dat verder gaat dan een CV door ook persoonlijkheid, impliciete kwaliteiten en ambities vast te leggen.
+- **Werkgeversvraag**: Contextuele vertaling van een vacature naar een 'persona' met specifieke teamcultuur-behoeften en gezochte karaktereigenschappen.
+- **Dossiercompleetheid**: Een strenge AI-beoordeling van de beschikbare informatie, inclusief suggesties voor vervolgvragen om de match-betrouwbaarheid te verhogen.
 
 ## Techstack
 

@@ -303,6 +303,26 @@ async def stream_match(req: MatchRequest):
 
     return EventSourceResponse(event_generator())
 
+class FeedbackRequest(BaseModel):
+    match_id: int
+    feedback_tekst: str
+
+@router.post("/feedback")
+async def match_feedback(req: FeedbackRequest):
+    from backend.services.agents import verwerk_match_feedback
+    from backend.database import bewaar_match_feedback
+    
+    # 1. Sla feedback op in DB
+    await bewaar_match_feedback(req.match_id, req.feedback_tekst)
+    
+    # 2. Verwerk feedback met AI (asynchroon in de achtergrond zou idealiter kunnen, maar doen we nu direct voor de demo-ervaring)
+    try:
+        nieuw_profiel = await verwerk_match_feedback(req.match_id, req.feedback_tekst)
+        return {"message": "Feedback verwerkt en profiel verrijkt", "nieuw_profiel": nieuw_profiel}
+    except Exception as e:
+        logger.error(f"Fout bij verwerken feedback: {e}")
+        return {"message": "Feedback opgeslagen, maar verwerking mislukt door technische fout.", "detail": str(e)}
+
 
 # --- Batch Match (meerdere kandidaten tegen één vacature) ---
 

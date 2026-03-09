@@ -597,9 +597,10 @@
                   </tbody>
                 </table>
 
-                {#if detail.vervolgvragen && detail.vervolgvragen.length > 0 && editingName !== employer.naam}
+                {#if (detail.vervolgvragen?.length > 0 || detail.stellingen?.length > 0) && editingName !== employer.naam}
                   <DossierCompleetheidEnrichment
                     questions={detail.vervolgvragen}
+                    stellingen={detail.stellingen}
                     name={employer.naam}
                     docType="employers"
                     onSuccess={(result) => {
@@ -608,6 +609,7 @@
                         profile_data: result.profiel,
                         profile_score: result.nieuwe_score,
                         vervolgvragen: result.vervolgvragen,
+                        stellingen: result.stellingen,
                       };
                       // Update the main list as well
                       const idx = employers.findIndex(

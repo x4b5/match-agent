@@ -173,6 +173,7 @@ def create_document_router(
             "aandachtspunten": (profiel or {}).get("aandachtspunten", []),
             "vervolgvragen": (profiel or {}).get("vervolgvragen", []),
             "cultuur_vragen": (profiel or {}).get("cultuur_vragen", []),
+            "stellingen": (profiel or {}).get("stellingen", []),
             "exists_on_disk": exists_on_disk
         }
 
@@ -305,9 +306,6 @@ def create_document_router(
                         if "benodigde_kwaliteiten" in resultaat: skills_delen.extend(resultaat["benodigde_kwaliteiten"])
                         
                         skills_tekst = " ".join(filter(None, skills_delen))
-                        if skills_tekst:
-                            vector_skills = await genereer_embedding(skills_tekst)
-                            
                         # Cultuur tekst
                         cultuur_delen = []
                         if "persoonlijkheid" in resultaat: cultuur_delen.extend(resultaat["persoonlijkheid"])
@@ -318,8 +316,20 @@ def create_document_router(
                         if "team_en_cultuur" in resultaat: cultuur_delen.append(resultaat["team_en_cultuur"])
 
                         cultuur_tekst = " ".join(filter(None, cultuur_delen))
+
+                        import asyncio
+                        v_tasks = []
+                        if skills_tekst:
+                            v_tasks.append(genereer_embedding(skills_tekst))
+                        else:
+                            v_tasks.append(asyncio.sleep(0, result=None))
+                            
                         if cultuur_tekst:
-                            vector_cultuur = await genereer_embedding(cultuur_tekst)
+                            v_tasks.append(genereer_embedding(cultuur_tekst))
+                        else:
+                            v_tasks.append(asyncio.sleep(0, result=None))
+                            
+                        vector_skills, vector_cultuur = await asyncio.gather(*v_tasks)
 
                     # Save embedding (op geschoonde tekst — AVG-compliant)
                     if vector:
@@ -416,6 +426,7 @@ def create_document_router(
             "nieuwe_score": nieuw_profiel.get("dossier_compleetheid", nieuw_profiel.get("profiel_betrouwbaarheid", 0)),
             "vervolgvragen": nieuw_profiel.get("vervolgvragen", []),
             "cultuur_vragen": nieuw_profiel.get("cultuur_vragen", []),
+            "stellingen": nieuw_profiel.get("stellingen", []),
             "profiel": nieuw_profiel
         }
 

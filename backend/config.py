@@ -29,7 +29,7 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_URL = f"{OLLAMA_BASE_URL}/api/generate"
 OLLAMA_EMBED_URL = f"{OLLAMA_BASE_URL}/api/embeddings"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:27b")
-PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:8b")
+PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:4b")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert. Jij verbindt kandidaten met werkgevers.
@@ -51,7 +51,8 @@ Je antwoord moet ALTIJD uitsluitend een kloppend JSON-object zijn. Gebruik preci
 # --- Gesplitste Match-prompts ---
 # Kern-prompt: 8 velden — betrouwbaar op elk quantisatieniveau
 KERN_MATCH_PROMPT = """Bekijk hoe goed deze kandidaat en de werkgeversvraag bij elkaar passen.
-Let vooral op persoonlijkheid, potentieel en karakter. Bekijk de match minder op diploma's en de precieze functietitels.
+Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Vermijd jargon en HR-termen.
+Let vooral op persoonlijkheid, potentieel en karakter.
 
 KANDIDAATPROFIEL:
 {cv_tekst}
@@ -68,11 +69,13 @@ Geef je antwoord in exact de volgende JSON-opmaak (schrijf geen extra test eromh
   "onderbouwing": "Leg in 2 of 3 zinnen uit waarom de drijfveren en karakters van beide partijen klikken.",
   "cultuur_fit": "Zal deze persoon passen bij de sfeer in dit bedrijf/team? Waarom wel of niet?",
   "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
-  "vervolgvragen": ["maximaal 3 belangrijke vragen di we nog moeten stellen om zekerder te zijn van deze match"]
+  "vervolgvragen": ["maximaal 3 belangrijke vragen die we nog moeten stellen om zekerder te zijn van deze match"],
+  "stellingen": ["maximaal 3 prikkelende stellingen die de kandidaat kan beoordelen om de match te bevestigen of te verfijnen"]
 }}"""
 
 # Verdieping-prompt: ontvangt kern-resultaat als context, genereert extra inzichten
 VERDIEPING_MATCH_PROMPT = """Je hebt onlangs een eerste scan gemaakt van een match. Voeg hier nu nog meer diepgang en inzichten aan toe.
+Schrijf in ALTIJD begrijpelijke en duidelijke taal (B1-niveau). Spreek de lezer direct aan.
 
 KERN-ANALYSE:
 {kern_json}
@@ -116,6 +119,7 @@ PROFIEL_KANDIDAAT_PROMPT = """Maak een overzichtelijk profiel van deze persoon o
 Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tekst eromheen).
 
 Belangrijke aanwijzingen:
+- Gebruik begrijpelijke en duidelijke taal (B1-niveau). Vermijd jargon en ingewikkelde woorden.
 - Focus vooral op wie deze persoon IS, niet alleen op wat ze hebben gedaan.
 - Kijk ook naar kwaliteiten die niet letterlijk worden genoemd, maar die je wel kunt afleiden (bijvoorbeeld: iemand die jarenlang in de horeca werkt, is waarschijnlijk stressbestendig).
 - BELANGRIJK: Blijf bij de feiten. Als iets niet in de tekst staat, vul dan "Niet genoemd" in of laat het lijstje leeg. Verzin geen eigenschappen of hobby's die je niet kunt bewijzen.
@@ -148,6 +152,7 @@ Belangrijke aanwijzingen:
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier om een goede match te maken?>,
     "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten of die een risico kunnen zijn"],
     "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE KANDIDAAT over belangrijke informatie die nog ontbreekt (bijvoorbeeld over werkstijl of wat iemand écht motiveert)"],
+    "stellingen": ["Bedenk 5 prikkelende stellingen die de kandidaat kan beoordelen op een schaal van 1 tot 4 (bijv. 'Ik werk het liefst in een gestructureerde omgeving'). Gebruik stellingen om informatie te verkrijgen die nog niet in het profiel staat."],
     "cultuur_vragen": ["3 KORTE, SIMPELE, verhalende vragen over cultuur en persoonlijkheid. Schrijf op B1-niveau (begrijpelijk voor iedereen). Vermijd moeilijke woorden of formele taal. Denk aan: 'Wanneer baalde je echt van een fout, maar leerde je er toch van?' of 'Heb je wel eens iets geks gedaan om een klant blij te maken?'. Schrijf zoals je tegen een vriend praat."]
 }}
 
@@ -160,8 +165,9 @@ PROFIEL_WERKGEVERSVRAAG_PROMPT = """Maak een overzichtelijk profiel van deze wer
 Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tekst eromheen).
 
 Belangrijke aanwijzingen:
+- Gebruik begrijpelijke en duidelijke taal (B1-niveau). Vermijd jargon en ingewikkelde woorden.
+- Schrijf actief en direct.
 - Focus niet alleen op de harde eisen, maar vooral op het TYPE PERSOON dat wordt gezocht.
-- Probeer een beeld te schetsen van de ideale kandidaat: hoe ziet de perfecte persoon eruit qua karakter en houding?
 - BELANGRIJK: Blijf bij de feiten uit de tekst. Als iets niet in de tekst staat, vul dan "Niet genoemd" in. Ga geen bedrijfscultuur verzinnen die niet in de tekst staat.
 - BEOORDELING DOSSIERCOMPLEETHEID: Wees heel streng!
     - 0-20: Zeer korte tekst (bijvoorbeeld alleen de naam van de baan en de plaats).
@@ -188,7 +194,8 @@ Belangrijke aanwijzingen:
     "belangrijkste_taak": "Wat is de allerbelangrijkste taak in deze baan?",
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is de informatie om een goede match te maken?>,
     "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten (bijvoorbeeld reistijd, ploegendienst of fysiek zwaar werk)"],
-    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE WERKGEVER over belangrijke details die nog ontbreken over de baan of het team"]
+    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE WERKGEVER over belangrijke details die nog ontbreken over de baan of het team"],
+    "stellingen": ["Bedenk 5 prikkelende stellingen over de werkplek of het team (bijv. 'In dit team wordt veel samengewerkt in plaats van individueel gewerkt'). Gebruik stellingen om de cultuur en behoeften scherper te krijgen."]
 }}
 
 BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop direct nadat je het JSON-object hebt afgesloten met }}.
@@ -203,7 +210,8 @@ Geef je antwoord in precies deze JSON-opmaak (geen extra tekst eromheen).
 
 {{
     "volledigheid_score": <getal van 0 tot 100, waarbij 100 betekent dat alles erin staat>,
-    "vervolgvragen": ["Duidelijke vraag 1 over wat er ontbreekt", "Vraag 2", "...(maximaal 5 vragen)"]
+    "vervolgvragen": ["Duidelijke vraag 1 over wat er ontbreekt", "Vraag 2", "...(maximaal 5 vragen)"],
+    "stellingen": ["5 prikkelende stellingen die gaten in de informatie vullen (bijv. 'Ik vind het geen probleem om onder tijdsdruk te werken')"]
 }}
 
 PROFIEL:
@@ -215,10 +223,12 @@ Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter
 Aanwijzingen:
 - DE NIEUWE ANTWOORDEN ZIJN LEIDEND. Als een antwoord informatie geeft die in het bestaande profiel nog op "Onbekend" of "Niet genoemd" staat, mOET je dit veld nu bijwerken met de nieuwe informatie.
 - Verwerk de nieuwe informatie soepel in het hele profiel. Maak er geen los stukje van onderaan, maar weef het erdoorheen.
+- Gebruik ALTIJD begrijpelijke en duidelijke taal (B1-niveau). Spreek de gebruiker direct aan.
 - Verhoog de score voor de dossiercompleetheid (dossier_compleetheid) aanzienlijk als de antwoorden belangrijke gaten vullen.
 - Voeg nieuwe inzichten toe over iemands karakter, talenten en drijfveren op basis van de antwoorden.
 - Bedenk nieuwe vervolgvragen voor de kandidaat als er nog steeds belangrijke zaken ontbreken (maximaal 5).
-- Als het profiel nu helemaal compleet is, mag het lijstje met vervolgvragen leeg blijven of een lege lijst zijn [].
+- Bedenk 5 nieuwe prikkelende stellingen (stellingen) die de kandidaat kan beoordelen op een 4-punts schaal om extra informatie te verzamelen.
+- Als het profiel nu helemaal compleet is, mogen de lijstjes met vervolgvragen en stellingen leeg blijven of een lege lijst zijn [].
 
 BESTAAND PROFIEL:
 {profiel_json}
@@ -237,10 +247,12 @@ Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter
 Aanwijzingen:
 - DE NIEUWE ANTWOORDEN ZIJN LEIDEND. Als een antwoord informatie geeft die in het bestaande profiel nog op "Onbekend" of "Niet genoemd" staat, MOET je dit veld nu bijwerken met de nieuwe informatie.
 - Verwerk de nieuwe informatie soepel in het hele verhaal. Maak er geen los blokje van, maar weef het erdoorheen.
+- Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Spreek de lezer direct aan.
 - Verhoog de score voor de dossiercompleetheid (dossier_compleetheid) aanzienlijk als de antwoorden belangrijke gaten vullen.
 - Voeg nieuwe inzichten toe over het gezochte karakter, de werksfeer en behoeften.
 - Bedenk nieuwe vervolgvragen voor de werkgever als er nog steeds belangrijke zaken ontbreken (maximaal 5).
-- Als het profiel nu helemaal compleet is, mag het lijstje met vervolgvragen leeg blijven.
+- Bedenk 5 nieuwe prikkelende stellingen over de werkplek of het team om de cultuur scherper te krijgen.
+- Als het profiel nu helemaal compleet is, mogen de lijstjes met vervolgvragen en stellingen leeg blijven.
 
 BESTAAND PROFIEL:
 {profiel_json}
@@ -253,6 +265,27 @@ OORSPRONKELIJKE TEKST (voor de zekerheid):
 
 Maak het volledige bijgewerkte profiel in precies dezelfde JSON-opmaak als het eerste profiel."""
 
+VERWERK_MATCH_FEEDBACK_PROMPT = """Je hebt onlangs een match beoordeeld. De recruiter heeft nu feedback gegeven op deze match. 
+Gebruik deze feedback om het profiel van de KANDIDAAT verder te verrijken en aan te scherpen.
+
+KANDIDAATPROFIEL (HUIDIG):
+{profiel_json}
+
+MATCH RESULTAAT:
+{match_json}
+
+RECRUITER FEEDBACK:
+{feedback_tekst}
+
+Aanwijzingen:
+0. Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Geen wollig taalgebruik of HR-jargon.
+1. Extraheer nieuwe feiten, vaardigheden of karaktereigenschappen uit de feedback.
+2. Update relevante velden in het profiel (zoals 'persoonlijkheid', 'kwaliteiten', 'hard_skills', 'soft_skills').
+3. Als de feedback aangeeft dat iets NIET klopt, pas dit dan aan.
+4. Verhoog de 'dossier_compleetheid' als de feedback waardevolle nieuwe informatie bevat.
+5. Behoud alle bestaande informatie die niet door de feedback wordt tegengesproken.
+
+Return het VOLLEDIG BIJGEWERKTE KANDIDAATPROFIEL in exact dezelfde JSON-opmaak als het origineel."""
 
 # --- Match-modi ---
 # Elke modus definieert welke stappen worden uitgevoerd:

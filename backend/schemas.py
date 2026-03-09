@@ -22,6 +22,7 @@ class KandidaatProfiel(BaseModel):
     dossier_compleetheid: int = Field(ge=0, le=100, validation_alias=AliasChoices("dossier_compleetheid", "profiel_betrouwbaarheid"), description="Hoe compleet is dit dossier?")
     aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij dit profiel")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
+    stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 stellingen met een 4-punts schaal die helpen gaten te vullen")
     cultuur_vragen: List[str] = Field(default_factory=list, max_length=3, description="3 prikkelende vragen over cultuur en persoonlijkheid")
 
 class WerkgeversvraagProfiel(BaseModel):
@@ -43,10 +44,12 @@ class WerkgeversvraagProfiel(BaseModel):
     dossier_compleetheid: int = Field(ge=0, le=100, validation_alias=AliasChoices("dossier_compleetheid", "profiel_betrouwbaarheid"), description="Hoe compleet is dit dossier?")
     aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij deze vraag")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
+    stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 prikkelende stellingen over de werkplek of het team")
 
 class EvalueerProfielResult(BaseModel):
     volledigheid_score: int = Field(ge=0, le=100, description="Volledigheid score")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over missende info")
+    stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 stellingen over missende info")
 
 class PersonalityAxes(BaseModel):
     Analytisch: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
@@ -72,6 +75,7 @@ class KernMatchResult(BaseModel):
     cultuur_fit: str
     dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
     vervolgvragen: List[str] = Field(default_factory=list, max_length=5)
+    stellingen: List[str] = Field(default_factory=list, max_length=5)
 
 class VerdiepingMatchResult(BaseModel):
     """Verdieping: extra velden die de kern-match verrijken."""
@@ -97,6 +101,7 @@ class QuickScanMatchResult(BaseModel):
     aandachtspunten: List[str] = Field(default_factory=list)
     dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
     vervolgvragen: List[str] = Field(default_factory=list)
+    stellingen: List[str] = Field(default_factory=list)
 
 # Standaard = samenvoeging van kern + verdieping (backwards compatible)
 class StandaardMatchResult(BaseModel):

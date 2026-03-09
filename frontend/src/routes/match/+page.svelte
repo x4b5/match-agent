@@ -280,6 +280,43 @@
   function backToBatch() {
     finalMatchData = { isBatch: true };
   }
+
+  // --- Feedback ---
+  let feedbackTekst = $state("");
+  let isSubmittingFeedback = $state(false);
+
+  async function submitFeedback() {
+    if (!feedbackTekst.trim()) return;
+    isSubmittingFeedback = true;
+
+    try {
+      const res = await fetch("/api/matching/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          match_id: finalMatchData.id,
+          feedback_tekst: feedbackTekst,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toasts.add("Feedback verwerkt! Profiel is verrijkt.", "success");
+        feedbackTekst = "";
+        // We verversen de match data niet direct om de UI rustig te houden,
+        // maar de gebruiker weet dat het profiel is bijgewerkt.
+      } else {
+        toasts.add(
+          data.message || "Feedback kon niet worden verwerkt.",
+          "error",
+        );
+      }
+    } catch (e: any) {
+      toasts.add("Netwerkfout bij feedback.", "error");
+    } finally {
+      isSubmittingFeedback = false;
+    }
+  }
 </script>
 
 <div class="page-hero">
@@ -865,16 +902,18 @@
   {/if}
 
   <!-- Vervolgvragen -->
-  {#if finalMatchData.vervolgvragen?.length && !finalMatchData.isBatch}
+  {#if (finalMatchData.vervolgvragen?.length || finalMatchData.stellingen?.length) && !finalMatchData.isBatch}
     <div class="card">
       <DossierCompleetheidEnrichment
         questions={finalMatchData.vervolgvragen}
+        stellingen={finalMatchData.stellingen}
         name={selectedCandidate}
         docType="candidates"
         onSuccess={(result) => {
           toasts.add("Kandidaat profiel verrijkt met antwoorden!", "success");
           // Update local match data if needed or refresh
           finalMatchData.vervolgvragen = result.vervolgvragen;
+          finalMatchData.stellingen = result.stellingen;
           // Optionally we could trigger a re-match here, but for now just showing enrichment success is good
         }}
       />
@@ -897,6 +936,53 @@
       </ul>
     </div>
   {/if}
+
+  <!-- Match Feedback Loop -->
+  <div class="card feedback-card">
+    <h3 class="section-title">
+      <span class="material-icons" style="color: var(--neon-gold);"
+        >maps_ugc</span
+      >
+      Feedback op deze match
+    </h3>
+    <p
+      style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;"
+    >
+      Klopt deze match niet helemaal? Of heb je extra informatie? Geef het hier
+      aan. Onze AI gebruikt je feedback om het profiel van <strong
+        >{selectedCandidate}</strong
+      > direct te verbeteren.
+    </p>
+    <div class="feedback-input-wrapper">
+      <textarea
+        placeholder="Bijv: 'De kandidaat heeft ook veel ervaring met React, wat niet in het CV stond.' of 'Deze persoon is minder senior voor deze rol dan de AI denkt.'"
+        class="input-field feedback-textarea"
+        bind:value={feedbackTekst}
+        disabled={isSubmittingFeedback}
+      ></textarea>
+      <button
+        class="btn-primary"
+        style="margin-top: 0.75rem; width: 100%;"
+        onclick={submitFeedback}
+        disabled={isSubmittingFeedback || !feedbackTekst.trim()}
+      >
+        {#if isSubmittingFeedback}
+          <span
+            class="material-icons spin"
+            style="font-size: 1.1rem; vertical-align: middle;">sync</span
+          >
+          Verwerken...
+        {:else}
+          <span
+            class="material-icons"
+            style="font-size: 1.1rem; vertical-align: middle;"
+            >auto_awesome</span
+          >
+          Feedback Verzenden & Profiel Verrijken
+        {/if}
+      </button>
+    </div>
+  </div>
 
   <!-- Toggle raw output + actions -->
   <div
@@ -1381,5 +1467,21 @@
   .btn-stop:hover {
     background: rgba(255, 64, 129, 0.2);
     border-color: var(--neon-pink);
+  }
+
+  .feedback-card {
+    border: 1px solid rgba(255, 171, 0, 0.2);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 171, 0, 0.05) 0%,
+      rgba(20, 20, 30, 0.4) 100%
+    );
+  }
+
+  .feedback-textarea {
+    min-height: 80px;
+    resize: vertical;
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
 </style>
