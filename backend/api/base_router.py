@@ -280,19 +280,52 @@ def create_document_router(
 
             # ── Sequentiële uitvoering: profiel eerst, dan embedding ──
             # Ollama kan maar één model tegelijk laden, dus sequentieel uitvoeren
-            await update_task_db(task_id, progress="Profiel wordt geanalyseerd...", progress_percent=40)
+            await update_task_db(task_id, progress="Model wordt geladen...", progress_percent=35)
 
+            # Voortgangsticker: laat de balk geleidelijk oplopen tijdens de LLM-call
+            llm_berichten = [
+                (38, "Tekst wordt gelezen door AI..."),
+                (42, "Werkstijl wordt geanalyseerd..."),
+                (48, "Leervermogen wordt ingeschat..."),
+                (54, "Vaardigheden worden geëxtraheerd..."),
+                (60, "Verrassende functies worden bedacht..."),
+                (65, "Profiel wordt afgerond..."),
+            ]
+            ticker_done = asyncio.Event()
+
+            async def _progress_ticker():
+                for pct, msg in llm_berichten:
+                    try:
+                        await asyncio.wait_for(ticker_done.wait(), timeout=15)
+                        return  # LLM is klaar
+                    except asyncio.TimeoutError:
+                        await update_task_db(task_id, progress=msg, progress_percent=pct)
+                # Als we hier komen draait de LLM nog steeds — blijf rustig wachten
+                stap = 68
+                while stap < 74:
+                    try:
+                        await asyncio.wait_for(ticker_done.wait(), timeout=30)
+                        return
+                    except asyncio.TimeoutError:
+                        await update_task_db(task_id, progress="Bijna klaar met analyse...", progress_percent=stap)
+                        stap += 2
+
+            ticker_task = asyncio.create_task(_progress_ticker())
             try:
                 resultaat = await asyncio.wait_for(
                     profiel_agent_fn(geschoonde_tekst),
                     timeout=600
                 )
             except asyncio.TimeoutError:
+                ticker_done.set()
                 await update_task_db(
                     task_id, status="failed",
                     error="Profielgeneratie duurde te lang (timeout na 10 minuten). Mogelijk is het Ollama model overbelast. Probeer het opnieuw."
                 )
                 return
+            finally:
+                ticker_done.set()
+                ticker_task.cancel()
 
             await update_task_db(task_id, progress="Embedding genereren...", progress_percent=75)
             # Geef Ollama even tijd om van generatie-model naar embedding-model te wisselen
@@ -354,16 +387,10 @@ def create_document_router(
                     if "taken" in resultaat: skills_delen.extend(resultaat["taken"])
 
                     skills_tekst = " ".join(filter(None, skills_delen))
-                    # Cultuur tekst (kandidaat: gedrag + leervermogen, werkgever: organisatiewaarden etc.)
+                    # Cultuur tekst (kandidaat: werkstijl + leervermogen, werkgever: organisatiewaarden etc.)
                     cultuur_delen = []
-                    if "gedrag" in resultaat and isinstance(resultaat["gedrag"], dict):
-                        for dim, val in resultaat["gedrag"].items():
-                            if isinstance(val, dict) and "toelichting" in val:
-                                cultuur_delen.append(val["toelichting"])
-                    if "leervermogen" in resultaat and isinstance(resultaat["leervermogen"], dict):
-                        for dim, val in resultaat["leervermogen"].items():
-                            if isinstance(val, dict) and "toelichting" in val:
-                                cultuur_delen.append(val["toelichting"])
+                    if "werkstijl" in resultaat: cultuur_delen.append(str(resultaat["werkstijl"]))
+                    if "leervermogen" in resultaat: cultuur_delen.append(str(resultaat["leervermogen"]))
                     if "organisatiewaarden" in resultaat: cultuur_delen.extend(resultaat["organisatiewaarden"])
                     if "gezochte_persoonlijkheid" in resultaat: cultuur_delen.extend(resultaat["gezochte_persoonlijkheid"])
                     if "team_en_cultuur" in resultaat: cultuur_delen.append(resultaat["team_en_cultuur"])
@@ -460,18 +487,7 @@ def create_document_router(
             skills_tekst = ", ".join(nieuw_profiel.get("vaardigheden", []))
             if nieuw_profiel.get("kernrol"):
                 skills_tekst += " " + nieuw_profiel["kernrol"]
-            cultuur_delen = []
-            gedrag = nieuw_profiel.get("gedrag", {})
-            if isinstance(gedrag, dict):
-                for val in gedrag.values():
-                    if isinstance(val, dict) and "toelichting" in val:
-                        cultuur_delen.append(val["toelichting"])
-            leervermogen = nieuw_profiel.get("leervermogen", {})
-            if isinstance(leervermogen, dict):
-                for val in leervermogen.values():
-                    if isinstance(val, dict) and "toelichting" in val:
-                        cultuur_delen.append(val["toelichting"])
-            cultuur_tekst = " ".join(cultuur_delen)
+            cultuur_tekst = f"{nieuw_profiel.get('werkstijl', '')} {nieuw_profiel.get('leervermogen', '')}"
             
             embedding, embedding_skills, embedding_cultuur = await genereer_embeddings_batch([
                 full_text_for_embedding, 

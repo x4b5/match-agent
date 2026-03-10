@@ -121,19 +121,8 @@ async def reverse_search(req: ReverseSearchRequest):
     if "kernrol" in cand_profiel: skills_delen.append(cand_profiel["kernrol"])
     skills_tekst = " ".join(filter(None, skills_delen))
 
-    # Cultuur tekst (gedrag + leervermogen toelichtingen)
-    cultuur_delen = []
-    gedrag = cand_profiel.get("gedrag", {})
-    if isinstance(gedrag, dict):
-        for val in gedrag.values():
-            if isinstance(val, dict) and "toelichting" in val:
-                cultuur_delen.append(val["toelichting"])
-    leervermogen = cand_profiel.get("leervermogen", {})
-    if isinstance(leervermogen, dict):
-        for val in leervermogen.values():
-            if isinstance(val, dict) and "toelichting" in val:
-                cultuur_delen.append(val["toelichting"])
-    cultuur_tekst = " ".join(filter(None, cultuur_delen))
+    # Cultuur tekst (werkstijl + leervermogen)
+    cultuur_tekst = f"{cand_profiel.get('werkstijl', '')} {cand_profiel.get('leervermogen', '')}"
 
     # Parallelle embedding generatie
     vector, vector_skills, vector_cultuur = await genereer_embeddings_batch([cand_json, skills_tekst, cultuur_tekst])

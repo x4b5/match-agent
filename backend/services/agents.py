@@ -399,18 +399,7 @@ async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
         try:
             full_text = json.dumps(nieuw_profiel, ensure_ascii=False)
             skills_tekst = ", ".join(nieuw_profiel.get("vaardigheden", []))
-            cultuur_delen = []
-            gedrag = nieuw_profiel.get("gedrag", {})
-            if isinstance(gedrag, dict):
-                for val in gedrag.values():
-                    if isinstance(val, dict) and "toelichting" in val:
-                        cultuur_delen.append(val["toelichting"])
-            leervermogen = nieuw_profiel.get("leervermogen", {})
-            if isinstance(leervermogen, dict):
-                for val in leervermogen.values():
-                    if isinstance(val, dict) and "toelichting" in val:
-                        cultuur_delen.append(val["toelichting"])
-            cultuur_tekst = " ".join(cultuur_delen)
+            cultuur_tekst = f"{nieuw_profiel.get('werkstijl', '')} {nieuw_profiel.get('leervermogen', '')}"
             
             vector, vec_skills, vec_cultuur = await genereer_embeddings_batch([full_text, skills_tekst, cultuur_tekst])
             

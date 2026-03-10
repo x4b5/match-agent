@@ -36,7 +36,7 @@ SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert. Jij
 Kijk vooral naar wat iemand kan (potentieel), wie iemand is (karakter), en wat iemand wil (drijfveren). Kijk minder streng naar diploma's of de precieze werkervaring.
 Je doel is om verrassende en inspirerende matches te maken. Wijs kandidaten op banen nadat ze daar zelf misschien niet aan hadden gedacht. Wijs werkgevers op talent dat ze normaal over het hoofd zouden zien.
 Wees eerlijk en objectief in je oordeel over de match. De manier waarop iemand in het team past (cultuurfit) en de persoonlijkheid tellen daarbij zwaar mee.
-BELANGRIJK: Gebruik GEEN DISC-termen (zoals Dominantie of Invloed) en geen kleurenmodellen. Gebruik het Big Five persoonlijkheidsmodel (openheid, conscientieusheid, extraversie, vriendelijkheid, neuroticisme) en Learning Agility (mental agility, people agility, change agility, results agility, self-awareness) als basis voor je analyse.
+BELANGRIJK: Gebruik GEEN DISC-termen (zoals Dominantie of Invloed) en geen kleurenmodellen. Benoem gewoon in heldere taal de concrete talenten en kwaliteiten.
 
 BEOORDELING DOSSIERCOMPLEETHEID:
 Geef bij elke match aan hoe compleet de informatie is:
@@ -125,29 +125,15 @@ Duidelijke taal (B1), actief en specifiek. Focus op wie iemand IS en potentieel.
 Blijf bij de feiten. Wees streng bij dossier_compleetheid (0-100).
 
 Het profiel heeft 3 pijlers:
-1. GEDRAG — op basis van het Big Five model. Geef per dimensie een score (1-5) en een korte toelichting met bewijs uit de tekst. Als iets niet af te leiden is, geef een neutrale score (3) en vermeld dat.
-2. LEERVERMOGEN — op basis van Learning Agility (5 dimensies). Geef per dimensie een score (1-5) en een korte toelichting met bewijs.
+1. WERKSTIJL — Korte beschrijving (2-4 zinnen) van hoe deze persoon werkt: karakter, samenwerking, communicatie, omgang met druk.
+2. LEERVERMOGEN — Korte beschrijving (2-4 zinnen) van het leervermogen in de breedste zin: hoe snel pikt iemand dingen op, hoe gaat iemand om met verandering, waar ligt de groeipotentie.
 3. VAARDIGHEDEN — concrete hard skills en technische vaardigheden.
-
-Verwerk persoonlijkheid, kwaliteiten, drijfveren, werkstijl en ambities in de toelichtingen van gedrag en leervermogen. Maak er geen losse velden van.
 
 {{
     "naam": "Naam",
     "kernrol": "Huidige rol/profiel",
-    "gedrag": {{
-        "openheid": {{"score": <1-5>, "toelichting": "Nieuwsgierigheid, creativiteit, open voor nieuwe ideeën"}},
-        "conscientieusheid": {{"score": <1-5>, "toelichting": "Zorgvuldigheid, discipline, doelgerichtheid"}},
-        "extraversie": {{"score": <1-5>, "toelichting": "Sociaal, energiek, assertief"}},
-        "vriendelijkheid": {{"score": <1-5>, "toelichting": "Samenwerking, empathie, behulpzaamheid"}},
-        "neuroticisme": {{"score": <1-5>, "toelichting": "Emotionele stabiliteit, omgang met stress (1=zeer stabiel, 5=zeer gevoelig)"}}
-    }},
-    "leervermogen": {{
-        "mental_agility": {{"score": <1-5>, "toelichting": "Analytisch vermogen, patronen herkennen"}},
-        "people_agility": {{"score": <1-5>, "toelichting": "Communicatie, empathie, effectief samenwerken"}},
-        "change_agility": {{"score": <1-5>, "toelichting": "Omgaan met onzekerheid, flexibiliteit"}},
-        "results_agility": {{"score": <1-5>, "toelichting": "Resultaten onder druk, veerkracht"}},
-        "self_awareness": {{"score": <1-5>, "toelichting": "Zelfinzicht, kent eigen sterktes en zwaktes"}}
-    }},
+    "werkstijl": "Hoe werkt deze persoon? Karakter, samenwerking, communicatie, omgang met druk.",
+    "leervermogen": "Hoe leert deze persoon? Hoe snel, hoe flexibel, waar ligt de groei?",
     "vaardigheden": ["Concrete hard skills en technische vaardigheden"],
     "beschikbaarheid_en_locatie": "Woonplaats/uren",
     "opleiding_en_ervaring_samenvatting": "Korte samenvatting",
@@ -269,7 +255,7 @@ RECRUITER FEEDBACK:
 Aanwijzingen:
 0. Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Geen wollig taalgebruik of HR-jargon.
 1. Extraheer nieuwe feiten, vaardigheden of karaktereigenschappen uit de feedback.
-2. Update relevante velden in het profiel: pas 'gedrag' (Big Five scores en toelichtingen), 'leervermogen' (Learning Agility scores en toelichtingen) en 'vaardigheden' aan.
+2. Update relevante velden in het profiel: pas 'werkstijl', 'leervermogen' en 'vaardigheden' aan waar nodig.
 3. Als de feedback aangeeft dat iets NIET klopt, pas dit dan aan.
 4. Verhoog de 'dossier_compleetheid' als de feedback waardevolle nieuwe informatie bevat.
 5. Behoud alle bestaande informatie die niet door de feedback wordt tegengesproken.
