@@ -30,15 +30,13 @@
       style="display: flex; align-items: center; gap: 10px; font-size: 1.3rem;"
     >
       <span class="material-icons" style="color: var(--neon-cyan);"
-        >psychology</span
+        >lock</span
       >
-      Lokale AI Kracht
+      Alles blijft op jouw computer
     </h2>
     <p>
-      Matchflix zet de kracht van geavanceerde Large Language Models (LLMs)
-      lokaal in op je eigen machine via Ollama. Dit betekent dat geen enkele cv
-      of vacaturetekst ooit je laptop of netwerk verlaat. Alle analyses,
-      vectorembeddings en data-extracties gebeuren veilig op je eigen hardware.
+      De AI draait volledig lokaal. Er wordt geen data naar de cloud of externe
+      diensten gestuurd — wat je invoert, blijft bij jou.
     </p>
   </div>
 
@@ -49,55 +47,77 @@
       <span class="material-icons" style="color: var(--neon-purple);"
         >verified_user</span
       >
-      AVG/GDPR-Compliant
+      Automatische bescherming van persoonsgegevens
     </h2>
     <p>
-      Bij de recruitment-operatie staat privacy voorop. Omdat MATCHFLIX een <strong
-        >100% gesloten systeem</strong
-      > is zonder cloud-afhankelijkheden, behoud je de volledige datasoevereiniteit
-      over gevoelige persoonsgegevens uit documenten en sollicitaties.
+      Voordat tekst wordt geanalyseerd, worden gevoelige gegevens zoals
+      e-mailadressen, IBAN-nummers en BSN-nummers automatisch onherkenbaar
+      gemaakt. BSN-nummers worden zelfs wiskundig gecontroleerd op echtheid.
     </p>
   </div>
 
-  <div class="card element-container" style="grid-column: 1 / -1;">
+  <div class="card element-container">
+    <h2
+      style="display: flex; align-items: center; gap: 10px; font-size: 1.3rem;"
+    >
+      <span class="material-icons" style="color: var(--neon-green);"
+        >psychology</span
+      >
+      Potentie boven papier
+    </h2>
+    <p>
+      Matchflix kijkt verder dan diploma's en functietitels. Het draait om wie
+      iemand is: karakter, drijfveren en of iemand past bij het team en de
+      cultuur.
+    </p>
+  </div>
+
+  <div class="card element-container">
     <h2
       style="display: flex; align-items: center; gap: 10px; font-size: 1.3rem;"
     >
       <span class="material-icons" style="color: var(--neon-blue);"
-        >architecture</span
+        >translate</span
       >
-      De Architectuur
+      Heldere taal, geen jargon
     </h2>
     <p>
-      De asynchrone FastAPI + SvelteKit architectuur garandeert een schaalbare
-      flow. Achtergrondtaken (profielgeneratie, batch matching) worden
-      bijgehouden via een task-tracking systeem met realtime status-updates.
-      De frontend streamt resultaten live via Server-Sent Events terug naar
-      je scherm.
+      Alle communicatie is geschreven op B1-niveau — begrijpelijk voor iedereen,
+      zonder vakjargon. Zo is het toegankelijk voor zowel recruiters als
+      kandidaten.
     </p>
-    <ul
-      style="color: var(--text-secondary); line-height: 1.8; margin-top: 1rem;"
+  </div>
+
+  <div class="card element-container">
+    <h2
+      style="display: flex; align-items: center; gap: 10px; font-size: 1.3rem;"
     >
-      <li>
-        <strong>Frontend:</strong> SvelteKit (Svelte 5) voor een interactieve UI
-        met realtime streaming.
-      </li>
-      <li>
-        <strong>Backend API:</strong> Python FastAPI met aiosqlite, SSE-streaming
-        en in-memory task tracking.
-      </li>
-      <li>
-        <strong>Matching:</strong> Embedding pre-filter (cosine similarity) gevolgd
-        door LLM-analyse. Batch matching en caching ingebouwd.
-      </li>
-      <li>
-        <strong>Intelligentie:</strong> Ollama API voor het lokaal aansturen van
-        open-source LLMs (profielen, matching, embeddings).
-      </li>
-      <li>
-        <strong>Opslag:</strong> SQLite als primaire bron voor profielen en matches,
-        filesystem voor ruwe documenten.
-      </li>
-    </ul>
+      <span class="material-icons" style="color: var(--neon-orange, #ff9800);"
+        >travel_explore</span
+      >
+      Slim zoeken op betekenis
+    </h2>
+    <p>
+      Het systeem zoekt niet op losse woorden, maar begrijpt de betekenis achter
+      profielen en vacatures. Daardoor vindt het ook matches die je met
+      traditioneel zoeken zou missen — op drie vlakken: algemene fit,
+      vaardigheden en cultuur.
+    </p>
+  </div>
+
+  <div class="card element-container">
+    <h2
+      style="display: flex; align-items: center; gap: 10px; font-size: 1.3rem;"
+    >
+      <span class="material-icons" style="color: var(--neon-pink, #e91e63);"
+        >auto_awesome</span
+      >
+      Leert van jouw feedback
+    </h2>
+    <p>
+      Wanneer een recruiter feedback geeft op een match, wordt het
+      kandidaatprofiel direct verrijkt. Het systeem leert mee en levert bij de
+      volgende ronde betere matches.
+    </p>
   </div>
 </div>
