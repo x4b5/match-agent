@@ -77,9 +77,14 @@ class KernMatchResult(BaseModel):
     vervolgvragen: List[str] = Field(default_factory=list, max_length=5)
     stellingen: List[str] = Field(default_factory=list, max_length=5)
 
+class SuccesPlan(BaseModel):
+    """Tweezijdig actieplan: wat kan de kandidaat doen, en wat moet de werkgever bieden?"""
+    actie_kandidaat: List[str]
+    actie_werkgever: List[str]
+
 class VerdiepingMatchResult(BaseModel):
     """Verdieping: extra velden die de kern-match verrijken."""
-    overbruggings_advies: List[str]
+    succes_plan: SuccesPlan
     gespreksstarters: List[str]
     risico_mitigatie: str
     gedeelde_waarden: List[str]
@@ -108,7 +113,7 @@ class StandaardMatchResult(BaseModel):
     match_percentage: int = Field(ge=0, le=100)
     matchende_punten: List[str]
     ontbrekende_punten: List[str]
-    overbruggings_advies: List[str] = Field(default_factory=list)
+    succes_plan: SuccesPlan = Field(default=None)
     verrassings_element: str
     gespreksstarters: List[str] = Field(default_factory=list)
     risico_mitigatie: str = Field(default="")

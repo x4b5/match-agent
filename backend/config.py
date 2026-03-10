@@ -88,7 +88,10 @@ WERKGEVERSVRAAGPROFIEL:
 
 Geef je uitgebreide analyse in exact deze JSON-opmaak (alleen de JSON-code overnemen):
 {{
-  "overbruggings_advies": ["Geef voor élk ontbrekend punt een advies. Hoe vangen we dit op? (bijvoorbeeld met een cursus of meer begeleiding)"],
+  "succes_plan": {{
+    "actie_kandidaat": ["Wat kan deze persoon zelf doen om sterker voor de dag te komen? Denk aan: een cursus, een certificaat, ergens extra op letten."],
+    "actie_werkgever": ["Wat moet de organisatie regelen om het een succes te maken? Denk aan: een inwerkplan, een mentor, aanpassing van de rol of werkplek."]
+  }},
   "gespreksstarters": ["3 goede interviewvragen die de recruiter kan gebruiken in het eerste gesprek"],
   "risico_mitigatie": "Hoe houden we de risico's zo klein mogelijk? Wat voor soort inwerken/begeleiding is daarvoor handig?",
   "gedeelde_waarden": ["Welke normen en waarden vinden zowel het bedrijf als deze persoon belangrijk?"],

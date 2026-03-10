@@ -153,7 +153,7 @@ class TestStandaardMatchResult:
             match_percentage=82,
             matchende_punten=["Teamspeler", "Communicatief"],
             ontbrekende_punten=["Geen ervaring in sector"],
-            overbruggings_advies=["Inwerktraject van 3 maanden"],
+            succes_plan={"actie_kandidaat": ["Inwerktraject van 3 maanden"], "actie_werkgever": ["Mentorprogramma opzetten"]},
             verrassings_element="Horeca-achtergrond",
             gespreksstarters=["Vertel over je ervaring met klanten"],
             risico_mitigatie="Begeleiding eerste 6 maanden",

@@ -884,20 +884,43 @@
     </div>
   {/if}
 
-  <!-- Overbruggingsadvies -->
-  {#if finalMatchData.overbruggings_advies?.length}
+  <!-- Succesplan -->
+  {#if finalMatchData.succes_plan?.actie_kandidaat?.length || finalMatchData.succes_plan?.actie_werkgever?.length}
     <div class="card">
       <h3 class="section-title">
         <span class="material-icons" style="color: var(--neon-cyan);"
-          >engineering</span
+          >handshake</span
         >
-        Overbruggingsadvies
+        Het Succesplan
       </h3>
-      <ul class="result-list result-list-neutral">
-        {#each finalMatchData.overbruggings_advies as advies}
-          <li>{advies}</li>
-        {/each}
-      </ul>
+      <div class="succes-plan-columns">
+        {#if finalMatchData.succes_plan.actie_kandidaat?.length}
+          <div class="succes-plan-col">
+            <h4 class="succes-plan-col-title">
+              <span class="material-icons" style="color: var(--neon-green); font-size: 1.1rem;">school</span>
+              Wat de kandidaat kan doen
+            </h4>
+            <ul class="result-list result-list-neutral">
+              {#each finalMatchData.succes_plan.actie_kandidaat as actie}
+                <li>{actie}</li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+        {#if finalMatchData.succes_plan.actie_werkgever?.length}
+          <div class="succes-plan-col">
+            <h4 class="succes-plan-col-title">
+              <span class="material-icons" style="color: var(--neon-purple); font-size: 1.1rem;">business</span>
+              Wat de werkgever kan bieden
+            </h4>
+            <ul class="result-list result-list-neutral">
+              {#each finalMatchData.succes_plan.actie_werkgever as actie}
+                <li>{actie}</li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+      </div>
     </div>
   {/if}
 
@@ -1029,6 +1052,28 @@
 {/if}
 
 <style>
+  .succes-plan-columns {
+    display: flex;
+    gap: 1.5rem;
+  }
+  .succes-plan-col {
+    flex: 1;
+    min-width: 0;
+  }
+  .succes-plan-col-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+  }
+  @media (max-width: 768px) {
+    .succes-plan-columns {
+      flex-direction: column;
+    }
+  }
   .step-indicator {
     padding: 0 1rem;
     margin-bottom: 2rem;
