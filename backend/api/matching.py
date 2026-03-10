@@ -115,14 +115,13 @@ async def reverse_search(req: ReverseSearchRequest):
     
     cand_json = json.dumps(cand_profiel, ensure_ascii=False)
     
-    # Skills tekst
-    skills_delen = []
-    if "vaardigheden" in cand_profiel: skills_delen.extend(cand_profiel["vaardigheden"])
-    if "kernrol" in cand_profiel: skills_delen.append(cand_profiel["kernrol"])
-    skills_tekst = " ".join(filter(None, skills_delen))
+    # Skills tekst (kunnen + kernrol)
+    skills_tekst = cand_profiel.get("kunnen", "")
+    if cand_profiel.get("kernrol"):
+        skills_tekst += " " + cand_profiel["kernrol"]
 
-    # Cultuur tekst (werkstijl + leervermogen)
-    cultuur_tekst = f"{cand_profiel.get('werkstijl', '')} {cand_profiel.get('leervermogen', '')}"
+    # Cultuur tekst (zijn + willen)
+    cultuur_tekst = f"{cand_profiel.get('zijn', '')} {cand_profiel.get('willen', '')}"
 
     # Parallelle embedding generatie
     vector, vector_skills, vector_cultuur = await genereer_embeddings_batch([cand_json, skills_tekst, cultuur_tekst])
@@ -171,20 +170,11 @@ async def semantic_search(req: SemanticSearchRequest):
 
     vac_json = json.dumps(vac_profiel, ensure_ascii=False)
     
-    # Skills tekst (werkgeversvraag-velden)
-    skills_delen = []
-    if "must_have_skills" in vac_profiel: skills_delen.extend(vac_profiel["must_have_skills"])
-    if "benodigde_kwaliteiten" in vac_profiel: skills_delen.extend(vac_profiel["benodigde_kwaliteiten"])
-    if "taken" in vac_profiel: skills_delen.extend(vac_profiel["taken"])
-    if "titel" in vac_profiel: skills_delen.append(vac_profiel["titel"])
-    skills_tekst = " ".join(filter(None, skills_delen))
+    # Skills tekst (kunnen + titel)
+    skills_tekst = f"{vac_profiel.get('kunnen', '')} {vac_profiel.get('titel', '')}".strip()
 
-    # Cultuur tekst (werkgeversvraag-velden)
-    cultuur_delen = []
-    if "organisatiewaarden" in vac_profiel: cultuur_delen.extend(vac_profiel["organisatiewaarden"])
-    if "gezochte_persoonlijkheid" in vac_profiel: cultuur_delen.extend(vac_profiel["gezochte_persoonlijkheid"])
-    if "team_en_cultuur" in vac_profiel: cultuur_delen.append(vac_profiel["team_en_cultuur"])
-    cultuur_tekst = " ".join(filter(None, cultuur_delen))
+    # Cultuur tekst (zijn + willen)
+    cultuur_tekst = f"{vac_profiel.get('zijn', '')} {vac_profiel.get('willen', '')}".strip()
 
     # Parallelle embedding generatie
     from backend.services.agents import genereer_embeddings_batch
@@ -212,7 +202,7 @@ async def semantic_search(req: SemanticSearchRequest):
                 "percentage": match["percentage"],
                 "sub_scores": match.get("sub_scores", {}),
                 "kernrol": profiel.get("kernrol", "Onbekend"),
-                "vaardigheden": profiel.get("vaardigheden", [])
+                "kunnen": profiel.get("kunnen", "")
             })
 
     return {"message": "Semantic search voltooid", "matches": enriched_matches}
@@ -305,6 +295,7 @@ class FeedbackRequest(BaseModel):
     match_id: int
     feedback_tekst: str = ""
     recruiter_rating: int | None = Field(default=None, ge=1, le=5)
+    feedback_categorieen: list[str] = []
 
 @router.post("/feedback")
 async def match_feedback(req: FeedbackRequest):
@@ -315,18 +306,24 @@ async def match_feedback(req: FeedbackRequest):
     if req.recruiter_rating is not None:
         await bewaar_recruiter_rating(req.match_id, req.recruiter_rating)
 
-    # 2. Verwerk feedback-tekst met AI (alleen bij niet-lege tekst)
+    # 2. Combineer categorieën met feedback-tekst
+    feedback_tekst = req.feedback_tekst
+    if req.feedback_categorieen:
+        categorie_prefix = "[Categorieën: " + ", ".join(req.feedback_categorieen) + "] "
+        feedback_tekst = categorie_prefix + feedback_tekst
+
+    # 3. Verwerk feedback-tekst met AI (alleen bij niet-lege tekst)
     nieuw_profiel = None
-    if req.feedback_tekst.strip():
-        await bewaar_match_feedback(req.match_id, req.feedback_tekst)
+    if feedback_tekst.strip():
+        await bewaar_match_feedback(req.match_id, feedback_tekst)
         try:
-            nieuw_profiel = await verwerk_match_feedback(req.match_id, req.feedback_tekst)
+            nieuw_profiel = await verwerk_match_feedback(req.match_id, feedback_tekst)
         except Exception as e:
             logger.error(f"Fout bij verwerken feedback: {e}")
             if req.recruiter_rating is None:
                 return {"message": "Feedback opgeslagen, maar verwerking mislukt door technische fout.", "detail": str(e)}
 
-    # 3. Trigger gewichtsoptimalisatie als er genoeg onverwerkte ratings zijn
+    # 4. Trigger gewichtsoptimalisatie als er genoeg onverwerkte ratings zijn
     try:
         onverwerkt = await tel_onverwerkte_ratings()
         if onverwerkt >= 10:
@@ -335,7 +332,7 @@ async def match_feedback(req: FeedbackRequest):
         logger.error(f"Fout bij gewichtsoptimalisatie: {e}")
 
     if nieuw_profiel:
-        return {"message": "Feedback verwerkt en profiel verrijkt", "nieuw_profiel": nieuw_profiel}
+        return {"message": "Feedback verwerkt en kandidaat- en werkgeversprofiel verrijkt", "nieuw_profiel": nieuw_profiel}
     elif req.recruiter_rating is not None:
         return {"message": f"Beoordeling ({req.recruiter_rating} sterren) opgeslagen"}
     else:

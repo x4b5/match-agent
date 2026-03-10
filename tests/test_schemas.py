@@ -13,21 +13,9 @@ class TestKandidaatProfiel:
         profiel = KandidaatProfiel(
             naam="Jan de Vries",
             kernrol="Software Developer",
-            persoonlijkheid=["analytisch", "creatief"],
-            kwaliteiten=["probleemoplossend"],
-            impliciete_kwaliteiten=["doorzetter"],
-            drijfveren=["leren"],
-            onderliggende_motivatie="Groei",
-            ideale_werkdag="Code schrijven",
-            werkstijl="Zelfstandig",
-            ambities_en_leerdoelen=["AI leren"],
-            gewenste_bedrijfscultuur="Informeel",
-            hobby_en_interesses=["schaken"],
-            hard_skills=["Python"],
-            soft_skills=["communicatie"],
-            beschikbaarheid_en_locatie="Amsterdam",
-            opleiding_en_ervaring_samenvatting="HBO ICT",
-            verrassende_functies=["Leraar", "Projectmanager", "Consultant"],
+            zijn="Analytisch en creatief. Werkt graag zelfstandig maar communiceert helder in teamverband.",
+            willen="Wil groeien in AI en machine learning. Zoekt een informele werkplek met ruimte voor experiment.",
+            kunnen="Python, JavaScript, data-analyse. HBO ICT afgerond. Woont in Amsterdam, fulltime beschikbaar. Nog weinig ervaring met cloud-infra.",
             dossier_compleetheid=75,
             vervolgvragen=["Wat is je ideale team?"]
         )
@@ -39,11 +27,7 @@ class TestKandidaatProfiel:
         with pytest.raises(ValidationError):
             KandidaatProfiel(
                 naam="Test", kernrol="Test",
-                persoonlijkheid=[], kwaliteiten=[], impliciete_kwaliteiten=[],
-                drijfveren=[], onderliggende_motivatie="", ideale_werkdag="",
-                werkstijl="", ambities_en_leerdoelen=[], gewenste_bedrijfscultuur="",
-                hobby_en_interesses=[], hard_skills=[], soft_skills=[],
-                beschikbaarheid_en_locatie="", opleiding_en_ervaring_samenvatting="",
+                zijn="Test", willen="Test", kunnen="Test",
                 dossier_compleetheid=150,  # Te hoog!
                 vervolgvragen=[]
             )
@@ -53,11 +37,7 @@ class TestKandidaatProfiel:
         with pytest.raises(ValidationError):
             KandidaatProfiel(
                 naam="Test", kernrol="Test",
-                persoonlijkheid=[], kwaliteiten=[], impliciete_kwaliteiten=[],
-                drijfveren=[], onderliggende_motivatie="", ideale_werkdag="",
-                werkstijl="", ambities_en_leerdoelen=[], gewenste_bedrijfscultuur="",
-                hobby_en_interesses=[], hard_skills=[], soft_skills=[],
-                beschikbaarheid_en_locatie="", opleiding_en_ervaring_samenvatting="",
+                zijn="Test", willen="Test", kunnen="Test",
                 dossier_compleetheid=-10,  # Negatief!
                 vervolgvragen=[]
             )
@@ -73,19 +53,9 @@ class TestWerkgeversvraagProfiel:
         profiel = WerkgeversvraagProfiel(
             titel="Objectbeveiliger",
             organisatie="Beveiliging BV",
-            organisatiewaarden=["veiligheid"],
-            gezochte_persoonlijkheid=["alert"],
-            benodigde_kwaliteiten=["communicatief"],
-            ideale_kandidaat_persona="Iemand die kalm blijft",
-            verborgen_behoeften=["stressbestendigheid"],
-            team_en_cultuur="Hecht team",
-            ontwikkel_en_doorgroeimogelijkheden="Opleiding",
-            begeleiding_en_inwerkperiode="8 weken",
-            must_have_skills=["VCA"],
-            nice_to_have_skills=["EHBO"],
-            taken=["Rondje lopen", "Camerabewaking"],
-            werktijden_en_omstandigheden="Wisselende diensten",
-            belangrijkste_taak="Objectbeveiliging",
+            zijn="Alert, kalm onder druk, teamspeler. Past in een hecht team met directe communicatie.",
+            willen="Kandidaat die veiligheid als kernwaarde ziet. Bedrijf biedt opleiding en doorgroeimogelijkheden.",
+            kunnen="VCA-certificaat is een must, EHBO is mooi meegenomen. Hoofdtaak: objectbeveiliging incl. rondes en camerabewaking. Wisselende diensten.",
             dossier_compleetheid=80,
             vervolgvragen=[]
         )
@@ -95,13 +65,13 @@ class TestWerkgeversvraagProfiel:
 class TestPersonalityAxes:
     def test_geldige_axes(self):
         axes = PersonalityAxes(
-            Analytisch="Zeer sterk, blijkt uit '10 jaar data-analyse'", 
-            Sociaal="Niet af te leiden uit dossier", 
-            Creatief="Hoog - ontwerpt eigen oplossingen",
-            Gestructureerd="Redelijk", 
-            Ondernemend="Niet af te leiden uit dossier"
+            Openheid="Zeer sterk, blijkt uit '10 jaar data-analyse'",
+            Conscientieusheid="Niet af te leiden uit dossier",
+            Extraversie="Hoog - ontwerpt eigen oplossingen",
+            Vriendelijkheid="Redelijk",
+            Neuroticisme="Niet af te leiden uit dossier"
         )
-        assert axes.Analytisch == "Zeer sterk, blijkt uit '10 jaar data-analyse'"
+        assert axes.Openheid == "Zeer sterk, blijkt uit '10 jaar data-analyse'"
 
 
 class TestQuickScanMatchResult:
@@ -112,8 +82,8 @@ class TestQuickScanMatchResult:
             ontbrekende_punten=["Geen VCA"],
             succes_plan={"actie_kandidaat": ["A"], "actie_werkgever": ["B"]},
             personality_axes=PersonalityAxes(
-                Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
-                Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
+                Openheid="Beschrijving A", Conscientieusheid="Beschrijving B", Extraversie="Beschrijving C",
+                Vriendelijkheid="Beschrijving D", Neuroticisme="Beschrijving E"
             ),
             dossier_compleetheid="Hoog"
         )
@@ -126,8 +96,8 @@ class TestQuickScanMatchResult:
                 match_percentage=72,
                 matchende_punten=[], ontbrekende_punten=[],
                 personality_axes=PersonalityAxes(
-                    Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
-                    Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
+                    Openheid="Beschrijving A", Conscientieusheid="Beschrijving B", Extraversie="Beschrijving C",
+                    Vriendelijkheid="Beschrijving D", Neuroticisme="Beschrijving E"
                 ),
                 dossier_compleetheid="Zeer Hoog"  # Ongeldig!
             )
@@ -139,8 +109,8 @@ class TestQuickScanMatchResult:
                 match_percentage=120,  # Te hoog!
                 matchende_punten=[], ontbrekende_punten=[],
                 personality_axes=PersonalityAxes(
-                    Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
-                    Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
+                    Openheid="Beschrijving A", Conscientieusheid="Beschrijving B", Extraversie="Beschrijving C",
+                    Vriendelijkheid="Beschrijving D", Neuroticisme="Beschrijving E"
                 ),
                 dossier_compleetheid="Hoog"
             )
@@ -161,8 +131,8 @@ class TestStandaardMatchResult:
             boodschap_aan_kandidaat="Deze rol is perfect voor jou!",
             match_narratief="Een verrassende match die inspireert.",
             personality_axes=PersonalityAxes(
-                Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
-                Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
+                Openheid="Beschrijving A", Conscientieusheid="Beschrijving B", Extraversie="Beschrijving C",
+                Vriendelijkheid="Beschrijving D", Neuroticisme="Beschrijving E"
             ),
             score_breakdown=ScoreBreakdown(
                 persoonlijkheid_fit=85, cultuur_fit=78,

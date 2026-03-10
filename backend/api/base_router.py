@@ -181,9 +181,7 @@ def create_document_router(
             "profile_data": profiel,
             "waarschuwingen": waarschuwingen,
             "profile_score": (profiel or {}).get("dossier_compleetheid", (profiel or {}).get("profiel_betrouwbaarheid")),
-            "aandachtspunten": (profiel or {}).get("aandachtspunten", []),
             "vervolgvragen": (profiel or {}).get("vervolgvragen", []),
-            "cultuur_vragen": (profiel or {}).get("cultuur_vragen", []),
             "stellingen": (profiel or {}).get("stellingen", []),
             "exists_on_disk": exists_on_disk
         }
@@ -285,8 +283,8 @@ def create_document_router(
             # Voortgangsticker: laat de balk geleidelijk oplopen tijdens de LLM-call
             llm_berichten = [
                 (38, "Tekst wordt gelezen door AI..."),
-                (42, "Werkstijl wordt geanalyseerd..."),
-                (48, "Leervermogen wordt ingeschat..."),
+                (42, "Persoonlijkheid wordt geanalyseerd..."),
+                (48, "Drijfveren worden ingeschat..."),
                 (54, "Vaardigheden worden geëxtraheerd..."),
                 (60, "Verrassende functies worden bedacht..."),
                 (65, "Profiel wordt afgerond..."),
@@ -378,22 +376,17 @@ def create_document_router(
 
                 # Extra dimensies genereren
                 if isinstance(resultaat, dict):
-                    # Skills tekst (kandidaat: vaardigheden + kernrol, werkgever: must_have_skills etc.)
+                    # Skills tekst (kandidaat: kunnen + kernrol, werkgever: kunnen + titel)
                     skills_delen = []
-                    if "vaardigheden" in resultaat: skills_delen.extend(resultaat["vaardigheden"])
+                    if "kunnen" in resultaat: skills_delen.append(str(resultaat["kunnen"]))
                     if "kernrol" in resultaat: skills_delen.append(resultaat["kernrol"])
-                    if "must_have_skills" in resultaat: skills_delen.extend(resultaat["must_have_skills"])
-                    if "benodigde_kwaliteiten" in resultaat: skills_delen.extend(resultaat["benodigde_kwaliteiten"])
-                    if "taken" in resultaat: skills_delen.extend(resultaat["taken"])
+                    if "titel" in resultaat: skills_delen.append(resultaat["titel"])
 
                     skills_tekst = " ".join(filter(None, skills_delen))
-                    # Cultuur tekst (kandidaat: werkstijl + leervermogen, werkgever: organisatiewaarden etc.)
+                    # Cultuur tekst (zijn + willen)
                     cultuur_delen = []
-                    if "werkstijl" in resultaat: cultuur_delen.append(str(resultaat["werkstijl"]))
-                    if "leervermogen" in resultaat: cultuur_delen.append(str(resultaat["leervermogen"]))
-                    if "organisatiewaarden" in resultaat: cultuur_delen.extend(resultaat["organisatiewaarden"])
-                    if "gezochte_persoonlijkheid" in resultaat: cultuur_delen.extend(resultaat["gezochte_persoonlijkheid"])
-                    if "team_en_cultuur" in resultaat: cultuur_delen.append(resultaat["team_en_cultuur"])
+                    if "zijn" in resultaat: cultuur_delen.append(str(resultaat["zijn"]))
+                    if "willen" in resultaat: cultuur_delen.append(str(resultaat["willen"]))
 
                     cultuur_tekst = " ".join(filter(None, cultuur_delen))
                     from backend.services.agents import genereer_embeddings_batch
@@ -484,10 +477,10 @@ def create_document_router(
             from backend.services.agents import genereer_embeddings_batch
             
             full_text_for_embedding = json.dumps(nieuw_profiel, ensure_ascii=False)
-            skills_tekst = ", ".join(nieuw_profiel.get("vaardigheden", []))
+            skills_tekst = nieuw_profiel.get("kunnen", "")
             if nieuw_profiel.get("kernrol"):
                 skills_tekst += " " + nieuw_profiel["kernrol"]
-            cultuur_tekst = f"{nieuw_profiel.get('werkstijl', '')} {nieuw_profiel.get('leervermogen', '')}"
+            cultuur_tekst = f"{nieuw_profiel.get('zijn', '')} {nieuw_profiel.get('willen', '')}"
             
             embedding, embedding_skills, embedding_cultuur = await genereer_embeddings_batch([
                 full_text_for_embedding, 
@@ -506,7 +499,6 @@ def create_document_router(
             "versie": versie_info["versie"],
             "nieuwe_score": nieuw_profiel.get("dossier_compleetheid", nieuw_profiel.get("profiel_betrouwbaarheid", 0)),
             "vervolgvragen": nieuw_profiel.get("vervolgvragen", []),
-            "cultuur_vragen": nieuw_profiel.get("cultuur_vragen", []),
             "stellingen": nieuw_profiel.get("stellingen", []),
             "profiel": nieuw_profiel
         }

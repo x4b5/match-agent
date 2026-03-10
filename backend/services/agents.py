@@ -281,7 +281,8 @@ async def optimaliseer_systeem_gewichten():
     5. Normaliseer (som = 1.0, per dimensie min 0.1 / max 0.6)
     """
     from backend.database import (
-        haal_hoog_gewaardeerde_matches, haal_learning_weights, update_learning_weights
+        haal_hoog_gewaardeerde_matches, haal_laag_gewaardeerde_matches,
+        haal_learning_weights, update_learning_weights
     )
 
     matches = await haal_hoog_gewaardeerde_matches(min_rating=4)
@@ -338,6 +339,41 @@ async def optimaliseer_systeem_gewichten():
     nieuwe_gewichten[hoogste] = huidige.get(hoogste, 0.33) + 0.05
     nieuwe_gewichten[laagste] = huidige.get(laagste, 0.33) - 0.05
 
+    # Negatieve matches: anti-patronen leren (kleinere stap: 0.03)
+    lage_matches = await haal_laag_gewaardeerde_matches(max_rating=2)
+    if lage_matches:
+        neg_scores = {"skills": [], "cultuur": [], "algemeen": []}
+        for match in lage_matches:
+            try:
+                resultaat = json.loads(match["resultaat_json"]) if match.get("resultaat_json") else {}
+                breakdown = resultaat.get("score_breakdown", {})
+                if not breakdown:
+                    continue
+                neg_scores["skills"].append(breakdown.get("skills_overlap", 0))
+                neg_scores["cultuur"].append(breakdown.get("cultuur_fit", 0))
+                neg_scores["algemeen"].append(
+                    (breakdown.get("persoonlijkheid_fit", 0)
+                     + breakdown.get("groei_potentieel", 0)
+                     + breakdown.get("motivatie_alignment", 0)) / 3
+                )
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+
+        if neg_scores["skills"]:
+            neg_gem = {
+                dim: sum(scores) / len(scores) if scores else 0
+                for dim, scores in neg_scores.items()
+            }
+            neg_hoogste = max(neg_gem, key=neg_gem.get)
+            neg_laagste = min(neg_gem, key=neg_gem.get)
+
+            if neg_hoogste != neg_laagste:
+                # Hoogst-scorende dimensie bij slechte matches: afstraffen
+                nieuwe_gewichten[neg_hoogste] = nieuwe_gewichten.get(neg_hoogste, 0.33) - 0.03
+                # Laagst-scorende dimensie bij slechte matches: belonen
+                nieuwe_gewichten[neg_laagste] = nieuwe_gewichten.get(neg_laagste, 0.33) + 0.03
+                logger.info(f"Negatieve bijsturing: {neg_hoogste} -0.03, {neg_laagste} +0.03 (op basis van {len(lage_matches)} lage matches)")
+
     # Normaliseer: som = 1.0, per dimensie min 0.1 / max 0.6
     totaal = sum(nieuwe_gewichten.values())
     if totaal > 0:
@@ -351,6 +387,69 @@ async def optimaliseer_systeem_gewichten():
 
     await update_learning_weights(nieuwe_gewichten)
     logger.info(f"Gewichten geoptimaliseerd: {huidige} → {nieuwe_gewichten} (op basis van {len(matches)} hoog-gewaardeerde matches)")
+
+
+async def verwerk_werkgever_feedback(match_id: int, feedback_tekst: str) -> dict | None:
+    """Verwerkt feedback op een match en werkt het werkgeversprofiel bij."""
+    from backend.database import _get_connection, update_profiel_na_verrijking, bewaar_embedding
+    from backend.config import VERWERK_WERKGEVER_FEEDBACK_PROMPT, PROFIEL_MODEL, WERKGEVERSVRAGEN_DIR
+    from backend.utils import opslaan_profiel
+
+    conn = await _get_connection()
+    try:
+        # 1. Haal match en bijbehorend werkgeversprofiel op
+        cursor = await conn.execute("""
+            SELECT m.resultaat_json, m.vacature_titel, d.document_id, d.profiel_json, d.naam
+            FROM matches m
+            JOIN documenten d ON d.naam = m.vacature_titel AND d.doc_type = 'vacature'
+            WHERE m.id = ?
+        """, (match_id,))
+        row = await cursor.fetchone()
+        if not row:
+            logger.info(f"Geen werkgeversprofiel gevonden voor match {match_id}, overslaan.")
+            return None
+
+        match_json = row[0]
+        vacature_titel = row[1]
+        doc_id = row[2]
+        profiel_json = row[3]
+        naam = row[4]
+
+        # 2. Laat LLM het werkgeversprofiel bijwerken op basis van feedback
+        prompt = VERWERK_WERKGEVER_FEEDBACK_PROMPT.format(
+            profiel_json=profiel_json,
+            match_json=match_json,
+            feedback_tekst=feedback_tekst
+        )
+
+        result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1, num_predict=4096)
+        nieuw_profiel = result.model_dump() if hasattr(result, "model_dump") else result
+
+        # 3. Update profiel in database
+        await update_profiel_na_verrijking(doc_id, nieuw_profiel)
+
+        # 4. Synchroniseer met iCloud JSON bestand
+        doel_pad = os.path.join(WERKGEVERSVRAGEN_DIR, naam)
+        if os.path.exists(doel_pad):
+            opslaan_profiel(doel_pad, nieuw_profiel)
+
+        # 5. Herbereken embeddings (3 dimensies)
+        try:
+            full_text = json.dumps(nieuw_profiel, ensure_ascii=False)
+
+            skills_tekst = f"{nieuw_profiel.get('kunnen', '')} {nieuw_profiel.get('titel', '')}".strip()
+            cultuur_tekst = f"{nieuw_profiel.get('zijn', '')} {nieuw_profiel.get('willen', '')}".strip()
+
+            vector, vec_skills, vec_cultuur = await genereer_embeddings_batch([full_text, skills_tekst, cultuur_tekst])
+
+            await bewaar_embedding(doc_id, "vacature", naam, vector, vec_skills, vec_cultuur)
+            logger.info(f"Werkgever-embeddings herberekend voor {naam} na match-feedback.")
+        except Exception as e:
+            logger.error(f"Fout bij herberekenen werkgever-embeddings na feedback voor {naam}: {e}")
+
+        return nieuw_profiel
+    finally:
+        await conn.close()
 
 
 async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
@@ -383,7 +482,7 @@ async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
             match_json=match_json,
             feedback_tekst=feedback_tekst
         )
-        
+
         result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1, num_predict=4096)
         nieuw_profiel = result.model_dump() if hasattr(result, "model_dump") else result
 
@@ -398,11 +497,11 @@ async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
         # 5. Herbereken embeddings (Echt leren!)
         try:
             full_text = json.dumps(nieuw_profiel, ensure_ascii=False)
-            skills_tekst = ", ".join(nieuw_profiel.get("vaardigheden", []))
-            cultuur_tekst = f"{nieuw_profiel.get('werkstijl', '')} {nieuw_profiel.get('leervermogen', '')}"
-            
+            skills_tekst = nieuw_profiel.get("kunnen", "")
+            cultuur_tekst = f"{nieuw_profiel.get('zijn', '')} {nieuw_profiel.get('willen', '')}"
+
             vector, vec_skills, vec_cultuur = await genereer_embeddings_batch([full_text, skills_tekst, cultuur_tekst])
-            
+
             await bewaar_embedding(doc_id, "kandidaat", naam, vector, vec_skills, vec_cultuur)
             logger.info(f"Embeddings herberekened voor {naam} na match-feedback.")
         except Exception as e:
@@ -414,6 +513,12 @@ async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
             (match_id,)
         )
         await conn.commit()
+
+        # 7. Werkgeversprofiel ook verrijken
+        try:
+            await verwerk_werkgever_feedback(match_id, feedback_tekst)
+        except Exception as e:
+            logger.error(f"Fout bij verwerken werkgever-feedback voor match {match_id}: {e}")
 
         return nieuw_profiel
     finally:
