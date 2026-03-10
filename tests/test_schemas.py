@@ -27,6 +27,7 @@ class TestKandidaatProfiel:
             soft_skills=["communicatie"],
             beschikbaarheid_en_locatie="Amsterdam",
             opleiding_en_ervaring_samenvatting="HBO ICT",
+            verrassende_functies=["Leraar", "Projectmanager", "Consultant"],
             dossier_compleetheid=75,
             vervolgvragen=["Wat is je ideale team?"]
         )
@@ -82,6 +83,7 @@ class TestWerkgeversvraagProfiel:
             begeleiding_en_inwerkperiode="8 weken",
             must_have_skills=["VCA"],
             nice_to_have_skills=["EHBO"],
+            taken=["Rondje lopen", "Camerabewaking"],
             werktijden_en_omstandigheden="Wisselende diensten",
             belangrijkste_taak="Objectbeveiliging",
             dossier_compleetheid=80,
@@ -108,8 +110,7 @@ class TestQuickScanMatchResult:
             match_percentage=72,
             matchende_punten=["Communicatief", "Stressbestendig"],
             ontbrekende_punten=["Geen VCA"],
-            verrassings_element="Horeca-achtergrond geeft klantgerichtheid",
-            onderbouwing="Past goed qua karakter",
+            succes_plan={"actie_kandidaat": ["A"], "actie_werkgever": ["B"]},
             personality_axes=PersonalityAxes(
                 Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
                 Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
@@ -124,7 +125,6 @@ class TestQuickScanMatchResult:
             QuickScanMatchResult(
                 match_percentage=72,
                 matchende_punten=[], ontbrekende_punten=[],
-                verrassings_element="", onderbouwing="",
                 personality_axes=PersonalityAxes(
                     Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
                     Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
@@ -138,7 +138,6 @@ class TestQuickScanMatchResult:
             QuickScanMatchResult(
                 match_percentage=120,  # Te hoog!
                 matchende_punten=[], ontbrekende_punten=[],
-                verrassings_element="", onderbouwing="",
                 personality_axes=PersonalityAxes(
                     Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
                     Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"
@@ -154,16 +153,13 @@ class TestStandaardMatchResult:
             matchende_punten=["Teamspeler", "Communicatief"],
             ontbrekende_punten=["Geen ervaring in sector"],
             succes_plan={"actie_kandidaat": ["Inwerktraject van 3 maanden"], "actie_werkgever": ["Mentorprogramma opzetten"]},
-            verrassings_element="Horeca-achtergrond",
             gespreksstarters=["Vertel over je ervaring met klanten"],
             risico_mitigatie="Begeleiding eerste 6 maanden",
             gedeelde_waarden=["Klanttevredenheid"],
             groeipotentieel="Kan doorgroeien naar teamleider",
-            cultuur_fit="Past in informele cultuur",
             aandachtspunten=["Sectorkennis opbouwen"],
             boodschap_aan_kandidaat="Deze rol is perfect voor jou!",
             match_narratief="Een verrassende match die inspireert.",
-            onderbouwing="Sterk karakter en overdraagbare skills",
             personality_axes=PersonalityAxes(
                 Analytisch="Beschrijving A", Sociaal="Beschrijving B", Creatief="Beschrijving C",
                 Gestructureerd="Beschrijving D", Ondernemend="Beschrijving E"

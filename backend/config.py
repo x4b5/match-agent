@@ -28,8 +28,8 @@ LOG_LEVEL = os.getenv("MATCHFLIX_LOG_LEVEL", "INFO")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_URL = f"{OLLAMA_BASE_URL}/api/generate"
 OLLAMA_EMBED_URL = f"{OLLAMA_BASE_URL}/api/embeddings"
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:27b")
-PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:4b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
+PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:8b")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert. Jij verbindt kandidaten met werkgevers.
@@ -49,10 +49,10 @@ Je antwoord moet ALTIJD uitsluitend een kloppend JSON-object zijn. Gebruik preci
 """
 
 # --- Gesplitste Match-prompts ---
-# Kern-prompt: 8 velden — betrouwbaar op elk quantisatieniveau
-KERN_MATCH_PROMPT = """Bekijk hoe goed deze kandidaat en de werkgeversvraag bij elkaar passen.
-Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Vermijd jargon en HR-termen.
-Let vooral op persoonlijkheid, potentieel en karakter.
+# Kern-prompt: de essentie van de match — direct en actiegericht
+KERN_MATCH_PROMPT = """Bekijk de match tussen deze kandidaat en de werkgeversvraag.
+Gebruik ALTIJD actie-gerichte, concrete taal (B1-niveau). 
+VERMIJD container-begrippen zoals 'goede communicatie', 'mooie kans' of 'passend profiel'. Wees specifiek: WAT gaat er goed? WAT is de actie?
 
 KANDIDAATPROFIEL:
 {cv_tekst}
@@ -60,22 +60,24 @@ KANDIDAATPROFIEL:
 WERKGEVERSVRAAGPROFIEL:
 {vacature_tekst}
 
-Geef je antwoord in exact de volgende JSON-opmaak (schrijf geen extra test eromheen, alleen de JSON):
+Geef je antwoord in exact de volgende JSON-opmaak:
 {{
-  "match_percentage": <getal van 0 tot 100 — laat persoonlijkheid en talent hierin het zwaarst meewegen>,
-  "matchende_punten": ["maximaal 3 hele duidelijke punten waarop de kandidaat en vacature goed samengaan"],
-  "ontbrekende_punten": ["maximaal 3 punten die we eigenlijk missen of die een drempel/risico vormen"],
-  "verrassings_element": "Wat maakt deze combinatie slim of onverwacht? Noem één leuk of pakkend punt.",
-  "onderbouwing": "Leg in 2 of 3 zinnen uit waarom de drijfveren en karakters van beide partijen klikken.",
-  "cultuur_fit": "Zal deze persoon passen bij de sfeer in dit bedrijf/team? Waarom wel of niet?",
+  "match_percentage": <getal 0-100 — focus op karakter en potentieel>,
+  "matchende_punten": ["max 3-5 concrete redenen waarom dit werkt (benoem hier ook cultuurfit, mentaliteit en persoonlijkheid)"],
+  "ontbrekende_punten": ["max 3 concrete drempels of risico's (benoem hier ook eventuele mismatches in cultuur of werkhouding)"],
+  "succes_plan": {{
+    "actie_kandidaat": ["1 concrete actie voor de kandidaat om te starten"],
+    "actie_werkgever": ["1 concrete actie voor de organisatie om de landing te borgen"]
+  }},
   "dossier_compleetheid": "Laag|Gemiddeld|Hoog",
-  "vervolgvragen": ["maximaal 3 belangrijke vragen die we nog moeten stellen om zekerder te zijn van deze match"],
-  "stellingen": ["maximaal 3 prikkelende stellingen die de kandidaat kan beoordelen om de match te bevestigen of te verfijnen"]
+  "vervolgvragen": ["max 2 kritische vragen om de match te bevestigen"],
+  "stellingen": ["max 2 stellingen die de kandidaat kan scoren"]
 }}"""
 
-# Verdieping-prompt: ontvangt kern-resultaat als context, genereert extra inzichten
-VERDIEPING_MATCH_PROMPT = """Je hebt onlangs een eerste scan gemaakt van een match. Voeg hier nu nog meer diepgang en inzichten aan toe.
-Schrijf in ALTIJD begrijpelijke en duidelijke taal (B1-niveau). Spreek de lezer direct aan.
+# Verdieping-prompt: extra verdiepende inzichten zonder te herhalen
+VERDIEPING_MATCH_PROMPT = """Voeg extra diepgang toe aan de bestaande match-analyse. 
+NIET de kernpunten herhalen, maar nieuwe perspectieven bieden.
+Gebruik actiegerichte taal en vermijd HR-jargon.
 
 KERN-ANALYSE:
 {kern_json}
@@ -86,20 +88,20 @@ KANDIDAATPROFIEL:
 WERKGEVERSVRAAGPROFIEL:
 {vacature_tekst}
 
-Geef je uitgebreide analyse in exact deze JSON-opmaak (alleen de JSON-code overnemen):
+Geef je uitgebreide analyse in exact deze JSON-opmaak:
 {{
   "succes_plan": {{
-    "actie_kandidaat": ["Wat kan deze persoon zelf doen om sterker voor de dag te komen? Denk aan: een cursus, een certificaat, ergens extra op letten."],
-    "actie_werkgever": ["Wat moet de organisatie regelen om het een succes te maken? Denk aan: een inwerkplan, een mentor, aanpassing van de rol of werkplek."]
+    "actie_kandidaat": ["Bestaande actie + 2 nieuwe concrete ontwikkelstappen"],
+    "actie_werkgever": ["Bestaande actie + 2 nieuwe stappen voor inwerking/coaching"]
   }},
-  "gespreksstarters": ["3 goede interviewvragen die de recruiter kan gebruiken in het eerste gesprek"],
-  "risico_mitigatie": "Hoe houden we de risico's zo klein mogelijk? Wat voor soort inwerken/begeleiding is daarvoor handig?",
-  "gedeelde_waarden": ["Welke normen en waarden vinden zowel het bedrijf als deze persoon belangrijk?"],
-  "groeipotentieel": "Hoe en in welke richting zou deze persoon binnen dit bedrijf kunnen doorgroeien?",
-  "boodschap_aan_kandidaat": "Een kort en aanmoedigend berichtje aan de kandidaat: waarom past deze vacature nou zó goed bij jou?",
-  "match_narratief": "Een inspirerend en kort verhaaltje (3-4 zinnen) dat laat zien waarom deze combinatie een gouden zet kan zijn.",
+  "gespreksstarters": ["3 scherpe interviewvragen die de kern raken"],
+  "risico_mitigatie": "Hoe vangen we de grootste drempels concreet op? Benoem wie wat doet.",
+  "gedeelde_waarden": ["Welke 2-3 dieperliggende waarden verbinden hen?"],
+  "groeipotentieel": "In welke specifieke rol of richting kan deze persoon over 2 jaar staan binnen dit bedrijf?",
+  "boodschap_aan_kandidaat": "Een korte, persoonlijke aanmoediging: waarom is DIT jouw volgende stap?",
+  "match_narratief": "Een krachtig beeld (2 zinnen) van hoe de samenwerking er over een maand uitziet.",
   "personality_axes": {{
-    "Analytisch": "Korte uitleg en geef een duidelijk voorbeeld uit de tekst. Niet zeker? Zeg dan: 'Niet af te leiden te maken uit het profiel'.",
+    "Analytisch": "Korte uitleg + citaat/bewijs uit dossier.",
     "Sociaal": "idem",
     "Creatief": "idem",
     "Gestructureerd": "idem",
@@ -123,6 +125,7 @@ Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tek
 
 Belangrijke aanwijzingen:
 - Gebruik begrijpelijke en duidelijke taal (B1-niveau). Vermijd jargon en ingewikkelde woorden.
+- Schrijf actief en actiegericht. Vermijd container-begrippen (zoals 'goede communicator' of 'flexibel'). Wees specifiek over WAT iemand doet.
 - Focus vooral op wie deze persoon IS, niet alleen op wat ze hebben gedaan.
 - Kijk ook naar kwaliteiten die niet letterlijk worden genoemd, maar die je wel kunt afleiden (bijvoorbeeld: iemand die jarenlang in de horeca werkt, is waarschijnlijk stressbestendig).
 - BELANGRIJK: Blijf bij de feiten. Als iets niet in de tekst staat, vul dan "Niet genoemd" in of laat het lijstje leeg. Verzin geen eigenschappen of hobby's die je niet kunt bewijzen.
@@ -169,7 +172,7 @@ Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tek
 
 Belangrijke aanwijzingen:
 - Gebruik begrijpelijke en duidelijke taal (B1-niveau). Vermijd jargon en ingewikkelde woorden.
-- Schrijf actief en direct.
+- Schrijf actief en direct. Vermijd container-begrippen. Wees concreet.
 - Focus niet alleen op de harde eisen, maar vooral op het TYPE PERSOON dat wordt gezocht.
 - BELANGRIJK: Blijf bij de feiten uit de tekst. Als iets niet in de tekst staat, vul dan "Niet genoemd" in. Ga geen bedrijfscultuur verzinnen die niet in de tekst staat.
 - BEOORDELING DOSSIERCOMPLEETHEID: Wees heel streng!
@@ -197,8 +200,7 @@ Belangrijke aanwijzingen:
     "belangrijkste_taak": "Wat is de allerbelangrijkste taak in deze baan?",
     "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is de informatie om een goede match te maken?>,
     "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten (bijvoorbeeld reistijd, ploegendienst of fysiek zwaar werk)"],
-    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE WERKGEVER over belangrijke details die nog ontbreken over de baan of het team"],
-    "stellingen": ["Bedenk 5 prikkelende stellingen over de werkplek of het team (bijv. 'In dit team wordt veel samengewerkt in plaats van individueel gewerkt'). Gebruik stellingen om de cultuur en behoeften scherper te krijgen."]
+    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE WERKGEVER/RECRUITER over belangrijke details die nog ontbreken over de baan of het team. Stel deze vragen VRAAGSTELLEND aan de WERKGEVER (bijv. 'Hoeveel tijdsdruk is er?' in plaats van 'Kun jij onder druk werken?')"]
 }}
 
 BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop direct nadat je het JSON-object hebt afgesloten met }}.
@@ -206,15 +208,18 @@ BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop d
 WERKGEVERSVRAAG:
 {tekst}"""
 
-EVALUEER_PROFIEL_PROMPT = """Beoordeel hoe compleet en goed het volgende profiel is ({type_profiel}).
+EVALUEER_PROFIEL_PROMPT = """Je bent een expert in recruitment. Beoordeel de VOLLEDIGHEID van dit profiel.
+Zijn er nog gaten in de informatie die ingevuld moeten worden om een perfecte match te maken?
+
+Voor WERKGEVERSVRAGEN: Richt de vervolgvragen ALTIJD aan de WERKGEVER/RECRUITER (bijv. 'Wat is het budget?' of 'Hoe ziet het team eruit?' en NIET 'Kun jij dit?').
+Voor KANDIDAATPROFIELEN: Richt de vervolgvragen aan de KANDIDAAT.
 Bedenk maximaal 5 duidelijke vragen die we nog aan de gebruiker kunnen stellen. Zo krijgen we de informatie die we nog missen om een echt goede match te maken.
 Zorg dat de vragen makkelijk te beantwoorden zijn.
 Geef je antwoord in precies deze JSON-opmaak (geen extra tekst eromheen).
 
 {{
     "volledigheid_score": <getal van 0 tot 100, waarbij 100 betekent dat alles erin staat>,
-    "vervolgvragen": ["Duidelijke vraag 1 over wat er ontbreekt", "Vraag 2", "...(maximaal 5 vragen)"],
-    "stellingen": ["5 prikkelende stellingen die gaten in de informatie vullen (bijv. 'Ik vind het geen probleem om onder tijdsdruk te werken')"]
+    "vervolgvragen": ["Duidelijke vraag aan de werkgever 1", "Vraag 2", "...(maximaal 5 vragen)"]
 }}
 
 PROFIEL:
@@ -253,9 +258,8 @@ Aanwijzingen:
 - Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Spreek de lezer direct aan.
 - Verhoog de score voor de dossiercompleetheid (dossier_compleetheid) aanzienlijk als de antwoorden belangrijke gaten vullen.
 - Voeg nieuwe inzichten toe over het gezochte karakter, de werksfeer en behoeften.
-- Bedenk nieuwe vervolgvragen voor de werkgever als er nog steeds belangrijke zaken ontbreken (maximaal 5).
-- Bedenk 5 nieuwe prikkelende stellingen over de werkplek of het team om de cultuur scherper te krijgen.
-- Als het profiel nu helemaal compleet is, mogen de lijstjes met vervolgvragen en stellingen leeg blijven.
+- Bedenk nieuwe vervolgvragen voor de werkgever/recruiter als er nog steeds belangrijke zaken ontbreken (maximaal 5). Stel deze vragen VRAAGSTELLEND aan de WERKGEVER (bijv. 'Wat zijn de exacte werktijden?' en NIET 'Wanneer kun jij werken?').
+- Als het profiel nu helemaal compleet is, mogen de lijstjes met vervolgvragen leeg blijven.
 
 BESTAAND PROFIEL:
 {profiel_json}
@@ -289,6 +293,19 @@ Aanwijzingen:
 5. Behoud alle bestaande informatie die niet door de feedback wordt tegengesproken.
 
 Return het VOLLEDIG BIJGEWERKTE KANDIDAATPROFIEL in exact dezelfde JSON-opmaak als het origineel."""
+
+REFLECTIE_PROMPT = """Analyseer de verzamelde feedback-teksten van een recruiter op matches.
+Vat samen wat de recruiter belangrijk vindt en welk type kandidaat hoog of laag scoort.
+
+FEEDBACK-TEKSTEN:
+{feedback_teksten}
+
+Geef je antwoord in exact deze JSON-opmaak:
+{{
+    "samenvatting": "Korte samenvatting van wat de recruiter waardeert en wat niet (2-4 zinnen, B1-niveau)",
+    "sterke_voorkeur": ["Lijstje van eigenschappen of kwaliteiten die de recruiter duidelijk prefereert"],
+    "vermijden": ["Lijstje van eigenschappen of kenmerken die de recruiter liever niet ziet"]
+}}"""
 
 # --- Match-modi ---
 # Elke modus definieert welke stappen worden uitgevoerd:

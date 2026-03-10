@@ -15,6 +15,7 @@ import os
 import shutil
 import json
 import logging
+import asyncio
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, BackgroundTasks
 from pydantic import BaseModel as PydanticBaseModel
@@ -23,10 +24,10 @@ from backend.utils import formatteer_directory_response, opslaan_profiel, zorg_v
 from backend.services.agents import extract_text_sync, genereer_embedding
 from backend.database import (
     bewaar_embedding, bewaar_document, haal_alle_documenten, haal_document,
-    bewaar_verrijking, update_profiel_na_verrijking
+    bewaar_verrijking, update_profiel_na_verrijking, update_task_db
 )
 from backend.services.pii_scrubber import scrub_pii
-from backend.api.tasks import maak_task, update_task
+from backend.api.tasks import maak_task
 
 logger = logging.getLogger("matchflix.router")
 
@@ -229,8 +230,8 @@ def create_document_router(
         os.remove(pad)
         return {"message": "Verwijderd"}
 
-    async def _generate_profile_task(map_pad: str, task_id: str):
-        update_task(task_id, status="running", progress="Starten...", progress_percent=5)
+    async def _generate_profile_task(map_pad: str, task_id: str, skip_pii: bool = False):
+        await update_task_db(task_id, status="running", progress="Starten...", progress_percent=5)
         try:
             from fastapi.concurrency import run_in_threadpool
             gecombineerde_tekst, waarschuwingen = await run_in_threadpool(extract_text_sync, map_pad)
@@ -242,7 +243,7 @@ def create_document_router(
             ).strip()
 
             if len(inhoud) < MIN_TEKST_LENGTE:
-                update_task(
+                await update_task_db(
                     task_id, status="failed",
                     error=f"Te weinig tekst voor profielgeneratie ({len(inhoud)} karakters, minimaal {MIN_TEKST_LENGTE}). Upload meer documenten."
                 )
@@ -258,20 +259,36 @@ def create_document_router(
                 logger.info(f"Deduplicatie: Document met deze inhoud bestaat al als '{bestaand['naam']}'")
                 waarschuwingen.append(f"Let op: Inhoud is identiek aan bestaand item '{bestaand['naam']}'.")
 
-            update_task(task_id, progress="Persoonlijke gegevens anonimiseren...", progress_percent=20)
-            geschoonde_tekst, pii_rapport = scrub_pii(gecombineerde_tekst)
-            if pii_rapport:
-                waarschuwingen.append(f"PII gemaskeerd: {pii_rapport}")
+            if skip_pii:
+                geschoonde_tekst = gecombineerde_tekst
+                pii_rapport = {}
+            else:
+                await update_task_db(task_id, progress="Persoonlijke gegevens anonimiseren...", progress_percent=20)
+                geschoonde_tekst, pii_rapport = scrub_pii(gecombineerde_tekst)
+                if pii_rapport:
+                    waarschuwingen.append(f"PII gemaskeerd: {pii_rapport}")
 
             # ── Parallelle uitvoering van Deduplicatie en Analyse ──
-            update_task(task_id, progress="Analyse & deduplicatie gestart...", progress_percent=40)
-            
+            await update_task_db(task_id, progress="Analyse & deduplicatie gestart...", progress_percent=40)
+
             # Start beide zware taken tegelijkertime
             v_task = asyncio.create_task(genereer_embedding(geschoonde_tekst))
             p_task = asyncio.create_task(profiel_agent_fn(geschoonde_tekst))
-            
-            # Wacht op beide resultaten
-            vector, resultaat = await asyncio.gather(v_task, p_task)
+
+            # Wacht op beide resultaten met timeout (max 10 minuten)
+            try:
+                vector, resultaat = await asyncio.wait_for(
+                    asyncio.gather(v_task, p_task),
+                    timeout=600
+                )
+            except asyncio.TimeoutError:
+                v_task.cancel()
+                p_task.cancel()
+                await update_task_db(
+                    task_id, status="failed",
+                    error="Profielgeneratie duurde te lang (timeout na 10 minuten). Mogelijk is het Ollama model overbelast. Probeer het opnieuw."
+                )
+                return
 
             # ── Semantische Deduplicatie Check (verwerking van resultaat) ──
             if vector:
@@ -285,9 +302,10 @@ def create_document_router(
                             logger.info(f"Semantische deduplicatie: '{os.path.basename(map_pad)}' lijkt {int(similarity * 100)}% op '{emb['naam']}'")
                             break # Één waarschuwing is genoeg
 
-            update_task(task_id, progress="Gegevens opslaan en indexeren...", progress_percent=90)
+            await update_task_db(task_id, progress="Gegevens opslaan en indexeren...", progress_percent=90)
             try:
                 naam = os.path.basename(map_pad)
+                resultaat["last_generated"] = datetime.now().isoformat()
                 from backend.database import haal_uuid_bij_naam
                 bestaande_uuid = await haal_uuid_bij_naam(naam, doc_type)
                 uuid_val = bestaande_uuid if bestaande_uuid else zorg_voor_uuid(map_pad)
@@ -318,20 +336,8 @@ def create_document_router(
                     if "team_en_cultuur" in resultaat: cultuur_delen.append(resultaat["team_en_cultuur"])
 
                     cultuur_tekst = " ".join(filter(None, cultuur_delen))
-
-                    import asyncio
-                    v_tasks = []
-                    if skills_tekst:
-                        v_tasks.append(genereer_embedding(skills_tekst))
-                    else:
-                        v_tasks.append(asyncio.sleep(0, result=None))
-                        
-                    if cultuur_tekst:
-                        v_tasks.append(genereer_embedding(cultuur_tekst))
-                    else:
-                        v_tasks.append(asyncio.sleep(0, result=None))
-                        
-                    vector_skills, vector_cultuur = await asyncio.gather(*v_tasks)
+                    from backend.services.agents import genereer_embeddings_batch
+                    vector_skills, vector_cultuur = await genereer_embeddings_batch([skills_tekst, cultuur_tekst])
 
                 # Save embedding (op geschoonde tekst — AVG-compliant)
                 if vector:
@@ -362,20 +368,20 @@ def create_document_router(
                     resultaat["_waarschuwingen"] = waarschuwingen
                 opslaan_profiel(map_pad, resultaat)
 
-            update_task(task_id, status="done", progress="Klaar", progress_percent=100)
+            await update_task_db(task_id, status="done", progress="Klaar", progress_percent=100)
 
         except Exception as e:
             logger.error(f"Profile generation failed for {map_pad}: {e}")
-            update_task(task_id, status="failed", error=str(e))
+            await update_task_db(task_id, status="failed", error=str(e))
 
     @router.post("/{name}/generate-profile")
-    async def generate_profile(name: str, background_tasks: BackgroundTasks):
+    async def generate_profile(name: str, background_tasks: BackgroundTasks, skip_pii: bool = False):
         base_dir = get_base_dir()
         doel_pad = os.path.join(base_dir, name)
         if not os.path.exists(doel_pad):
             raise HTTPException(status_code=404, detail="Map niet gevonden.")
         task_id = maak_task("profile_generation", name)
-        background_tasks.add_task(_generate_profile_task, doel_pad, task_id)
+        background_tasks.add_task(_generate_profile_task, doel_pad, task_id, skip_pii)
         return {"message": "Profiel generatie gestart in de achterground.", "task_id": task_id}
 
     @router.post("/{name}/enrich")
@@ -396,6 +402,8 @@ def create_document_router(
         ruwe_tekst = doc.get("ruwe_tekst", "")
         
         nieuw_profiel = await verrijk_agent_fn(profiel_json, antwoorden_json, ruwe_tekst)
+        if isinstance(nieuw_profiel, dict):
+            nieuw_profiel["last_generated"] = datetime.now().isoformat()
         
         if not isinstance(nieuw_profiel, dict):
             raise HTTPException(status_code=500, detail="LLM kon geen verrijkt profiel genereren.")
@@ -408,14 +416,17 @@ def create_document_router(
         # Herbereken embeddings zodat het systeem "leert" van de nieuwe info
         try:
             # Gebruik de verrijkte JSON als basis voor nieuwe embeddings
-            full_text_for_embedding = json.dumps(nieuw_profiel, ensure_ascii=False)
-            embedding = await genereer_embedding(full_text_for_embedding)
+            from backend.services.agents import genereer_embeddings_batch
             
+            full_text_for_embedding = json.dumps(nieuw_profiel, ensure_ascii=False)
             skills_tekst = ", ".join(nieuw_profiel.get("hard_skills", []) + nieuw_profiel.get("soft_skills", []))
             cultuur_tekst = f"{nieuw_profiel.get('gewenste_bedrijfscultuur', '')} {nieuw_profiel.get('onderliggende_motivatie', '')}"
             
-            embedding_skills = await genereer_embedding(skills_tekst) if skills_tekst else None
-            embedding_cultuur = await genereer_embedding(cultuur_tekst) if cultuur_tekst else None
+            embedding, embedding_skills, embedding_cultuur = await genereer_embeddings_batch([
+                full_text_for_embedding, 
+                skills_tekst, 
+                cultuur_tekst
+            ])
             
             await bewaar_embedding(document_id, doc_type, name, embedding, embedding_skills, embedding_cultuur)
             logger.info(f"Embeddings herberekened voor {name} na verrijking.")
@@ -434,25 +445,25 @@ def create_document_router(
         }
 
     @router.post("/bulk-import")
-    async def bulk_import(background_tasks: BackgroundTasks):
+    async def bulk_import(background_tasks: BackgroundTasks, skip_pii: bool = False):
         """Scan directory en importeer alles wat nog niet in de DB staat."""
         base_dir = get_base_dir()
         if not os.path.exists(base_dir):
             return {"message": "Geen mappen gevonden."}
-            
+
         db_docs = await haal_alle_documenten(doc_type)
         db_namen = {doc["naam"] for doc in db_docs}
-        
+
         from backend.utils import lijst_mappen
         fysieke_mappen = lijst_mappen(base_dir)
-        
+
         import_count = 0
         tasks = []
         for m in fysieke_mappen:
             if m not in db_namen:
                 pad = os.path.join(base_dir, m)
                 task_id = maak_task("profile_generation", m)
-                background_tasks.add_task(_generate_profile_task, pad, task_id)
+                background_tasks.add_task(_generate_profile_task, pad, task_id, skip_pii)
                 tasks.append(task_id)
                 import_count += 1
                 

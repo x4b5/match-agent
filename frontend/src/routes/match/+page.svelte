@@ -152,9 +152,10 @@
       matchType === "individual"
         ? "/api/matching/stream"
         : "/api/matching/batch";
-    const body: any = {
+    const body = {
       modus: selectedMode,
       vacature_naam: selectedEmployer,
+      force_refresh: true, // Altijd verversen voor nieuwe prompt-aanpassingen
     };
     if (matchType === "individual") {
       body.kandidaat_naam = selectedCandidate;
@@ -270,11 +271,15 @@
     currentPhase = "";
     elapsedSeconds = 0;
     expectedStappen = [];
+    recruiterRating = null;
+    ratingHover = null;
   }
 
   function selectBatchDetail(item: any) {
     finalMatchData = item;
     selectedCandidate = item.naam;
+    recruiterRating = null;
+    ratingHover = null;
   }
 
   function backToBatch() {
@@ -284,9 +289,32 @@
   // --- Feedback ---
   let feedbackTekst = $state("");
   let isSubmittingFeedback = $state(false);
+  let recruiterRating: number | null = $state(null);
+  let ratingHover: number | null = $state(null);
+
+  async function rateMatch(rating: number) {
+    recruiterRating = rating;
+    try {
+      const res = await fetch("/api/matching/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          match_id: finalMatchData.id,
+          recruiter_rating: rating,
+        }),
+      });
+      if (res.ok) {
+        toasts.add(`Beoordeling (${rating} sterren) opgeslagen!`, "success");
+      } else {
+        toasts.add("Beoordeling kon niet worden opgeslagen.", "error");
+      }
+    } catch {
+      toasts.add("Netwerkfout bij beoordeling.", "error");
+    }
+  }
 
   async function submitFeedback() {
-    if (!feedbackTekst.trim()) return;
+    if (!feedbackTekst.trim() && recruiterRating === null) return;
     isSubmittingFeedback = true;
 
     try {
@@ -296,6 +324,7 @@
         body: JSON.stringify({
           match_id: finalMatchData.id,
           feedback_tekst: feedbackTekst,
+          recruiter_rating: recruiterRating,
         }),
       });
 
@@ -303,8 +332,6 @@
       if (res.ok) {
         toasts.add("Feedback verwerkt! Profiel is verrijkt.", "success");
         feedbackTekst = "";
-        // We verversen de match data niet direct om de UI rustig te houden,
-        // maar de gebruiker weet dat het profiel is bijgewerkt.
       } else {
         toasts.add(
           data.message || "Feedback kon niet worden verwerkt.",
@@ -822,65 +849,18 @@
     {/if}
   </div>
 
-  <!-- Verrassingselement + Onderbouwing -->
-  {#if finalMatchData.verrassings_element}
+  <!-- Groeipotentieel (standaard modus) -->
+  {#if finalMatchData.groeipotentieel}
     <div class="card">
       <h3 class="section-title">
-        <span class="material-icons" style="color: var(--neon-gold);"
-          >lightbulb</span
+        <span class="material-icons" style="color: var(--neon-green);"
+          >trending_up</span
         >
-        Verrassings-element
+        Groeipotentieel
       </h3>
       <p style="color: var(--text-primary); margin: 0; line-height: 1.6;">
-        {finalMatchData.verrassings_element}
+        {finalMatchData.groeipotentieel}
       </p>
-    </div>
-  {/if}
-
-  <!-- Onderbouwing -->
-  {#if finalMatchData.onderbouwing}
-    <div class="card">
-      <h3 class="section-title">
-        <span class="material-icons" style="color: var(--neon-blue);"
-          >gavel</span
-        >
-        Onderbouwing
-      </h3>
-      <p style="color: var(--text-secondary); margin: 0; line-height: 1.6;">
-        {finalMatchData.onderbouwing}
-      </p>
-    </div>
-  {/if}
-
-  <!-- Cultuur fit + Groeipotentieel (standaard modus) -->
-  {#if finalMatchData.cultuur_fit || finalMatchData.groeipotentieel}
-    <div class="grid-2">
-      {#if finalMatchData.cultuur_fit}
-        <div class="card">
-          <h3 class="section-title">
-            <span class="material-icons" style="color: var(--neon-cyan);"
-              >diversity_3</span
-            >
-            Cultuur Fit
-          </h3>
-          <p style="color: var(--text-primary); margin: 0; line-height: 1.6;">
-            {finalMatchData.cultuur_fit}
-          </p>
-        </div>
-      {/if}
-      {#if finalMatchData.groeipotentieel}
-        <div class="card">
-          <h3 class="section-title">
-            <span class="material-icons" style="color: var(--neon-green);"
-              >trending_up</span
-            >
-            Groeipotentieel
-          </h3>
-          <p style="color: var(--text-primary); margin: 0; line-height: 1.6;">
-            {finalMatchData.groeipotentieel}
-          </p>
-        </div>
-      {/if}
     </div>
   {/if}
 
@@ -897,7 +877,11 @@
         {#if finalMatchData.succes_plan.actie_kandidaat?.length}
           <div class="succes-plan-col">
             <h4 class="succes-plan-col-title">
-              <span class="material-icons" style="color: var(--neon-green); font-size: 1.1rem;">school</span>
+              <span
+                class="material-icons"
+                style="color: var(--neon-green); font-size: 1.1rem;"
+                >school</span
+              >
               Wat de kandidaat kan doen
             </h4>
             <ul class="result-list result-list-neutral">
@@ -910,7 +894,11 @@
         {#if finalMatchData.succes_plan.actie_werkgever?.length}
           <div class="succes-plan-col">
             <h4 class="succes-plan-col-title">
-              <span class="material-icons" style="color: var(--neon-purple); font-size: 1.1rem;">business</span>
+              <span
+                class="material-icons"
+                style="color: var(--neon-purple); font-size: 1.1rem;"
+                >business</span
+              >
               Wat de werkgever kan bieden
             </h4>
             <ul class="result-list result-list-neutral">
@@ -968,8 +956,44 @@
       >
       Feedback op deze match
     </h3>
+    <!-- Ster-beoordeling -->
     <p
-      style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;"
+      style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;"
+    >
+      Hoe goed past deze match?
+    </p>
+    <div class="star-rating" role="radiogroup" aria-label="Beoordeling">
+      {#each [1, 2, 3, 4, 5] as star}
+        <button
+          class="star-btn"
+          class:active={recruiterRating !== null && star <= recruiterRating}
+          class:hover={ratingHover !== null && star <= ratingHover}
+          onclick={() => rateMatch(star)}
+          onmouseenter={() => (ratingHover = star)}
+          onmouseleave={() => (ratingHover = null)}
+          aria-label="{star} sterren"
+        >
+          <span class="material-icons">
+            {(
+              ratingHover !== null
+                ? star <= ratingHover
+                : recruiterRating !== null && star <= recruiterRating
+            )
+              ? "star"
+              : "star_border"}
+          </span>
+        </button>
+      {/each}
+      {#if recruiterRating}
+        <span
+          style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 0.5rem;"
+          >{recruiterRating}/5</span
+        >
+      {/if}
+    </div>
+
+    <p
+      style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; margin-top: 1rem;"
     >
       Klopt deze match niet helemaal? Of heb je extra informatie? Geef het hier
       aan. Onze AI gebruikt je feedback om het profiel van <strong
@@ -1528,5 +1552,37 @@
     resize: vertical;
     font-size: 0.9rem;
     line-height: 1.5;
+  }
+
+  .star-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .star-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.15rem;
+    color: rgba(255, 255, 255, 0.25);
+    transition:
+      color 0.15s,
+      transform 0.15s;
+  }
+
+  .star-btn .material-icons {
+    font-size: 1.6rem;
+  }
+
+  .star-btn:hover,
+  .star-btn.hover {
+    color: var(--neon-gold, #ffab00);
+    transform: scale(1.15);
+  }
+
+  .star-btn.active {
+    color: var(--neon-gold, #ffab00);
   }
 </style>

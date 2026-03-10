@@ -1,19 +1,21 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import os
 import json
 import time
 import logging
+import asyncio
 from sse_starlette.sse import EventSourceResponse
 
 from backend.config import KANDIDATEN_DIR, WERKGEVERSVRAGEN_DIR, MATCH_MODI, OLLAMA_MODEL
 
 logger = logging.getLogger("matchflix.matching")
 from backend.utils import laad_profiel_uit_map
-from backend.services.agents import match_kandidaat, match_kandidaat_stream
+from backend.services.agents import match_kandidaat, match_kandidaat_stream, genereer_embeddings_batch
 from backend.database import (
     bewaar_match, haal_top_matches_vector, haal_top_vacatures_vector, haal_document,
-    haal_laatste_matches, haal_cached_match, haal_alle_documenten
+    haal_laatste_matches, haal_cached_match, haal_alle_documenten,
+    bewaar_recruiter_rating, tel_onverwerkte_ratings, haal_learning_weights
 )
 from backend.services.llm_instance import get_provider
 
@@ -112,7 +114,6 @@ async def reverse_search(req: ReverseSearchRequest):
         raise HTTPException(status_code=400, detail=f"Kandidaat profiel niet gevonden voor {req.kandidaat_naam}")
     
     cand_json = json.dumps(cand_profiel, ensure_ascii=False)
-    vector = await get_provider().generate_embedding(cand_json)
     
     # Skills tekst
     skills_delen = []
@@ -122,7 +123,6 @@ async def reverse_search(req: ReverseSearchRequest):
     if "taken" in cand_profiel: skills_delen.extend(cand_profiel["taken"])
     if "kernrol" in cand_profiel: skills_delen.append(cand_profiel["kernrol"])
     skills_tekst = " ".join(filter(None, skills_delen))
-    vector_skills = await get_provider().generate_embedding(skills_tekst) if skills_tekst else None
     
     # Cultuur tekst
     cultuur_delen = []
@@ -131,16 +131,20 @@ async def reverse_search(req: ReverseSearchRequest):
     if "gewenste_bedrijfscultuur" in cand_profiel: cultuur_delen.append(cand_profiel["gewenste_bedrijfscultuur"])
     if "organisatiewaarden" in cand_profiel: cultuur_delen.extend(cand_profiel["organisatiewaarden"])
     cultuur_tekst = " ".join(filter(None, cultuur_delen))
-    vector_cultuur = await get_provider().generate_embedding(cultuur_tekst) if cultuur_tekst else None
+
+    # Parallelle embedding generatie
+    vector, vector_skills, vector_cultuur = await genereer_embeddings_batch([cand_json, skills_tekst, cultuur_tekst])
     
     if not vector:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren.")
     
+    gewichten = await haal_learning_weights()
     top_vacatures = await haal_top_vacatures_vector(
-        kandidaat_vector=vector, 
+        kandidaat_vector=vector,
         kandidaat_skills=vector_skills,
         kandidaat_cultuur=vector_cultuur,
-        limit=req.limit
+        limit=req.limit,
+        gewichten=gewichten
     )
     
     enriched = []
@@ -174,7 +178,6 @@ async def semantic_search(req: SemanticSearchRequest):
         raise HTTPException(status_code=400, detail=f"Vacature profiel niet gevonden voor {req.vacature_naam}")
 
     vac_json = json.dumps(vac_profiel, ensure_ascii=False)
-    vector = await get_provider().generate_embedding(vac_json)
     
     # Skills tekst
     skills_delen = []
@@ -184,7 +187,6 @@ async def semantic_search(req: SemanticSearchRequest):
     if "taken" in vac_profiel: skills_delen.extend(vac_profiel["taken"])
     if "titel" in vac_profiel: skills_delen.append(vac_profiel["titel"])
     skills_tekst = " ".join(filter(None, skills_delen))
-    vector_skills = await get_provider().generate_embedding(skills_tekst) if skills_tekst else None
     
     # Cultuur tekst
     cultuur_delen = []
@@ -192,16 +194,21 @@ async def semantic_search(req: SemanticSearchRequest):
     if "gezochte_persoonlijkheid" in vac_profiel: cultuur_delen.extend(vac_profiel["gezochte_persoonlijkheid"])
     if "team_en_cultuur" in vac_profiel: cultuur_delen.append(vac_profiel["team_en_cultuur"])
     cultuur_tekst = " ".join(filter(None, cultuur_delen))
-    vector_cultuur = await get_provider().generate_embedding(cultuur_tekst) if cultuur_tekst else None
+
+    # Parallelle embedding generatie
+    from backend.services.agents import genereer_embeddings_batch
+    vector, vector_skills, vector_cultuur = await genereer_embeddings_batch([vac_json, skills_tekst, cultuur_tekst])
 
     if not vector:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren voor vacature.")
 
+    gewichten = await haal_learning_weights()
     top_matches = await haal_top_matches_vector(
-        vacature_vector=vector, 
+        vacature_vector=vector,
         vacature_skills=vector_skills,
         vacature_cultuur=vector_cultuur,
-        limit=req.limit
+        limit=req.limit,
+        gewichten=gewichten
     )
 
     enriched_matches = []
@@ -305,23 +312,52 @@ async def stream_match(req: MatchRequest):
 
 class FeedbackRequest(BaseModel):
     match_id: int
-    feedback_tekst: str
+    feedback_tekst: str = ""
+    recruiter_rating: int | None = Field(default=None, ge=1, le=5)
 
 @router.post("/feedback")
 async def match_feedback(req: FeedbackRequest):
-    from backend.services.agents import verwerk_match_feedback
+    from backend.services.agents import verwerk_match_feedback, optimaliseer_systeem_gewichten
     from backend.database import bewaar_match_feedback
-    
-    # 1. Sla feedback op in DB
-    await bewaar_match_feedback(req.match_id, req.feedback_tekst)
-    
-    # 2. Verwerk feedback met AI (asynchroon in de achtergrond zou idealiter kunnen, maar doen we nu direct voor de demo-ervaring)
+
+    # 1. Sla recruiter-rating op (indien meegegeven)
+    if req.recruiter_rating is not None:
+        await bewaar_recruiter_rating(req.match_id, req.recruiter_rating)
+
+    # 2. Verwerk feedback-tekst met AI (alleen bij niet-lege tekst)
+    nieuw_profiel = None
+    if req.feedback_tekst.strip():
+        await bewaar_match_feedback(req.match_id, req.feedback_tekst)
+        try:
+            nieuw_profiel = await verwerk_match_feedback(req.match_id, req.feedback_tekst)
+        except Exception as e:
+            logger.error(f"Fout bij verwerken feedback: {e}")
+            if req.recruiter_rating is None:
+                return {"message": "Feedback opgeslagen, maar verwerking mislukt door technische fout.", "detail": str(e)}
+
+    # 3. Trigger gewichtsoptimalisatie als er genoeg onverwerkte ratings zijn
     try:
-        nieuw_profiel = await verwerk_match_feedback(req.match_id, req.feedback_tekst)
-        return {"message": "Feedback verwerkt en profiel verrijkt", "nieuw_profiel": nieuw_profiel}
+        onverwerkt = await tel_onverwerkte_ratings()
+        if onverwerkt >= 10:
+            await optimaliseer_systeem_gewichten()
     except Exception as e:
-        logger.error(f"Fout bij verwerken feedback: {e}")
-        return {"message": "Feedback opgeslagen, maar verwerking mislukt door technische fout.", "detail": str(e)}
+        logger.error(f"Fout bij gewichtsoptimalisatie: {e}")
+
+    if nieuw_profiel:
+        return {"message": "Feedback verwerkt en profiel verrijkt", "nieuw_profiel": nieuw_profiel}
+    elif req.recruiter_rating is not None:
+        return {"message": f"Beoordeling ({req.recruiter_rating} sterren) opgeslagen"}
+    else:
+        return {"message": "Geen feedback of rating ontvangen"}
+
+
+# --- Gewichten ---
+
+@router.get("/weights")
+async def get_weights():
+    """Retourneert de huidige learning weights."""
+    gewichten = await haal_learning_weights()
+    return {"weights": gewichten}
 
 
 # --- Batch Match (meerdere kandidaten tegen één vacature) ---
@@ -345,7 +381,8 @@ async def batch_match(req: BatchMatchRequest):
         elif req.use_prefilter:
             vector = await get_provider().generate_embedding(vac_json)
             if vector:
-                top = await haal_top_matches_vector(vector, limit=req.limit)
+                gewichten = await haal_learning_weights()
+                top = await haal_top_matches_vector(vector, limit=req.limit, gewichten=gewichten)
                 kandidaten_lijst = [m["naam"] for m in top]
                 yield json.dumps({
                     "type": "prefilter",
@@ -362,49 +399,35 @@ async def batch_match(req: BatchMatchRequest):
             if not req.kandidaat_namen:
                 kandidaten_lijst = kandidaten_lijst[:req.limit]
 
-        total = len(kandidaten_lijst)
-        alle_resultaten = []
+        # Stap 2: Match elke kandidaat (Parallel met Semaphore)
+        sem = asyncio.Semaphore(3) # Max 3 parallelle matches voor Ollama
 
-        # Stap 2: Match elke kandidaat
-        for idx, naam in enumerate(kandidaten_lijst):
-            yield json.dumps({
-                "type": "match_start",
-                "data": {"naam": naam, "index": idx + 1, "total": total}
-            }, ensure_ascii=False)
+        async def worker(naam, idx):
+            async with sem:
+                yield_json = lambda t, d: json.dumps({"type": t, "data": d}, ensure_ascii=False)
+                
+                # Start event
+                start_evt = {"type": "match_start", "data": {"naam": naam, "index": idx + 1, "total": total}}
+                # We can't yield from here easily to the outer generator, 
+                # so we return the result and the caller yields.
+                # Actually, better to just use a list of tasks.
+                
+                # Cache check
+                if not req.force_refresh:
+                    cached = await haal_cached_match(naam, req.vacature_naam, req.modus)
+                    if cached and cached.get("resultaat_dict"):
+                        return {"naam": naam, "result": cached["resultaat_dict"], "cached": True}
 
-            # Cache check
-            if not req.force_refresh:
-                cached = await haal_cached_match(naam, req.vacature_naam, req.modus)
-                if cached and cached.get("resultaat_dict"):
-                    result = cached["resultaat_dict"]
-                    alle_resultaten.append({"naam": naam, **result, "cached": True})
-                    yield json.dumps({
-                        "type": "match_result",
-                        "data": {"naam": naam, "result": result, "cached": True}
-                    }, ensure_ascii=False)
-                    continue
+                cv_profiel = await _krijg_profiel(naam, is_kandidaat=True)
+                if not cv_profiel:
+                    return None
 
-            cv_profiel = await _krijg_profiel(naam, is_kandidaat=True)
-            if not cv_profiel:
-                continue
+                cv_json = json.dumps(cv_profiel, ensure_ascii=False)
+                kandidaat_id = cv_profiel.get("id", naam)
 
-            cv_json = json.dumps(cv_profiel, ensure_ascii=False)
-            kandidaat_id = cv_profiel.get("id", naam)
-
-            # Stream tokens per kandidaat
-            volledig = ""
-            async for chunk in match_kandidaat_stream(cv_json, vac_json, modus=req.modus):
-                if chunk.get("type") == "token":
-                    volledig += chunk.get("data", "")
-                    yield json.dumps({
-                        "type": "token",
-                        "data": chunk.get("data", ""),
-                        "kandidaat": naam
-                    }, ensure_ascii=False)
-                elif chunk.get("type") == "result":
-                    result = chunk.get("data", {})
-                    alle_resultaten.append({"naam": naam, **result})
-
+                try:
+                    result = await match_kandidaat(cv_json, vac_json, modus=req.modus)
+                    
                     modi = MATCH_MODI.get(req.modus)
                     await bewaar_match(
                         kandidaat_naam=naam,
@@ -416,10 +439,23 @@ async def batch_match(req: BatchMatchRequest):
                         resultaat_dict=result,
                         temperature=modi.get("temperature") if modi else None
                     )
+                    return {"naam": naam, "result": result, "cached": False}
+                except Exception as e:
+                    logger.error(f"Fout bij matchen van {naam}: {e}")
+                    return {"naam": naam, "error": str(e)}
 
+        # We draaien de tasks en yielden updates wanneer ze klaar zijn
+        tasks = [worker(naam, i) for i, naam in enumerate(kandidaten_lijst)]
+        for fut in asyncio.as_completed(tasks):
+            res = await fut
+            if res:
+                if "error" in res:
+                    yield json.dumps({"type": "error", "data": f"Fout bij {res['naam']}: {res['error']}"}, ensure_ascii=False)
+                else:
+                    alle_resultaten.append({"naam": res["naam"], **res["result"], "cached": res.get("cached", False)})
                     yield json.dumps({
                         "type": "match_result",
-                        "data": {"naam": naam, "result": result}
+                        "data": {"naam": res["naam"], "result": res["result"], "cached": res.get("cached", False)}
                     }, ensure_ascii=False)
 
         # Stap 3: Gesorteerd eindresultaat

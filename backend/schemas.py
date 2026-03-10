@@ -24,6 +24,7 @@ class KandidaatProfiel(BaseModel):
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
     stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 stellingen met een 4-punts schaal die helpen gaten te vullen")
     cultuur_vragen: List[str] = Field(default_factory=list, max_length=3, description="3 prikkelende vragen over cultuur en persoonlijkheid")
+    last_generated: Optional[str] = Field(default=None, description="ISO datum van laatste generatie")
 
 class WerkgeversvraagProfiel(BaseModel):
     titel: str = Field(description="Functietitel")
@@ -44,7 +45,7 @@ class WerkgeversvraagProfiel(BaseModel):
     dossier_compleetheid: int = Field(ge=0, le=100, validation_alias=AliasChoices("dossier_compleetheid", "profiel_betrouwbaarheid"), description="Hoe compleet is dit dossier?")
     aandachtspunten: List[str] = Field(default_factory=list, description="Aandachtspunten of kanttekeningen bij deze vraag")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
-    stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 prikkelende stellingen over de werkplek of het team")
+    last_generated: Optional[str] = Field(default=None, description="ISO datum van laatste generatie")
 
 class EvalueerProfielResult(BaseModel):
     volledigheid_score: int = Field(ge=0, le=100, description="Volledigheid score")
@@ -65,22 +66,20 @@ class ScoreBreakdown(BaseModel):
     groei_potentieel: int = Field(ge=0, le=100, description="Hoeveel groeipotentieel is er?")
     motivatie_alignment: int = Field(ge=0, le=100, description="Hoe goed sluiten drijfveren aan?")
 
+class SuccesPlan(BaseModel):
+    """Tweezijdig actieplan: wat kan de kandidaat doen, en wat moet de werkgever bieden?"""
+    actie_kandidaat: List[str]
+    actie_werkgever: List[str]
+
 class KernMatchResult(BaseModel):
     """Kern-match: de 8 belangrijkste velden — betrouwbaar op elk model."""
     match_percentage: int = Field(ge=0, le=100)
     matchende_punten: List[str] = Field(max_length=5, description="Max 3-5 concrete matchpunten")
     ontbrekende_punten: List[str] = Field(max_length=5, description="Max 3-5 concrete ontbrekende punten")
-    verrassings_element: str
-    onderbouwing: str
-    cultuur_fit: str
+    succes_plan: SuccesPlan
     dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
     vervolgvragen: List[str] = Field(default_factory=list, max_length=5)
     stellingen: List[str] = Field(default_factory=list, max_length=5)
-
-class SuccesPlan(BaseModel):
-    """Tweezijdig actieplan: wat kan de kandidaat doen, en wat moet de werkgever bieden?"""
-    actie_kandidaat: List[str]
-    actie_werkgever: List[str]
 
 class VerdiepingMatchResult(BaseModel):
     """Verdieping: extra velden die de kern-match verrijken."""
@@ -99,9 +98,7 @@ class QuickScanMatchResult(BaseModel):
     match_percentage: int = Field(ge=0, le=100)
     matchende_punten: List[str]
     ontbrekende_punten: List[str]
-    verrassings_element: str
-    onderbouwing: str
-    cultuur_fit: str = Field(default="")
+    succes_plan: SuccesPlan = Field(default=None)
     personality_axes: PersonalityAxes = Field(default=None)
     aandachtspunten: List[str] = Field(default_factory=list)
     dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
@@ -114,16 +111,14 @@ class StandaardMatchResult(BaseModel):
     matchende_punten: List[str]
     ontbrekende_punten: List[str]
     succes_plan: SuccesPlan = Field(default=None)
-    verrassings_element: str
     gespreksstarters: List[str] = Field(default_factory=list)
     risico_mitigatie: str = Field(default="")
     gedeelde_waarden: List[str] = Field(default_factory=list)
     groeipotentieel: str = Field(default="")
-    cultuur_fit: str
     aandachtspunten: List[str] = Field(default_factory=list)
     boodschap_aan_kandidaat: str = Field(default="")
     match_narratief: str = Field(default="", description="Kort, inspirerend verhaal dat de match tot leven brengt")
-    onderbouwing: str
+    onderbouwing: str = Field(default="") # kept for backward compatibility if needed, but not in prompt
     personality_axes: PersonalityAxes = Field(default=None)
     score_breakdown: ScoreBreakdown = Field(default=None, description="Transparante sub-scores per dimensie")
     dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")

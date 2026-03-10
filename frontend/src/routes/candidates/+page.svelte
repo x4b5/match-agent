@@ -234,7 +234,7 @@
     return String(val);
   }
 
-  const SKIP_KEYS = new Set(["_waarschuwingen"]);
+  const SKIP_KEYS = new Set(["_waarschuwingen", "last_generated"]);
 </script>
 
 <div class="page-hero">
@@ -381,8 +381,21 @@
                     >{candidate.profile_score}%</strong
                   >{:else}<span
                     style="color: var(--text-secondary); font-style: italic;"
-                    >Onbekend — genereer opnieuw</span
+                    >Onbekend</span
                   >{/if}
+              {/if}
+              {#if candidate.profile_data?.last_generated}
+                | <span style="opacity: 0.8;"
+                  >{new Date(
+                    candidate.profile_data.last_generated,
+                  ).toLocaleDateString("nl-NL", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}</span
+                >
               {/if}
               <span
                 style="margin-left: 0.5rem; font-size: 0.7rem; color: var(--text-secondary); opacity: 0.6;"

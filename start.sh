@@ -18,6 +18,16 @@ export PYTHONPATH=.
 uvicorn backend.main:app --host localhost --port 8000 &
 BACKEND_PID=$!
 
+# Wacht even en controleer of de backend nog draait
+sleep 2
+if ! ps -p $BACKEND_PID > /dev/null
+then
+    echo "❌ FOUT: De backend kon niet worden gestart. Controleer de logs hierboven."
+    exit 1
+fi
+
+echo "✅ Backend gestart (PID: $BACKEND_PID)"
+
 # Start SvelteKit development server in the foreground
 cd frontend
 npm run dev

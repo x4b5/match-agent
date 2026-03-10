@@ -4,12 +4,14 @@
 
 Match kandidaten uit een kandidatenpool met werkgeversvragen, 100% lokaal via Ollama. De focus ligt op potentieel, persoonlijkheid, drijfveren en verrassende combinaties in plaats van een rigide check op diploma's en harde werkervaring. Geen data verlaat de machine.
 
-## Sterke Punten
+## Kernpijlers
 
-- **100% Lokaal & Privacy**: De volledige verwerking (Ollama) en opslag (SQLite/Lokale mappen) gebeurt direct op de machine van de gebruiker. Geen data verlaat de omgeving, wat zorgt voor maximale privacy en veiligheid.
-- **AI-Gedreven Matchmaking**: Maakt gebruik van geavanceerde LLM's (zoals Qwen 3.5:27b) voor een multi-dimensionale analyse van matches op basis van persoonlijkheid, cultuur, skills, groei en motivatie. Bevat een 'diepte-analyse' met thinking-modellen.
-- **Continu Lerend**: Een recursieve feedback-loop van recruiters verrijkt kandidaatprofielen en verbetert toekomstige matches direct op basis van menselijke inzichten.
-- **Focus op Potentieel**: Prioriteert karakter, drijfveren en overdraagbare vaardigheden boven een rigide check op diploma's of functietitels. Het ontdekt verrassende combinaties die recruiters anders over het hoofd zouden zien.
+- **Alles blijft op jouw computer**: De AI draait volledig lokaal. Er wordt geen data naar de cloud of externe diensten gestuurd — wat je invoert, blijft bij jou.
+- **Automatische bescherming van persoonsgegevens**: Voordat tekst wordt geanalyseerd, worden gevoelige gegevens zoals e-mailadressen, IBAN-nummers en BSN-nummers automatisch onherkenbaar gemaakt. BSN-nummers worden zelfs wiskundig gecontroleerd op echtheid.
+- **Potentie boven papier**: Matchflix kijkt verder dan diploma's en functietitels. Het draait om wie iemand is: karakter, drijfveren en of iemand past bij het team en de cultuur.
+- **Heldere taal, geen jargon**: Alle communicatie is geschreven op B1-niveau — begrijpelijk voor iedereen, zonder vakjargon. Zo is het toegankelijk voor zowel recruiters als kandidaten.
+- **Slim zoeken op betekenis**: Het systeem zoekt niet op losse woorden, maar begrijpt de betekenis achter profielen en vacatures. Daardoor vindt het ook matches die je met traditioneel zoeken zou missen — op drie vlakken: algemene fit, vaardigheden en cultuur.
+- **Leert van jouw feedback**: Wanneer een recruiter feedback geeft op een match, wordt het kandidaatprofiel direct verrijkt. Het systeem leert mee en levert bij de volgende ronde betere matches.
 
 ## Kernbegrippen
 

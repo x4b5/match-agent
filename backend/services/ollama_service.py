@@ -78,13 +78,15 @@ class OllamaProvider(LLMProvider):
         self._async_client = AsyncOpenAI(
             base_url=openai_base_url,
             api_key="ollama", # required but unused by ollama
+            timeout=600.0,  # 10 minuten timeout
         )
         self.client = instructor.from_openai(self._async_client, mode=instructor.Mode.JSON)
 
     async def _post(self, url: str, payload: dict, timeout: int = 600) -> dict:
-        async with aiohttp.ClientSession() as session:
+        client_timeout = aiohttp.ClientTimeout(total=timeout)
+        async with aiohttp.ClientSession(timeout=client_timeout) as session:
             try:
-                async with session.post(url, json=payload, timeout=timeout) as response:
+                async with session.post(url, json=payload) as response:
                     response.raise_for_status()
                     return await response.json()
             except asyncio.TimeoutError:
@@ -103,95 +105,77 @@ class OllamaProvider(LLMProvider):
         think: bool = False,
         max_retries: int = 2,
     ) -> T | dict:
-        use_structured = schema and not think
+        import time
+        t0 = time.time()
+        logger.info(f"Ollama generate_json aangeroepen (model={model}, schema={schema.__name__ if schema else 'None'}, think={think})")
+        
+        # We use the native Ollama route by default as it supports 'format' 
+        # (json schema) which is more stable for local models than the 
+        # OpenAI-compatible /v1 route.
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "system": self.system_prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": num_predict,
+                "num_ctx": num_ctx,
+                "seed": 42,
+            },
+            "think": think,
+        }
 
-        # If thinking is required, we use the old raw endpoint route. Instructor + JSON mode will strip <think> tokens.
-        if think or not use_structured:
-            payload = {
-                "model": model,
-                "prompt": prompt,
-                "system": self.system_prompt,
-                "stream": False,
-                "options": {
-                    "temperature": temperature,
-                    "num_predict": num_predict,
-                    "num_ctx": num_ctx,
-                    "seed": 42,
-                },
-                "think": think,
-            }
+        if schema:
+            payload["format"] = schema.model_json_schema()
+        else:
+            payload["format"] = "json"
 
-            if use_structured:
-                payload["format"] = schema.model_json_schema()
-            elif schema is None:
-                payload["format"] = "json"
+        laatste_antwoord = ""
+        for poging in range(max_retries + 1):
+            try:
+                resp = await self._post(self.generate_url, payload, timeout=600)
 
-            laatste_antwoord = ""
-            for poging in range(max_retries + 1):
-                try:
-                    resp = await self._post(self.generate_url, payload, timeout=600)
+                if resp.get("done_reason") == "length":
+                    logger.warning(f"Ollama gestopt door token limiet (poging {poging + 1}, model={model})")
 
-                    if resp.get("done_reason") == "length":
-                        logger.warning(f"Ollama gestopt door token limiet (poging {poging + 1}, model={model})")
+                antwoord = resp.get("response", "")
+                laatste_antwoord = antwoord
 
-                    antwoord = resp.get("response", "")
-                    laatste_antwoord = antwoord
-
-                    if think:
-                        antwoord = _extract_json_from_thinking(antwoord)
-
-                    resultaat = _validate_json_antwoord(antwoord, schema) if schema else json.loads(antwoord)
-                    if resultaat is not None:
-                        return schema(**resultaat) if schema and isinstance(resultaat, dict) else resultaat
-
-                    _bewaar_debug_output(antwoord, poging, model)
-
-                except OllamaError as e:
-                    logger.error(f"Ollama fout poging {poging + 1}: {e}")
-                    if poging == max_retries:
-                        raise e
-                except json.JSONDecodeError:
-                    _bewaar_debug_output(antwoord, poging, model)
-
-                if poging < max_retries:
-                    await asyncio.sleep(2 * (poging + 1))
-
-            # Graceful fallback
-            if laatste_antwoord:
                 if think:
-                    laatste_antwoord = _extract_json_from_thinking(laatste_antwoord)
-                fallback = _validate_json_antwoord(laatste_antwoord, None)
-                if fallback:
-                    logger.warning(f"Fallback: JSON valide maar voldoet niet aan schema (model={model}). Ruwe data geretourneerd.")
-                    fallback["_waarschuwing"] = "Profiel voldoet niet volledig aan het verwachte schema. Sommige velden kunnen ontbreken."
-                    return fallback
+                    antwoord = _extract_json_from_thinking(antwoord)
 
-            raise OllamaError(
-                f"Model {model} gaf geen geldig JSON-antwoord na {max_retries + 1} pogingen. "
-                f"Controleer of het model geladen is en voldoende context heeft."
-            )
+                resultaat = _validate_json_antwoord(antwoord, schema) if schema else json.loads(antwoord)
+                if resultaat is not None:
+                    logger.info(f"Ollama native generate succesvol in {time.time()-t0:.2f}s")
+                    return schema(**resultaat) if schema and isinstance(resultaat, dict) else resultaat
 
-        # Uses Instructor when not in 'think' mode and we have a schema
-        try:
-            result = await self.client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                response_model=schema,
-                max_retries=max_retries,
-                temperature=temperature,
-                max_tokens=num_predict,
-                seed=42
-                # Note: OpenAI compatible endpoints might not directly support num_ctx per request dynamically in Ollama. 
-                # It is generally set at model load time or server config but passing it can be tricky. 
-                # For robust structured JSON though, Instructor provides the stability we need.
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Instructor API fout (model={model}): {str(e)}")
-            raise OllamaError(f"Instructor kon geen geldige JSON genereren: {str(e)}")
+                _bewaar_debug_output(antwoord, poging, model)
+
+            except OllamaError as e:
+                logger.error(f"Ollama fout poging {poging + 1}: {e}")
+                if poging == max_retries:
+                    raise e
+            except json.JSONDecodeError:
+                _bewaar_debug_output(antwoord, poging, model)
+
+            if poging < max_retries:
+                await asyncio.sleep(2 * (poging + 1))
+
+        # Graceful fallback
+        if laatste_antwoord:
+            if think:
+                laatste_antwoord = _extract_json_from_thinking(laatste_antwoord)
+            fallback = _validate_json_antwoord(laatste_antwoord, None)
+            if fallback:
+                logger.warning(f"Fallback: JSON valide maar voldoet niet aan schema (model={model}). Ruwe data geretourneerd.")
+                fallback["_waarschuwing"] = "Profiel voldoet niet volledig aan het verwachte schema. Sommige velden kunnen ontbreken."
+                return fallback
+
+        raise OllamaError(
+            f"Model {model} gaf geen geldig JSON-antwoord na {max_retries + 1} pogingen. "
+            f"Controleer of het model geladen is en voldoende context heeft."
+        )
 
 
     async def generate_json_stream(
