@@ -22,6 +22,37 @@ class OllamaError(Exception):
 
 # ── Helper functies (module-level) ──
 
+def _resolve_refs(schema: dict) -> dict:
+    """Resolve alle $ref verwijzingen in een JSON schema zodat Ollama het kan verwerken.
+
+    Ollama's structured output ondersteunt geen $ref/$defs. Deze functie
+    vervangt alle $ref verwijzingen door de eigenlijke definities inline.
+    """
+    defs = schema.get("$defs", {})
+    if not defs:
+        return schema
+
+    def _resolve(node):
+        if isinstance(node, dict):
+            if "$ref" in node:
+                ref_path = node["$ref"]  # bijv. "#/$defs/GedragDimensie"
+                ref_name = ref_path.split("/")[-1]
+                if ref_name in defs:
+                    # Merge extra properties (zoals description) met de resolved def
+                    resolved = _resolve(dict(defs[ref_name]))
+                    extra = {k: v for k, v in node.items() if k != "$ref"}
+                    resolved.update(extra)
+                    return resolved
+                return node
+            return {k: _resolve(v) for k, v in node.items()}
+        elif isinstance(node, list):
+            return [_resolve(item) for item in node]
+        return node
+
+    resolved = _resolve(schema)
+    resolved.pop("$defs", None)
+    return resolved
+
 def _extract_json_from_thinking(antwoord: str) -> str:
     """Haal het JSON-blok uit een thinking-mode antwoord dat denktekst kan bevatten."""
     stripped = antwoord.strip()
@@ -127,7 +158,7 @@ class OllamaProvider(LLMProvider):
         }
 
         if schema:
-            payload["format"] = schema.model_json_schema()
+            payload["format"] = _resolve_refs(schema.model_json_schema())
         else:
             payload["format"] = "json"
 
@@ -140,6 +171,11 @@ class OllamaProvider(LLMProvider):
                     logger.warning(f"Ollama gestopt door token limiet (poging {poging + 1}, model={model})")
 
                 antwoord = resp.get("response", "")
+                # Qwen3 plaatst soms het antwoord in het 'thinking' veld
+                # als format + thinking tegelijk actief zijn
+                if not antwoord.strip() and resp.get("thinking", "").strip():
+                    antwoord = resp["thinking"]
+                    logger.info("Antwoord gevonden in 'thinking' veld i.p.v. 'response'.")
                 laatste_antwoord = antwoord
 
                 if think:
@@ -208,7 +244,7 @@ class OllamaProvider(LLMProvider):
         }
 
         if use_structured:
-            payload["format"] = schema.model_json_schema()
+            payload["format"] = _resolve_refs(schema.model_json_schema())
         else:
             payload["format"] = "json"
 

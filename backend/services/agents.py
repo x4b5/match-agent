@@ -398,8 +398,19 @@ async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
         # 5. Herbereken embeddings (Echt leren!)
         try:
             full_text = json.dumps(nieuw_profiel, ensure_ascii=False)
-            skills_tekst = ", ".join(nieuw_profiel.get("hard_skills", []) + nieuw_profiel.get("soft_skills", []))
-            cultuur_tekst = f"{nieuw_profiel.get('gewenste_bedrijfscultuur', '')} {nieuw_profiel.get('onderliggende_motivatie', '')}"
+            skills_tekst = ", ".join(nieuw_profiel.get("vaardigheden", []))
+            cultuur_delen = []
+            gedrag = nieuw_profiel.get("gedrag", {})
+            if isinstance(gedrag, dict):
+                for val in gedrag.values():
+                    if isinstance(val, dict) and "toelichting" in val:
+                        cultuur_delen.append(val["toelichting"])
+            leervermogen = nieuw_profiel.get("leervermogen", {})
+            if isinstance(leervermogen, dict):
+                for val in leervermogen.values():
+                    if isinstance(val, dict) and "toelichting" in val:
+                        cultuur_delen.append(val["toelichting"])
+            cultuur_tekst = " ".join(cultuur_delen)
             
             vector, vec_skills, vec_cultuur = await genereer_embeddings_batch([full_text, skills_tekst, cultuur_tekst])
             

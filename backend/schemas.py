@@ -1,21 +1,43 @@
 from pydantic import BaseModel, Field, AliasChoices
 from typing import List, Optional
 
+
+# --- Pijler 1: Gedrag (Big Five) ---
+
+class GedragDimensie(BaseModel):
+    score: int = Field(ge=1, le=5, description="Score 1-5")
+    toelichting: str = Field(description="Korte uitleg met bewijs uit dossier")
+
+class BigFiveGedrag(BaseModel):
+    openheid: GedragDimensie = Field(description="Openheid voor ervaring: nieuwsgierigheid, creativiteit, open voor nieuwe ideeën")
+    conscientieusheid: GedragDimensie = Field(description="Zorgvuldigheid en discipline: georganiseerd, betrouwbaar, doelgericht")
+    extraversie: GedragDimensie = Field(description="Sociaal en energiek: praatgraag, assertief, zoekt gezelschap")
+    vriendelijkheid: GedragDimensie = Field(description="Samenwerking en empathie: behulpzaam, vertrouwend, coöperatief")
+    neuroticisme: GedragDimensie = Field(description="Emotionele stabiliteit: hoe iemand omgaat met stress en druk (1=zeer stabiel, 5=zeer gevoelig)")
+
+
+# --- Pijler 2: Leervermogen (Learning Agility) ---
+
+class LeervermogenDimensie(BaseModel):
+    score: int = Field(ge=1, le=5, description="Score 1-5")
+    toelichting: str = Field(description="Korte uitleg met bewijs uit dossier")
+
+class Leervermogen(BaseModel):
+    mental_agility: LeervermogenDimensie = Field(description="Analytisch vermogen: complexe problemen doorgronden, patronen herkennen")
+    people_agility: LeervermogenDimensie = Field(description="Communicatie en empathie: effectief samenwerken, anderen begrijpen")
+    change_agility: LeervermogenDimensie = Field(description="Omgaan met onzekerheid: flexibel, experimenteert, omarmt verandering")
+    results_agility: LeervermogenDimensie = Field(description="Resultaten onder druk: levert onder moeilijke omstandigheden, veerkrachtig")
+    self_awareness: LeervermogenDimensie = Field(description="Zelfinzicht: kent eigen sterktes en zwaktes, staat open voor feedback")
+
+
+# --- Kandidaatprofiel (3 pijlers) ---
+
 class KandidaatProfiel(BaseModel):
     naam: str = Field(description="Naam van de kandidaat")
     kernrol: str = Field(description="Primaire huidige rol of overkoepelend profiel")
-    persoonlijkheid: List[str] = Field(description="Lijst van karaktereigenschappen en persoonskenmerken")
-    kwaliteiten: List[str] = Field(description="Lijst van sterke punten en talenten")
-    impliciete_kwaliteiten: List[str] = Field(description="Verborgen kwaliteiten afgeleid uit werkervaring of hobby's")
-    drijfveren: List[str] = Field(description="Wat deze persoon motiveert of zoekt")
-    onderliggende_motivatie: str = Field(description="Wat drijft deze persoon in de kern?")
-    ideale_werkdag: str = Field(description="Beschrijf in 2-3 zinnen hoe een ideale werkdag eruitziet")
-    werkstijl: str = Field(description="Hoe de persoon te werk gaat (bijv. zelfstandig, teamplayer)")
-    ambities_en_leerdoelen: List[str] = Field(description="Wat de persoon wil bereiken of nog wil leren")
-    gewenste_bedrijfscultuur: str = Field(description="In wat voor soort omgeving de persoon goed gedijt")
-    hobby_en_interesses: List[str] = Field(description="Relevante bezigheden die karakter tonen")
-    hard_skills: List[str] = Field(description="Relevante hard skills")
-    soft_skills: List[str] = Field(description="Soft skills")
+    gedrag: BigFiveGedrag = Field(description="Pijler 1: Gedrag op basis van Big Five persoonlijkheidsmodel")
+    leervermogen: Leervermogen = Field(description="Pijler 2: Leervermogen op basis van Learning Agility (5 dimensies)")
+    vaardigheden: List[str] = Field(description="Pijler 3: Hard skills en technische vaardigheden")
     beschikbaarheid_en_locatie: str = Field(description="Praktische zaken (indien genoemd in tekst)")
     opleiding_en_ervaring_samenvatting: str = Field(description="Korte samenvatting van achtergrond")
     verrassende_functies: List[str] = Field(min_length=3, max_length=5, description="3-5 concrete functies/rollen waar deze persoon qua persoonlijkheid en talent goed bij zou passen, maar waar hij/zij zelf misschien niet aan denkt")
@@ -53,11 +75,11 @@ class EvalueerProfielResult(BaseModel):
     stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 stellingen over missende info")
 
 class PersonalityAxes(BaseModel):
-    Analytisch: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Sociaal: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Creatief: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Gestructureerd: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Ondernemend: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Openheid: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Conscientieusheid: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Extraversie: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Vriendelijkheid: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Neuroticisme: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
 
 class ScoreBreakdown(BaseModel):
     persoonlijkheid_fit: int = Field(ge=0, le=100, description="Hoe goed passen de karaktereigenschappen?")

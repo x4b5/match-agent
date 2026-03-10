@@ -16,6 +16,7 @@ import shutil
 import json
 import logging
 import asyncio
+from datetime import datetime
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, BackgroundTasks
 from pydantic import BaseModel as PydanticBaseModel
@@ -80,14 +81,19 @@ def create_document_router(
             # Zoek bijbehorende fysieke info (doc count etc)
             fysieke_info = next((d for d in fysieke_mappen if d["naam"] == naam), {})
             
+            # Zorg dat last_generated altijd aanwezig is in profile_data
+            profiel_data = doc["profiel_dict"]
+            if profiel_data and not profiel_data.get("last_generated"):
+                profiel_data["last_generated"] = doc.get("timestamp")
+
             response.append({
                 "id": doc["document_id"],
                 "naam": naam,
                 "doc_count": fysieke_info.get("doc_count", 0),
                 "docs": fysieke_info.get("docs", []),
                 "has_profile": doc["profiel_compleet"],
-                "profile_score": doc["profiel_dict"].get("dossier_compleetheid", doc["profiel_dict"].get("profiel_betrouwbaarheid")) if doc["profiel_dict"] else None,
-                "profile_data": doc["profiel_dict"],
+                "profile_score": profiel_data.get("dossier_compleetheid", profiel_data.get("profiel_betrouwbaarheid")) if profiel_data else None,
+                "profile_data": profiel_data,
                 "waarschuwingen": doc.get("waarschuwingen_list", []),
                 "exists_on_disk": bestaat_fysiek,
                 "timestamp": doc["timestamp"]
@@ -161,6 +167,10 @@ def create_document_router(
         uuid_val = db_doc["document_id"] if db_doc else zorg_voor_uuid(pad)
         profiel = db_doc.get("profiel_dict") if db_doc else laad_profiel_uit_map(pad)
         waarschuwingen = db_doc.get("waarschuwingen_list", []) if db_doc else []
+
+        # Zorg dat last_generated altijd aanwezig is
+        if profiel and not profiel.get("last_generated") and db_doc:
+            profiel["last_generated"] = db_doc.get("timestamp")
 
         return {
             "id": uuid_val,
@@ -268,27 +278,33 @@ def create_document_router(
                 if pii_rapport:
                     waarschuwingen.append(f"PII gemaskeerd: {pii_rapport}")
 
-            # ── Parallelle uitvoering van Deduplicatie en Analyse ──
-            await update_task_db(task_id, progress="Analyse & deduplicatie gestart...", progress_percent=40)
+            # ── Sequentiële uitvoering: profiel eerst, dan embedding ──
+            # Ollama kan maar één model tegelijk laden, dus sequentieel uitvoeren
+            await update_task_db(task_id, progress="Profiel wordt geanalyseerd...", progress_percent=40)
 
-            # Start beide zware taken tegelijkertime
-            v_task = asyncio.create_task(genereer_embedding(geschoonde_tekst))
-            p_task = asyncio.create_task(profiel_agent_fn(geschoonde_tekst))
-
-            # Wacht op beide resultaten met timeout (max 10 minuten)
             try:
-                vector, resultaat = await asyncio.wait_for(
-                    asyncio.gather(v_task, p_task),
+                resultaat = await asyncio.wait_for(
+                    profiel_agent_fn(geschoonde_tekst),
                     timeout=600
                 )
             except asyncio.TimeoutError:
-                v_task.cancel()
-                p_task.cancel()
                 await update_task_db(
                     task_id, status="failed",
                     error="Profielgeneratie duurde te lang (timeout na 10 minuten). Mogelijk is het Ollama model overbelast. Probeer het opnieuw."
                 )
                 return
+
+            await update_task_db(task_id, progress="Embedding genereren...", progress_percent=75)
+            # Geef Ollama even tijd om van generatie-model naar embedding-model te wisselen
+            await asyncio.sleep(2)
+            try:
+                vector = await asyncio.wait_for(
+                    genereer_embedding(geschoonde_tekst),
+                    timeout=120
+                )
+            except (asyncio.TimeoutError, Exception) as e:
+                logger.warning(f"Embedding mislukt voor {map_pad}: {e}. Profiel wordt zonder embedding opgeslagen.")
+                vector = None
 
             # ── Semantische Deduplicatie Check (Numpy Batch) ──
             if vector:
@@ -329,22 +345,25 @@ def create_document_router(
 
                 # Extra dimensies genereren
                 if isinstance(resultaat, dict):
-                    # Skills tekst
+                    # Skills tekst (kandidaat: vaardigheden + kernrol, werkgever: must_have_skills etc.)
                     skills_delen = []
-                    if "hard_skills" in resultaat: skills_delen.extend(resultaat["hard_skills"])
-                    if "soft_skills" in resultaat: skills_delen.extend(resultaat["soft_skills"])
-                    if "kwaliteiten" in resultaat: skills_delen.extend(resultaat["kwaliteiten"])
-                    if "taken" in resultaat: skills_delen.extend(resultaat["taken"])
+                    if "vaardigheden" in resultaat: skills_delen.extend(resultaat["vaardigheden"])
                     if "kernrol" in resultaat: skills_delen.append(resultaat["kernrol"])
                     if "must_have_skills" in resultaat: skills_delen.extend(resultaat["must_have_skills"])
                     if "benodigde_kwaliteiten" in resultaat: skills_delen.extend(resultaat["benodigde_kwaliteiten"])
-                    
+                    if "taken" in resultaat: skills_delen.extend(resultaat["taken"])
+
                     skills_tekst = " ".join(filter(None, skills_delen))
-                    # Cultuur tekst
+                    # Cultuur tekst (kandidaat: gedrag + leervermogen, werkgever: organisatiewaarden etc.)
                     cultuur_delen = []
-                    if "persoonlijkheid" in resultaat: cultuur_delen.extend(resultaat["persoonlijkheid"])
-                    if "drijfveren" in resultaat: cultuur_delen.extend(resultaat["drijfveren"])
-                    if "gewenste_bedrijfscultuur" in resultaat: cultuur_delen.append(resultaat["gewenste_bedrijfscultuur"])
+                    if "gedrag" in resultaat and isinstance(resultaat["gedrag"], dict):
+                        for dim, val in resultaat["gedrag"].items():
+                            if isinstance(val, dict) and "toelichting" in val:
+                                cultuur_delen.append(val["toelichting"])
+                    if "leervermogen" in resultaat and isinstance(resultaat["leervermogen"], dict):
+                        for dim, val in resultaat["leervermogen"].items():
+                            if isinstance(val, dict) and "toelichting" in val:
+                                cultuur_delen.append(val["toelichting"])
                     if "organisatiewaarden" in resultaat: cultuur_delen.extend(resultaat["organisatiewaarden"])
                     if "gezochte_persoonlijkheid" in resultaat: cultuur_delen.extend(resultaat["gezochte_persoonlijkheid"])
                     if "team_en_cultuur" in resultaat: cultuur_delen.append(resultaat["team_en_cultuur"])
@@ -352,7 +371,11 @@ def create_document_router(
                     cultuur_tekst = " ".join(filter(None, cultuur_delen))
                     from backend.services.agents import genereer_embeddings_batch
                     # We doen de extra dimensies in één batch request
-                    vector_skills, vector_cultuur = await genereer_embeddings_batch([skills_tekst, cultuur_tekst])
+                    try:
+                        vector_skills, vector_cultuur = await genereer_embeddings_batch([skills_tekst, cultuur_tekst])
+                    except Exception as e:
+                        logger.warning(f"Skills/cultuur embeddings mislukt: {e}")
+                        vector_skills, vector_cultuur = None, None
 
                 # Save embedding (op geschoonde tekst — AVG-compliant)
                 if vector:
@@ -434,8 +457,21 @@ def create_document_router(
             from backend.services.agents import genereer_embeddings_batch
             
             full_text_for_embedding = json.dumps(nieuw_profiel, ensure_ascii=False)
-            skills_tekst = ", ".join(nieuw_profiel.get("hard_skills", []) + nieuw_profiel.get("soft_skills", []))
-            cultuur_tekst = f"{nieuw_profiel.get('gewenste_bedrijfscultuur', '')} {nieuw_profiel.get('onderliggende_motivatie', '')}"
+            skills_tekst = ", ".join(nieuw_profiel.get("vaardigheden", []))
+            if nieuw_profiel.get("kernrol"):
+                skills_tekst += " " + nieuw_profiel["kernrol"]
+            cultuur_delen = []
+            gedrag = nieuw_profiel.get("gedrag", {})
+            if isinstance(gedrag, dict):
+                for val in gedrag.values():
+                    if isinstance(val, dict) and "toelichting" in val:
+                        cultuur_delen.append(val["toelichting"])
+            leervermogen = nieuw_profiel.get("leervermogen", {})
+            if isinstance(leervermogen, dict):
+                for val in leervermogen.values():
+                    if isinstance(val, dict) and "toelichting" in val:
+                        cultuur_delen.append(val["toelichting"])
+            cultuur_tekst = " ".join(cultuur_delen)
             
             embedding, embedding_skills, embedding_cultuur = await genereer_embeddings_batch([
                 full_text_for_embedding, 

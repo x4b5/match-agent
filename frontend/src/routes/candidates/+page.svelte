@@ -235,6 +235,25 @@
   }
 
   const SKIP_KEYS = new Set(["_waarschuwingen", "last_generated"]);
+
+  // Labels voor Big Five en Learning Agility dimensies
+  const GEDRAG_LABELS: Record<string, string> = {
+    openheid: "Openheid",
+    conscientieusheid: "Conscientieusheid",
+    extraversie: "Extraversie",
+    vriendelijkheid: "Vriendelijkheid",
+    neuroticisme: "Neuroticisme",
+  };
+  const LEERVERMOGEN_LABELS: Record<string, string> = {
+    mental_agility: "Mental Agility",
+    people_agility: "People Agility",
+    change_agility: "Change Agility",
+    results_agility: "Results Agility",
+    self_awareness: "Self-Awareness",
+  };
+
+  // Pijler-keys die apart gerenderd worden
+  const PILLAR_KEYS = new Set(["gedrag", "leervermogen"]);
 </script>
 
 <div class="page-hero">
@@ -567,10 +586,72 @@
                 <div class="detail-section-title">
                   <span class="material-icons">person</span> Profielgegevens
                 </div>
-                <table class="profile-table">
+
+                <!-- Gedrag (Big Five) -->
+                {#if detail.profile_data.gedrag}
+                  <div class="detail-section-title" style="margin-top: 1rem; font-size: 0.85rem;">
+                    <span class="material-icons" style="font-size: 1rem;">psychology</span> Gedrag (Big Five)
+                  </div>
+                  <table class="profile-table">
+                    <tbody>
+                      {#each Object.entries(detail.profile_data.gedrag) as [dim, val]}
+                        <tr>
+                          <th style="width: 160px;">{GEDRAG_LABELS[dim] || dim}</th>
+                          <td>
+                            {#if typeof val === "object" && val !== null}
+                              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="display: flex; gap: 2px; flex-shrink: 0;">
+                                  {#each Array(5) as _, i}
+                                    <span style="width: 14px; height: 14px; border-radius: 3px; display: inline-block; background: {i < (val.score || 0) ? 'var(--neon-cyan)' : 'var(--bg-secondary)'}; opacity: {i < (val.score || 0) ? 1 : 0.3};"></span>
+                                  {/each}
+                                </div>
+                                <span style="font-size: 0.8rem;">{val.toelichting || '—'}</span>
+                              </div>
+                            {:else}
+                              {renderValue(val)}
+                            {/if}
+                          </td>
+                        </tr>
+                      {/each}
+                    </tbody>
+                  </table>
+                {/if}
+
+                <!-- Leervermogen (Learning Agility) -->
+                {#if detail.profile_data.leervermogen}
+                  <div class="detail-section-title" style="margin-top: 1rem; font-size: 0.85rem;">
+                    <span class="material-icons" style="font-size: 1rem;">school</span> Leervermogen (Learning Agility)
+                  </div>
+                  <table class="profile-table">
+                    <tbody>
+                      {#each Object.entries(detail.profile_data.leervermogen) as [dim, val]}
+                        <tr>
+                          <th style="width: 160px;">{LEERVERMOGEN_LABELS[dim] || dim}</th>
+                          <td>
+                            {#if typeof val === "object" && val !== null}
+                              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="display: flex; gap: 2px; flex-shrink: 0;">
+                                  {#each Array(5) as _, i}
+                                    <span style="width: 14px; height: 14px; border-radius: 3px; display: inline-block; background: {i < (val.score || 0) ? 'var(--neon-green)' : 'var(--bg-secondary)'}; opacity: {i < (val.score || 0) ? 1 : 0.3};"></span>
+                                  {/each}
+                                </div>
+                                <span style="font-size: 0.8rem;">{val.toelichting || '—'}</span>
+                              </div>
+                            {:else}
+                              {renderValue(val)}
+                            {/if}
+                          </td>
+                        </tr>
+                      {/each}
+                    </tbody>
+                  </table>
+                {/if}
+
+                <!-- Overige velden -->
+                <table class="profile-table" style="margin-top: 0.5rem;">
                   <tbody>
                     {#each Object.entries(detail.profile_data) as [key, value]}
-                      {#if !SKIP_KEYS.has(key)}
+                      {#if !SKIP_KEYS.has(key) && !PILLAR_KEYS.has(key)}
                         <tr>
                           <th>{key.replace(/_/g, " ")}</th>
                           <td>

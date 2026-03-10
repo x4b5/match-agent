@@ -117,19 +117,22 @@ async def reverse_search(req: ReverseSearchRequest):
     
     # Skills tekst
     skills_delen = []
-    if "hard_skills" in cand_profiel: skills_delen.extend(cand_profiel["hard_skills"])
-    if "soft_skills" in cand_profiel: skills_delen.extend(cand_profiel["soft_skills"])
-    if "kwaliteiten" in cand_profiel: skills_delen.extend(cand_profiel["kwaliteiten"])
-    if "taken" in cand_profiel: skills_delen.extend(cand_profiel["taken"])
+    if "vaardigheden" in cand_profiel: skills_delen.extend(cand_profiel["vaardigheden"])
     if "kernrol" in cand_profiel: skills_delen.append(cand_profiel["kernrol"])
     skills_tekst = " ".join(filter(None, skills_delen))
-    
-    # Cultuur tekst
+
+    # Cultuur tekst (gedrag + leervermogen toelichtingen)
     cultuur_delen = []
-    if "persoonlijkheid" in cand_profiel: cultuur_delen.extend(cand_profiel["persoonlijkheid"])
-    if "drijfveren" in cand_profiel: cultuur_delen.extend(cand_profiel["drijfveren"])
-    if "gewenste_bedrijfscultuur" in cand_profiel: cultuur_delen.append(cand_profiel["gewenste_bedrijfscultuur"])
-    if "organisatiewaarden" in cand_profiel: cultuur_delen.extend(cand_profiel["organisatiewaarden"])
+    gedrag = cand_profiel.get("gedrag", {})
+    if isinstance(gedrag, dict):
+        for val in gedrag.values():
+            if isinstance(val, dict) and "toelichting" in val:
+                cultuur_delen.append(val["toelichting"])
+    leervermogen = cand_profiel.get("leervermogen", {})
+    if isinstance(leervermogen, dict):
+        for val in leervermogen.values():
+            if isinstance(val, dict) and "toelichting" in val:
+                cultuur_delen.append(val["toelichting"])
     cultuur_tekst = " ".join(filter(None, cultuur_delen))
 
     # Parallelle embedding generatie
@@ -179,16 +182,15 @@ async def semantic_search(req: SemanticSearchRequest):
 
     vac_json = json.dumps(vac_profiel, ensure_ascii=False)
     
-    # Skills tekst
+    # Skills tekst (werkgeversvraag-velden)
     skills_delen = []
-    if "hard_skills" in vac_profiel: skills_delen.extend(vac_profiel["hard_skills"])
     if "must_have_skills" in vac_profiel: skills_delen.extend(vac_profiel["must_have_skills"])
     if "benodigde_kwaliteiten" in vac_profiel: skills_delen.extend(vac_profiel["benodigde_kwaliteiten"])
     if "taken" in vac_profiel: skills_delen.extend(vac_profiel["taken"])
     if "titel" in vac_profiel: skills_delen.append(vac_profiel["titel"])
     skills_tekst = " ".join(filter(None, skills_delen))
-    
-    # Cultuur tekst
+
+    # Cultuur tekst (werkgeversvraag-velden)
     cultuur_delen = []
     if "organisatiewaarden" in vac_profiel: cultuur_delen.extend(vac_profiel["organisatiewaarden"])
     if "gezochte_persoonlijkheid" in vac_profiel: cultuur_delen.extend(vac_profiel["gezochte_persoonlijkheid"])
@@ -221,7 +223,7 @@ async def semantic_search(req: SemanticSearchRequest):
                 "percentage": match["percentage"],
                 "sub_scores": match.get("sub_scores", {}),
                 "kernrol": profiel.get("kernrol", "Onbekend"),
-                "kwaliteiten": profiel.get("kwaliteiten", [])
+                "vaardigheden": profiel.get("vaardigheden", [])
             })
 
     return {"message": "Semantic search voltooid", "matches": enriched_matches}

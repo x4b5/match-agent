@@ -29,16 +29,16 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_URL = f"{OLLAMA_BASE_URL}/api/generate"
 OLLAMA_EMBED_URL = f"{OLLAMA_BASE_URL}/api/embeddings"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
-PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:4b")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", OLLAMA_MODEL)
+PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:8b")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert. Jij verbindt kandidaten met werkgevers.
 Kijk vooral naar wat iemand kan (potentieel), wie iemand is (karakter), en wat iemand wil (drijfveren). Kijk minder streng naar diploma's of de precieze werkervaring.
 Je doel is om verrassende en inspirerende matches te maken. Wijs kandidaten op banen nadat ze daar zelf misschien niet aan hadden gedacht. Wijs werkgevers op talent dat ze normaal over het hoofd zouden zien.
 Wees eerlijk en objectief in je oordeel over de match. De manier waarop iemand in het team past (cultuurfit) en de persoonlijkheid tellen daarbij zwaar mee.
-BELANGRIJK: Gebruik GEEN DISC-termen (zoals Dominantie of Invloed) en geen kleurenmodellen. Benoem gewoon in heldere taal de concrete talenten en kwaliteiten.
+BELANGRIJK: Gebruik GEEN DISC-termen (zoals Dominantie of Invloed) en geen kleurenmodellen. Gebruik het Big Five persoonlijkheidsmodel (openheid, conscientieusheid, extraversie, vriendelijkheid, neuroticisme) en Learning Agility (mental agility, people agility, change agility, results agility, self-awareness) als basis voor je analyse.
 
-BEOORDELING DOSSIERCOMPLEETHEID: 
+BEOORDELING DOSSIERCOMPLEETHEID:
 Geef bij elke match aan hoe compleet de informatie is:
 - HOOG: Er is genoeg informatie over de kandidaat en de vacature om een goede inschatting te maken van de match.
 - GEMIDDELD: Er missen kleine details, waardoor we een klein beetje moeten gissen.
@@ -101,11 +101,11 @@ Geef je uitgebreide analyse in exact deze JSON-opmaak:
   "boodschap_aan_kandidaat": "Een korte, persoonlijke aanmoediging: waarom is DIT jouw volgende stap?",
   "match_narratief": "Een krachtig beeld (2 zinnen) van hoe de samenwerking er over een maand uitziet.",
   "personality_axes": {{
-    "Analytisch": "Korte uitleg + citaat/bewijs uit dossier.",
-    "Sociaal": "idem",
-    "Creatief": "idem",
-    "Gestructureerd": "idem",
-    "Ondernemend": "idem"
+    "Openheid": "Korte uitleg + citaat/bewijs uit dossier.",
+    "Conscientieusheid": "idem",
+    "Extraversie": "idem",
+    "Vriendelijkheid": "idem",
+    "Neuroticisme": "idem"
   }},
   "score_breakdown": {{
     "persoonlijkheid_fit": <getal 0-100>,
@@ -120,25 +120,35 @@ Geef je uitgebreide analyse in exact deze JSON-opmaak:
 MATCH_PROMPT = KERN_MATCH_PROMPT
 
 # --- Prompts voor Profiel-extractie ---
-PROFIEL_KANDIDAAT_PROMPT = """Maak een profiel van deze persoon in JSON. 
+PROFIEL_KANDIDAAT_PROMPT = """Maak een profiel van deze persoon in JSON.
 Duidelijke taal (B1), actief en specifiek. Focus op wie iemand IS en potentieel.
 Blijf bij de feiten. Wees streng bij dossier_compleetheid (0-100).
+
+Het profiel heeft 3 pijlers:
+1. GEDRAG — op basis van het Big Five model. Geef per dimensie een score (1-5) en een korte toelichting met bewijs uit de tekst. Als iets niet af te leiden is, geef een neutrale score (3) en vermeld dat.
+2. LEERVERMOGEN — op basis van Learning Agility (5 dimensies). Geef per dimensie een score (1-5) en een korte toelichting met bewijs.
+3. VAARDIGHEDEN — concrete hard skills en technische vaardigheden.
+
+Verwerk persoonlijkheid, kwaliteiten, drijfveren, werkstijl en ambities in de toelichtingen van gedrag en leervermogen. Maak er geen losse velden van.
 
 {{
     "naam": "Naam",
     "kernrol": "Huidige rol/profiel",
-    "persoonlijkheid": ["Karaktereigenschappen"],
-    "kwaliteiten": ["Sterke punten"],
-    "impliciete_kwaliteiten": ["Verborgen talenten uit ervaring"],
-    "drijfveren": ["Wat is belangrijk in werk"],
-    "onderliggende_motivatie": "Kern drijfveer",
-    "ideale_werkdag": "Perfecte dag in 2 zinnen",
-    "werkstijl": "Hoe werkt deze persoon?",
-    "ambities_en_leerdoelen": ["Wat wil men bereiken/leren"],
-    "gewenste_bedrijfscultuur": "Prettige werkomgeving",
-    "hobby_en_interesses": ["Relevante hobby's"],
-    "hard_skills": ["Technisch/diploma's"],
-    "soft_skills": ["Sociaal/persoonlijk"],
+    "gedrag": {{
+        "openheid": {{"score": <1-5>, "toelichting": "Nieuwsgierigheid, creativiteit, open voor nieuwe ideeën"}},
+        "conscientieusheid": {{"score": <1-5>, "toelichting": "Zorgvuldigheid, discipline, doelgerichtheid"}},
+        "extraversie": {{"score": <1-5>, "toelichting": "Sociaal, energiek, assertief"}},
+        "vriendelijkheid": {{"score": <1-5>, "toelichting": "Samenwerking, empathie, behulpzaamheid"}},
+        "neuroticisme": {{"score": <1-5>, "toelichting": "Emotionele stabiliteit, omgang met stress (1=zeer stabiel, 5=zeer gevoelig)"}}
+    }},
+    "leervermogen": {{
+        "mental_agility": {{"score": <1-5>, "toelichting": "Analytisch vermogen, patronen herkennen"}},
+        "people_agility": {{"score": <1-5>, "toelichting": "Communicatie, empathie, effectief samenwerken"}},
+        "change_agility": {{"score": <1-5>, "toelichting": "Omgaan met onzekerheid, flexibiliteit"}},
+        "results_agility": {{"score": <1-5>, "toelichting": "Resultaten onder druk, veerkracht"}},
+        "self_awareness": {{"score": <1-5>, "toelichting": "Zelfinzicht, kent eigen sterktes en zwaktes"}}
+    }},
+    "vaardigheden": ["Concrete hard skills en technische vaardigheden"],
     "beschikbaarheid_en_locatie": "Woonplaats/uren",
     "opleiding_en_ervaring_samenvatting": "Korte samenvatting",
     "verrassende_functies": ["3-5 creatieve suggesties op basis van karakter"],
@@ -259,7 +269,7 @@ RECRUITER FEEDBACK:
 Aanwijzingen:
 0. Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Geen wollig taalgebruik of HR-jargon.
 1. Extraheer nieuwe feiten, vaardigheden of karaktereigenschappen uit de feedback.
-2. Update relevante velden in het profiel (zoals 'persoonlijkheid', 'kwaliteiten', 'hard_skills', 'soft_skills').
+2. Update relevante velden in het profiel: pas 'gedrag' (Big Five scores en toelichtingen), 'leervermogen' (Learning Agility scores en toelichtingen) en 'vaardigheden' aan.
 3. Als de feedback aangeeft dat iets NIET klopt, pas dit dan aan.
 4. Verhoog de 'dossier_compleetheid' als de feedback waardevolle nieuwe informatie bevat.
 5. Behoud alle bestaande informatie die niet door de feedback wordt tegengesproken.
