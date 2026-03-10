@@ -54,9 +54,9 @@ async def init_db():
                 document_id TEXT PRIMARY KEY,
                 doc_type TEXT,
                 naam TEXT,
-                vector_json TEXT,
-                vector_skills_json TEXT,
-                vector_cultuur_json TEXT,
+                vector_zijn_json TEXT,
+                vector_willen_json TEXT,
+                vector_kunnen_json TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -105,7 +105,7 @@ async def init_db():
         if row[0] == 0:
             await conn.executemany(
                 "INSERT INTO learning_weights (dimensie, huidig_gewicht) VALUES (?, ?)",
-                [("skills", 0.4), ("cultuur", 0.4), ("algemeen", 0.2)]
+                [("zijn", 0.33), ("willen", 0.33), ("kunnen", 0.34)]
             )
         
         # Indexen voor sneller zoeken
@@ -147,14 +147,32 @@ async def init_db():
             pass  # Kolom bestaat al
             
         try:
-            await conn.execute("ALTER TABLE embeddings ADD COLUMN vector_skills_json TEXT")
+            await conn.execute("ALTER TABLE embeddings ADD COLUMN vector_zijn_json TEXT")
         except Exception:
             pass  # Kolom bestaat al
 
         try:
-            await conn.execute("ALTER TABLE embeddings ADD COLUMN vector_cultuur_json TEXT")
+            await conn.execute("ALTER TABLE embeddings ADD COLUMN vector_willen_json TEXT")
         except Exception:
             pass  # Kolom bestaat al
+
+        try:
+            await conn.execute("ALTER TABLE embeddings ADD COLUMN vector_kunnen_json TEXT")
+        except Exception:
+            pass  # Kolom bestaat al
+
+        # Migreer learning weights van oud (skills/cultuur/algemeen) naar nieuw (zijn/willen/kunnen)
+        try:
+            cursor = await conn.execute("SELECT dimensie FROM learning_weights WHERE dimensie IN ('skills', 'cultuur', 'algemeen')")
+            oude_keys = await cursor.fetchall()
+            if oude_keys:
+                await conn.execute("DELETE FROM learning_weights WHERE dimensie IN ('skills', 'cultuur', 'algemeen')")
+                await conn.executemany(
+                    "INSERT OR IGNORE INTO learning_weights (dimensie, huidig_gewicht) VALUES (?, ?)",
+                    [("zijn", 0.33), ("willen", 0.33), ("kunnen", 0.34)]
+                )
+        except Exception:
+            pass
 
         try:
             await conn.execute("ALTER TABLE matches ADD COLUMN recruiter_rating INTEGER")
@@ -236,6 +254,20 @@ async def haal_hoog_gewaardeerde_matches(min_rating: int = 4) -> list[dict]:
         await conn.close()
 
 
+async def haal_laag_gewaardeerde_matches(max_rating: int = 2) -> list[dict]:
+    """Haal matches op met een rating <= max_rating (slechte matches)."""
+    conn = await _get_connection()
+    try:
+        cursor = await conn.execute(
+            "SELECT * FROM matches WHERE recruiter_rating <= ? ORDER BY timestamp DESC",
+            (max_rating,)
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        await conn.close()
+
+
 async def haal_learning_weights() -> dict[str, float]:
     """Haal de huidige learning weights op."""
     conn = await _get_connection()
@@ -243,7 +275,7 @@ async def haal_learning_weights() -> dict[str, float]:
         cursor = await conn.execute("SELECT dimensie, huidig_gewicht FROM learning_weights")
         rows = await cursor.fetchall()
         if not rows:
-            return {"skills": 0.4, "cultuur": 0.4, "algemeen": 0.2}
+            return {"zijn": 0.33, "willen": 0.33, "kunnen": 0.34}
         return {row["dimensie"]: row["huidig_gewicht"] for row in rows}
     finally:
         await conn.close()
@@ -313,20 +345,20 @@ async def haal_unieke_vacatures():
 
 # ── Embeddings ──
 
-async def bewaar_embedding(document_id, doc_type, naam, vector, vector_skills=None, vector_cultuur=None):
-    """Sla embedding vectoren op (basis, plus optioneel skills en cultuur dimensies)."""
+async def bewaar_embedding(document_id, doc_type, naam, vector_zijn=None, vector_willen=None, vector_kunnen=None):
+    """Sla embedding vectoren op (zijn, willen, kunnen dimensies)."""
     conn = await _get_connection()
     try:
         await conn.execute("""
-            INSERT OR REPLACE INTO embeddings (document_id, doc_type, naam, vector_json, vector_skills_json, vector_cultuur_json)
+            INSERT OR REPLACE INTO embeddings (document_id, doc_type, naam, vector_zijn_json, vector_willen_json, vector_kunnen_json)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
-            document_id, 
-            doc_type, 
-            naam, 
-            json.dumps(vector) if vector else None, 
-            json.dumps(vector_skills) if vector_skills else None,
-            json.dumps(vector_cultuur) if vector_cultuur else None
+            document_id,
+            doc_type,
+            naam,
+            json.dumps(vector_zijn) if vector_zijn else None,
+            json.dumps(vector_willen) if vector_willen else None,
+            json.dumps(vector_kunnen) if vector_kunnen else None
         ))
         await conn.commit()
     finally:
@@ -336,16 +368,16 @@ async def haal_alle_embeddings(doc_type):
     """Haal alle embeddings op van een specifiek type inclusief sub-dimensies."""
     conn = await _get_connection()
     try:
-        cursor = await conn.execute("SELECT document_id, naam, vector_json, vector_skills_json, vector_cultuur_json FROM embeddings WHERE doc_type = ?", (doc_type,))
+        cursor = await conn.execute("SELECT document_id, naam, vector_zijn_json, vector_willen_json, vector_kunnen_json FROM embeddings WHERE doc_type = ?", (doc_type,))
         res = []
         rows = await cursor.fetchall()
         for row in rows:
             res.append({
                 "document_id": row["document_id"],
                 "naam": row["naam"],
-                "vector": json.loads(row["vector_json"]) if row["vector_json"] else None,
-                "vector_skills": json.loads(row["vector_skills_json"]) if row["vector_skills_json"] else None,
-                "vector_cultuur": json.loads(row["vector_cultuur_json"]) if row["vector_cultuur_json"] else None
+                "vector_zijn": json.loads(row["vector_zijn_json"]) if row["vector_zijn_json"] else None,
+                "vector_willen": json.loads(row["vector_willen_json"]) if row["vector_willen_json"] else None,
+                "vector_kunnen": json.loads(row["vector_kunnen_json"]) if row["vector_kunnen_json"] else None
             })
         return res
     finally:
@@ -377,9 +409,9 @@ def _batch_cosine(matrix: np.ndarray, query: np.ndarray) -> np.ndarray:
 
 
 async def haal_top_matches_vector(
-    vacature_vector: list[float] = None,
-    vacature_skills: list[float] = None,
-    vacature_cultuur: list[float] = None,
+    vacature_zijn: list[float] = None,
+    vacature_willen: list[float] = None,
+    vacature_kunnen: list[float] = None,
     limit: int = 5,
     gewichten: dict[str, float] = None
 ) -> list[dict]:
@@ -388,54 +420,58 @@ async def haal_top_matches_vector(
     if not kandidaten:
         return []
 
-    # Filter kandidaten met een geldige vector
-    valid = [k for k in kandidaten if k["vector"]]
+    # Filter kandidaten met minstens één geldige vector
+    valid = [k for k in kandidaten if k["vector_zijn"] or k["vector_willen"] or k["vector_kunnen"]]
     if not valid:
         return []
 
     # Bouw matrices en bereken batch scores
-    scores_algemeen = np.zeros(len(valid))
-    scores_skills = np.zeros(len(valid))
-    scores_cultuur = np.zeros(len(valid))
+    scores_zijn = np.zeros(len(valid))
+    scores_willen = np.zeros(len(valid))
+    scores_kunnen = np.zeros(len(valid))
 
-    if vacature_vector:
-        q = np.asarray(vacature_vector, dtype=np.float64)
-        mat = np.array([k["vector"] for k in valid], dtype=np.float64)
-        scores_algemeen = _batch_cosine(mat, q)
-
-    if vacature_skills:
-        q_s = np.asarray(vacature_skills, dtype=np.float64)
-        # Alleen kandidaten met skills vector; de rest houdt score 0
-        indices = [i for i, k in enumerate(valid) if k["vector_skills"]]
+    if vacature_zijn:
+        q = np.asarray(vacature_zijn, dtype=np.float64)
+        indices = [i for i, k in enumerate(valid) if k["vector_zijn"]]
         if indices:
-            mat_s = np.array([valid[i]["vector_skills"] for i in indices], dtype=np.float64)
-            batch_scores = _batch_cosine(mat_s, q_s)
+            mat = np.array([valid[i]["vector_zijn"] for i in indices], dtype=np.float64)
+            batch_scores = _batch_cosine(mat, q)
             for j, idx in enumerate(indices):
-                scores_skills[idx] = batch_scores[j]
+                scores_zijn[idx] = batch_scores[j]
 
-    if vacature_cultuur:
-        q_c = np.asarray(vacature_cultuur, dtype=np.float64)
-        indices = [i for i, k in enumerate(valid) if k["vector_cultuur"]]
+    if vacature_kunnen:
+        q_k = np.asarray(vacature_kunnen, dtype=np.float64)
+        indices = [i for i, k in enumerate(valid) if k["vector_kunnen"]]
         if indices:
-            mat_c = np.array([valid[i]["vector_cultuur"] for i in indices], dtype=np.float64)
-            batch_scores = _batch_cosine(mat_c, q_c)
+            mat_k = np.array([valid[i]["vector_kunnen"] for i in indices], dtype=np.float64)
+            batch_scores = _batch_cosine(mat_k, q_k)
             for j, idx in enumerate(indices):
-                scores_cultuur[idx] = batch_scores[j]
+                scores_kunnen[idx] = batch_scores[j]
+
+    if vacature_willen:
+        q_w = np.asarray(vacature_willen, dtype=np.float64)
+        indices = [i for i, k in enumerate(valid) if k["vector_willen"]]
+        if indices:
+            mat_w = np.array([valid[i]["vector_willen"] for i in indices], dtype=np.float64)
+            batch_scores = _batch_cosine(mat_w, q_w)
+            for j, idx in enumerate(indices):
+                scores_willen[idx] = batch_scores[j]
 
     # Gewogen combinatie (dynamisch via learning weights)
     w = gewichten or {}
-    w_skills = w.get("skills", 0.4)
-    w_cultuur = w.get("cultuur", 0.4)
-    w_algemeen = w.get("algemeen", 0.2)
+    w_zijn = w.get("zijn", 0.33)
+    w_willen = w.get("willen", 0.33)
+    w_kunnen = w.get("kunnen", 0.34)
 
     has_sub = np.array([
-        bool(vacature_skills and vacature_cultuur and k["vector_skills"] and k["vector_cultuur"])
+        bool(vacature_zijn and vacature_willen and vacature_kunnen
+             and k["vector_zijn"] and k["vector_willen"] and k["vector_kunnen"])
         for k in valid
     ])
     combined = np.where(
         has_sub,
-        scores_skills * w_skills + scores_cultuur * w_cultuur + scores_algemeen * w_algemeen,
-        scores_algemeen,
+        scores_zijn * w_zijn + scores_willen * w_willen + scores_kunnen * w_kunnen,
+        scores_zijn,
     )
 
     # Top-N via argpartition (sneller dan full sort bij grote sets)
@@ -452,18 +488,18 @@ async def haal_top_matches_vector(
             "score": float(combined[i]),
             "percentage": max(0, min(100, int(combined[i] * 100))),
             "sub_scores": {
-                "algemeen": max(0, min(100, int(scores_algemeen[i] * 100))),
-                "skills": max(0, min(100, int(scores_skills[i] * 100))),
-                "cultuur": max(0, min(100, int(scores_cultuur[i] * 100))),
+                "zijn": max(0, min(100, int(scores_zijn[i] * 100))),
+                "willen": max(0, min(100, int(scores_willen[i] * 100))),
+                "kunnen": max(0, min(100, int(scores_kunnen[i] * 100))),
             },
         }
         for i in top_idx
     ]
 
 async def haal_top_vacatures_vector(
-    kandidaat_vector: list[float] = None,
-    kandidaat_skills: list[float] = None,
-    kandidaat_cultuur: list[float] = None,
+    kandidaat_zijn: list[float] = None,
+    kandidaat_willen: list[float] = None,
+    kandidaat_kunnen: list[float] = None,
     limit: int = 5,
     gewichten: dict[str, float] = None
 ) -> list[dict]:
@@ -472,51 +508,56 @@ async def haal_top_vacatures_vector(
     if not vacatures:
         return []
 
-    valid = [v for v in vacatures if v["vector"]]
+    valid = [v for v in vacatures if v["vector_zijn"] or v["vector_willen"] or v["vector_kunnen"]]
     if not valid:
         return []
 
-    scores_algemeen = np.zeros(len(valid))
-    scores_skills = np.zeros(len(valid))
-    scores_cultuur = np.zeros(len(valid))
+    scores_zijn = np.zeros(len(valid))
+    scores_willen = np.zeros(len(valid))
+    scores_kunnen = np.zeros(len(valid))
 
-    if kandidaat_vector:
-        q = np.asarray(kandidaat_vector, dtype=np.float64)
-        mat = np.array([v["vector"] for v in valid], dtype=np.float64)
-        scores_algemeen = _batch_cosine(mat, q)
-
-    if kandidaat_skills:
-        q_s = np.asarray(kandidaat_skills, dtype=np.float64)
-        indices = [i for i, v in enumerate(valid) if v["vector_skills"]]
+    if kandidaat_zijn:
+        q = np.asarray(kandidaat_zijn, dtype=np.float64)
+        indices = [i for i, v in enumerate(valid) if v["vector_zijn"]]
         if indices:
-            mat_s = np.array([valid[i]["vector_skills"] for i in indices], dtype=np.float64)
-            batch_scores = _batch_cosine(mat_s, q_s)
+            mat = np.array([valid[i]["vector_zijn"] for i in indices], dtype=np.float64)
+            batch_scores = _batch_cosine(mat, q)
             for j, idx in enumerate(indices):
-                scores_skills[idx] = batch_scores[j]
+                scores_zijn[idx] = batch_scores[j]
 
-    if kandidaat_cultuur:
-        q_c = np.asarray(kandidaat_cultuur, dtype=np.float64)
-        indices = [i for i, v in enumerate(valid) if v["vector_cultuur"]]
+    if kandidaat_kunnen:
+        q_k = np.asarray(kandidaat_kunnen, dtype=np.float64)
+        indices = [i for i, v in enumerate(valid) if v["vector_kunnen"]]
         if indices:
-            mat_c = np.array([valid[i]["vector_cultuur"] for i in indices], dtype=np.float64)
-            batch_scores = _batch_cosine(mat_c, q_c)
+            mat_k = np.array([valid[i]["vector_kunnen"] for i in indices], dtype=np.float64)
+            batch_scores = _batch_cosine(mat_k, q_k)
             for j, idx in enumerate(indices):
-                scores_cultuur[idx] = batch_scores[j]
+                scores_kunnen[idx] = batch_scores[j]
+
+    if kandidaat_willen:
+        q_w = np.asarray(kandidaat_willen, dtype=np.float64)
+        indices = [i for i, v in enumerate(valid) if v["vector_willen"]]
+        if indices:
+            mat_w = np.array([valid[i]["vector_willen"] for i in indices], dtype=np.float64)
+            batch_scores = _batch_cosine(mat_w, q_w)
+            for j, idx in enumerate(indices):
+                scores_willen[idx] = batch_scores[j]
 
     # Gewogen combinatie (dynamisch via learning weights)
     w = gewichten or {}
-    w_skills = w.get("skills", 0.4)
-    w_cultuur = w.get("cultuur", 0.4)
-    w_algemeen = w.get("algemeen", 0.2)
+    w_zijn = w.get("zijn", 0.33)
+    w_willen = w.get("willen", 0.33)
+    w_kunnen = w.get("kunnen", 0.34)
 
     has_sub = np.array([
-        bool(kandidaat_skills and kandidaat_cultuur and v["vector_skills"] and v["vector_cultuur"])
+        bool(kandidaat_zijn and kandidaat_willen and kandidaat_kunnen
+             and v["vector_zijn"] and v["vector_willen"] and v["vector_kunnen"])
         for v in valid
     ])
     combined = np.where(
         has_sub,
-        scores_skills * w_skills + scores_cultuur * w_cultuur + scores_algemeen * w_algemeen,
-        scores_algemeen,
+        scores_zijn * w_zijn + scores_willen * w_willen + scores_kunnen * w_kunnen,
+        scores_zijn,
     )
 
     if len(combined) > limit:
@@ -532,9 +573,9 @@ async def haal_top_vacatures_vector(
             "score": float(combined[i]),
             "percentage": max(0, min(100, int(combined[i] * 100))),
             "sub_scores": {
-                "algemeen": max(0, min(100, int(scores_algemeen[i] * 100))),
-                "skills": max(0, min(100, int(scores_skills[i] * 100))),
-                "cultuur": max(0, min(100, int(scores_cultuur[i] * 100))),
+                "zijn": max(0, min(100, int(scores_zijn[i] * 100))),
+                "willen": max(0, min(100, int(scores_willen[i] * 100))),
+                "kunnen": max(0, min(100, int(scores_kunnen[i] * 100))),
             },
         }
         for i in top_idx

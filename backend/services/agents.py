@@ -291,7 +291,7 @@ async def optimaliseer_systeem_gewichten():
         return
 
     # Verzamel score_breakdowns
-    dimensie_scores = {"skills": [], "cultuur": [], "algemeen": []}
+    dimensie_scores = {"kunnen": [], "willen": [], "zijn": []}
     for match in matches:
         try:
             resultaat = json.loads(match["resultaat_json"]) if match.get("resultaat_json") else {}
@@ -299,22 +299,21 @@ async def optimaliseer_systeem_gewichten():
             if not breakdown:
                 continue
 
-            skills_score = breakdown.get("skills_overlap", 0)
-            cultuur_score = breakdown.get("cultuur_fit", 0)
-            algemeen_score = (
+            kunnen_score = breakdown.get("skills_overlap", 0)
+            willen_score = breakdown.get("motivatie_alignment", 0)
+            zijn_score = (
                 breakdown.get("persoonlijkheid_fit", 0)
-                + breakdown.get("groei_potentieel", 0)
-                + breakdown.get("motivatie_alignment", 0)
-            ) / 3
+                + breakdown.get("cultuur_fit", 0)
+            ) / 2
 
-            dimensie_scores["skills"].append(skills_score)
-            dimensie_scores["cultuur"].append(cultuur_score)
-            dimensie_scores["algemeen"].append(algemeen_score)
+            dimensie_scores["kunnen"].append(kunnen_score)
+            dimensie_scores["willen"].append(willen_score)
+            dimensie_scores["zijn"].append(zijn_score)
         except (json.JSONDecodeError, TypeError, KeyError):
             continue
 
     # Check of we genoeg data hebben
-    if not dimensie_scores["skills"]:
+    if not dimensie_scores["kunnen"]:
         logger.info("Geen bruikbare score_breakdowns gevonden in hoog-gewaardeerde matches.")
         return
 
@@ -342,24 +341,23 @@ async def optimaliseer_systeem_gewichten():
     # Negatieve matches: anti-patronen leren (kleinere stap: 0.03)
     lage_matches = await haal_laag_gewaardeerde_matches(max_rating=2)
     if lage_matches:
-        neg_scores = {"skills": [], "cultuur": [], "algemeen": []}
+        neg_scores = {"kunnen": [], "willen": [], "zijn": []}
         for match in lage_matches:
             try:
                 resultaat = json.loads(match["resultaat_json"]) if match.get("resultaat_json") else {}
                 breakdown = resultaat.get("score_breakdown", {})
                 if not breakdown:
                     continue
-                neg_scores["skills"].append(breakdown.get("skills_overlap", 0))
-                neg_scores["cultuur"].append(breakdown.get("cultuur_fit", 0))
-                neg_scores["algemeen"].append(
+                neg_scores["kunnen"].append(breakdown.get("skills_overlap", 0))
+                neg_scores["willen"].append(breakdown.get("motivatie_alignment", 0))
+                neg_scores["zijn"].append(
                     (breakdown.get("persoonlijkheid_fit", 0)
-                     + breakdown.get("groei_potentieel", 0)
-                     + breakdown.get("motivatie_alignment", 0)) / 3
+                     + breakdown.get("cultuur_fit", 0)) / 2
                 )
             except (json.JSONDecodeError, TypeError, KeyError):
                 continue
 
-        if neg_scores["skills"]:
+        if neg_scores["kunnen"]:
             neg_gem = {
                 dim: sum(scores) / len(scores) if scores else 0
                 for dim, scores in neg_scores.items()
@@ -433,16 +431,15 @@ async def verwerk_werkgever_feedback(match_id: int, feedback_tekst: str) -> dict
         if os.path.exists(doel_pad):
             opslaan_profiel(doel_pad, nieuw_profiel)
 
-        # 5. Herbereken embeddings (3 dimensies)
+        # 5. Herbereken embeddings (3 pijlers: zijn/willen/kunnen)
         try:
-            full_text = json.dumps(nieuw_profiel, ensure_ascii=False)
+            zijn_tekst = str(nieuw_profiel.get("zijn", ""))
+            willen_tekst = str(nieuw_profiel.get("willen", ""))
+            kunnen_tekst = f"{nieuw_profiel.get('kunnen', '')} {nieuw_profiel.get('titel', '')}".strip()
 
-            skills_tekst = f"{nieuw_profiel.get('kunnen', '')} {nieuw_profiel.get('titel', '')}".strip()
-            cultuur_tekst = f"{nieuw_profiel.get('zijn', '')} {nieuw_profiel.get('willen', '')}".strip()
+            vec_zijn, vec_willen, vec_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
 
-            vector, vec_skills, vec_cultuur = await genereer_embeddings_batch([full_text, skills_tekst, cultuur_tekst])
-
-            await bewaar_embedding(doc_id, "vacature", naam, vector, vec_skills, vec_cultuur)
+            await bewaar_embedding(doc_id, "vacature", naam, vec_zijn, vec_willen, vec_kunnen)
             logger.info(f"Werkgever-embeddings herberekend voor {naam} na match-feedback.")
         except Exception as e:
             logger.error(f"Fout bij herberekenen werkgever-embeddings na feedback voor {naam}: {e}")
@@ -494,15 +491,17 @@ async def verwerk_match_feedback(match_id: int, feedback_tekst: str) -> dict:
         if os.path.exists(doel_pad):
             opslaan_profiel(doel_pad, nieuw_profiel)
 
-        # 5. Herbereken embeddings (Echt leren!)
+        # 5. Herbereken embeddings (3 pijlers: zijn/willen/kunnen)
         try:
-            full_text = json.dumps(nieuw_profiel, ensure_ascii=False)
-            skills_tekst = nieuw_profiel.get("kunnen", "")
-            cultuur_tekst = f"{nieuw_profiel.get('zijn', '')} {nieuw_profiel.get('willen', '')}"
+            zijn_tekst = str(nieuw_profiel.get("zijn", ""))
+            willen_tekst = str(nieuw_profiel.get("willen", ""))
+            kunnen_tekst = str(nieuw_profiel.get("kunnen", ""))
+            if nieuw_profiel.get("kernrol"):
+                kunnen_tekst += " " + nieuw_profiel["kernrol"]
 
-            vector, vec_skills, vec_cultuur = await genereer_embeddings_batch([full_text, skills_tekst, cultuur_tekst])
+            vec_zijn, vec_willen, vec_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
 
-            await bewaar_embedding(doc_id, "kandidaat", naam, vector, vec_skills, vec_cultuur)
+            await bewaar_embedding(doc_id, "kandidaat", naam, vec_zijn, vec_willen, vec_kunnen)
             logger.info(f"Embeddings herberekened voor {naam} na match-feedback.")
         except Exception as e:
             logger.error(f"Fout bij herberekenen embeddings na feedback voor {naam}: {e}")

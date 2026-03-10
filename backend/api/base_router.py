@@ -22,7 +22,7 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, BackgroundTasks
 from pydantic import BaseModel as PydanticBaseModel
 
 from backend.utils import formatteer_directory_response, opslaan_profiel, zorg_voor_uuid
-from backend.services.agents import extract_text_sync, genereer_embedding
+from backend.services.agents import extract_text_sync
 from backend.database import (
     bewaar_embedding, bewaar_document, haal_alle_documenten, haal_document,
     bewaar_verrijking, update_profiel_na_verrijking, update_task_db
@@ -328,40 +328,6 @@ def create_document_router(
             await update_task_db(task_id, progress="Embedding genereren...", progress_percent=75)
             # Geef Ollama even tijd om van generatie-model naar embedding-model te wisselen
             await asyncio.sleep(2)
-            try:
-                vector = await asyncio.wait_for(
-                    genereer_embedding(geschoonde_tekst),
-                    timeout=120
-                )
-            except (asyncio.TimeoutError, Exception) as e:
-                logger.warning(f"Embedding mislukt voor {map_pad}: {e}. Profiel wordt zonder embedding opgeslagen.")
-                vector = None
-
-            # ── Semantische Deduplicatie Check (Numpy Batch) ──
-            if vector:
-                from backend.database import haal_alle_embeddings, _batch_cosine
-                bestaande_embeddings = await haal_alle_embeddings(doc_type)
-                
-                valid_count = len(bestaande_embeddings)
-                if valid_count > 0:
-                    # Filter eigen naam eruit
-                    target_naam = os.path.basename(map_pad)
-                    valid_to_check = [emb for emb in bestaande_embeddings if emb["naam"] != target_naam]
-                    
-                    if valid_to_check:
-                        import numpy as np
-                        q = np.asarray(vector, dtype=np.float64)
-                        mat = np.array([emb["vector"] for emb in valid_to_check if emb["vector"]], dtype=np.float64)
-                        
-                        if mat.size > 0:
-                            similarities = _batch_cosine(mat, q)
-                            max_idx = np.argmax(similarities)
-                            max_sim = similarities[max_idx]
-                            
-                            if max_sim > 0.92:
-                                match_naam = valid_to_check[max_idx]["naam"]
-                                waarschuwingen.append(f"Let op: Dit document lijkt sterk op '{match_naam}'. Wil je doorgaan?")
-                                logger.info(f"Semantische deduplicatie: '{target_naam}' lijkt {int(max_sim * 100)}% op '{match_naam}'")
 
             await update_task_db(task_id, progress="Gegevens opslaan en indexeren...", progress_percent=90)
             try:
@@ -371,35 +337,54 @@ def create_document_router(
                 bestaande_uuid = await haal_uuid_bij_naam(naam, doc_type)
                 uuid_val = bestaande_uuid if bestaande_uuid else zorg_voor_uuid(map_pad)
 
-                vector_skills = None
-                vector_cultuur = None
+                vector_zijn = None
+                vector_willen = None
+                vector_kunnen = None
 
-                # Extra dimensies genereren
+                # Drie pijler-embeddings genereren
                 if isinstance(resultaat, dict):
-                    # Skills tekst (kandidaat: kunnen + kernrol, werkgever: kunnen + titel)
-                    skills_delen = []
-                    if "kunnen" in resultaat: skills_delen.append(str(resultaat["kunnen"]))
-                    if "kernrol" in resultaat: skills_delen.append(resultaat["kernrol"])
-                    if "titel" in resultaat: skills_delen.append(resultaat["titel"])
+                    zijn_tekst = str(resultaat.get("zijn", ""))
+                    willen_tekst = str(resultaat.get("willen", ""))
+                    kunnen_delen = []
+                    if "kunnen" in resultaat: kunnen_delen.append(str(resultaat["kunnen"]))
+                    if "kernrol" in resultaat: kunnen_delen.append(resultaat["kernrol"])
+                    if "titel" in resultaat: kunnen_delen.append(resultaat["titel"])
+                    kunnen_tekst = " ".join(filter(None, kunnen_delen))
 
-                    skills_tekst = " ".join(filter(None, skills_delen))
-                    # Cultuur tekst (zijn + willen)
-                    cultuur_delen = []
-                    if "zijn" in resultaat: cultuur_delen.append(str(resultaat["zijn"]))
-                    if "willen" in resultaat: cultuur_delen.append(str(resultaat["willen"]))
-
-                    cultuur_tekst = " ".join(filter(None, cultuur_delen))
                     from backend.services.agents import genereer_embeddings_batch
-                    # We doen de extra dimensies in één batch request
                     try:
-                        vector_skills, vector_cultuur = await genereer_embeddings_batch([skills_tekst, cultuur_tekst])
+                        vector_zijn, vector_willen, vector_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
                     except Exception as e:
-                        logger.warning(f"Skills/cultuur embeddings mislukt: {e}")
-                        vector_skills, vector_cultuur = None, None
+                        logger.warning(f"Zijn/willen/kunnen embeddings mislukt: {e}")
+                        vector_zijn, vector_willen, vector_kunnen = None, None, None
 
-                # Save embedding (op geschoonde tekst — AVG-compliant)
-                if vector:
-                    await bewaar_embedding(uuid_val, doc_type, naam, vector, vector_skills, vector_cultuur)
+                # ── Semantische Deduplicatie Check (Numpy Batch) ──
+                if vector_zijn:
+                    from backend.database import haal_alle_embeddings, _batch_cosine
+                    bestaande_embeddings = await haal_alle_embeddings(doc_type)
+
+                    if bestaande_embeddings:
+                        target_naam = os.path.basename(map_pad)
+                        valid_to_check = [emb for emb in bestaande_embeddings if emb["naam"] != target_naam and emb["vector_zijn"]]
+
+                        if valid_to_check:
+                            import numpy as np
+                            q = np.asarray(vector_zijn, dtype=np.float64)
+                            mat = np.array([emb["vector_zijn"] for emb in valid_to_check], dtype=np.float64)
+
+                            if mat.size > 0:
+                                similarities = _batch_cosine(mat, q)
+                                max_idx = np.argmax(similarities)
+                                max_sim = similarities[max_idx]
+
+                                if max_sim > 0.92:
+                                    match_naam = valid_to_check[max_idx]["naam"]
+                                    waarschuwingen.append(f"Let op: Dit document lijkt sterk op '{match_naam}'. Wil je doorgaan?")
+                                    logger.info(f"Semantische deduplicatie: '{target_naam}' lijkt {int(max_sim * 100)}% op '{match_naam}'")
+
+                # Save embedding (AVG-compliant)
+                if vector_zijn or vector_willen or vector_kunnen:
+                    await bewaar_embedding(uuid_val, doc_type, naam, vector_zijn, vector_willen, vector_kunnen)
 
                 await bewaar_document(
                     document_id=uuid_val,
@@ -412,11 +397,11 @@ def create_document_router(
                 )
 
                 # Auto-shortlist bij nieuwe vacature
-                if auto_shortlist and vector and isinstance(resultaat, dict):
+                if auto_shortlist and vector_zijn and isinstance(resultaat, dict):
                     from backend.database import haal_top_matches_vector
-                    shortlist = await haal_top_matches_vector(vector, limit=5)
+                    shortlist = await haal_top_matches_vector(vacature_zijn=vector_zijn, vacature_willen=vector_willen, vacature_kunnen=vector_kunnen, limit=5)
                     if shortlist:
-                        logger.info(f"📬 Auto-shortlist voor '{naam}': {len(shortlist)} matches (top: {shortlist[0]['percentage']}%)")
+                        logger.info(f"Auto-shortlist voor '{naam}': {len(shortlist)} matches (top: {shortlist[0]['percentage']}%)")
 
             except Exception as e:
                 logger.error(f"Error saving data for {doc_type} {map_pad}: {e}")
@@ -473,22 +458,24 @@ def create_document_router(
         
         # Herbereken embeddings zodat het systeem "leert" van de nieuwe info
         try:
-            # Gebruik de verrijkte JSON als basis voor nieuwe embeddings
             from backend.services.agents import genereer_embeddings_batch
-            
-            full_text_for_embedding = json.dumps(nieuw_profiel, ensure_ascii=False)
-            skills_tekst = nieuw_profiel.get("kunnen", "")
+
+            zijn_tekst = str(nieuw_profiel.get("zijn", ""))
+            willen_tekst = str(nieuw_profiel.get("willen", ""))
+            kunnen_delen = [str(nieuw_profiel.get("kunnen", ""))]
             if nieuw_profiel.get("kernrol"):
-                skills_tekst += " " + nieuw_profiel["kernrol"]
-            cultuur_tekst = f"{nieuw_profiel.get('zijn', '')} {nieuw_profiel.get('willen', '')}"
-            
-            embedding, embedding_skills, embedding_cultuur = await genereer_embeddings_batch([
-                full_text_for_embedding, 
-                skills_tekst, 
-                cultuur_tekst
+                kunnen_delen.append(nieuw_profiel["kernrol"])
+            if nieuw_profiel.get("titel"):
+                kunnen_delen.append(nieuw_profiel["titel"])
+            kunnen_tekst = " ".join(filter(None, kunnen_delen))
+
+            vec_zijn, vec_willen, vec_kunnen = await genereer_embeddings_batch([
+                zijn_tekst,
+                willen_tekst,
+                kunnen_tekst
             ])
-            
-            await bewaar_embedding(document_id, doc_type, name, embedding, embedding_skills, embedding_cultuur)
+
+            await bewaar_embedding(document_id, doc_type, name, vec_zijn, vec_willen, vec_kunnen)
             logger.info(f"Embeddings herberekened voor {name} na verrijking.")
         except Exception as e:
             logger.error(f"Fout bij herberekenen embeddings voor {name}: {e}")

@@ -100,8 +100,8 @@
     <p>
       Het systeem zoekt niet op losse woorden, maar begrijpt de betekenis achter
       profielen en vacatures. Daardoor vindt het ook matches die je met
-      traditioneel zoeken zou missen — op drie vlakken: algemene fit,
-      vaardigheden en cultuur.
+      traditioneel zoeken zou missen — op drie vlakken: zijn, willen en
+      kunnen.
     </p>
   </div>
 

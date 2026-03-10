@@ -17,8 +17,6 @@ from backend.database import (
     haal_laatste_matches, haal_cached_match, haal_alle_documenten,
     bewaar_recruiter_rating, tel_onverwerkte_ratings, haal_learning_weights
 )
-from backend.services.llm_instance import get_provider
-
 router = APIRouter(prefix="/matching", tags=["Matching"])
 
 
@@ -113,27 +111,23 @@ async def reverse_search(req: ReverseSearchRequest):
     if not cand_profiel:
         raise HTTPException(status_code=400, detail=f"Kandidaat profiel niet gevonden voor {req.kandidaat_naam}")
     
-    cand_json = json.dumps(cand_profiel, ensure_ascii=False)
-    
-    # Skills tekst (kunnen + kernrol)
-    skills_tekst = cand_profiel.get("kunnen", "")
+    zijn_tekst = str(cand_profiel.get("zijn", ""))
+    willen_tekst = str(cand_profiel.get("willen", ""))
+    kunnen_tekst = str(cand_profiel.get("kunnen", ""))
     if cand_profiel.get("kernrol"):
-        skills_tekst += " " + cand_profiel["kernrol"]
-
-    # Cultuur tekst (zijn + willen)
-    cultuur_tekst = f"{cand_profiel.get('zijn', '')} {cand_profiel.get('willen', '')}"
+        kunnen_tekst += " " + cand_profiel["kernrol"]
 
     # Parallelle embedding generatie
-    vector, vector_skills, vector_cultuur = await genereer_embeddings_batch([cand_json, skills_tekst, cultuur_tekst])
-    
-    if not vector:
+    vector_zijn, vector_willen, vector_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
+
+    if not vector_zijn:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren.")
-    
+
     gewichten = await haal_learning_weights()
     top_vacatures = await haal_top_vacatures_vector(
-        kandidaat_vector=vector,
-        kandidaat_skills=vector_skills,
-        kandidaat_cultuur=vector_cultuur,
+        kandidaat_zijn=vector_zijn,
+        kandidaat_willen=vector_willen,
+        kandidaat_kunnen=vector_kunnen,
         limit=req.limit,
         gewichten=gewichten
     )
@@ -168,26 +162,22 @@ async def semantic_search(req: SemanticSearchRequest):
     if not vac_profiel:
         raise HTTPException(status_code=400, detail=f"Vacature profiel niet gevonden voor {req.vacature_naam}")
 
-    vac_json = json.dumps(vac_profiel, ensure_ascii=False)
-    
-    # Skills tekst (kunnen + titel)
-    skills_tekst = f"{vac_profiel.get('kunnen', '')} {vac_profiel.get('titel', '')}".strip()
-
-    # Cultuur tekst (zijn + willen)
-    cultuur_tekst = f"{vac_profiel.get('zijn', '')} {vac_profiel.get('willen', '')}".strip()
+    zijn_tekst = str(vac_profiel.get("zijn", ""))
+    willen_tekst = str(vac_profiel.get("willen", ""))
+    kunnen_tekst = f"{vac_profiel.get('kunnen', '')} {vac_profiel.get('titel', '')}".strip()
 
     # Parallelle embedding generatie
     from backend.services.agents import genereer_embeddings_batch
-    vector, vector_skills, vector_cultuur = await genereer_embeddings_batch([vac_json, skills_tekst, cultuur_tekst])
+    vector_zijn, vector_willen, vector_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
 
-    if not vector:
+    if not vector_zijn:
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren voor vacature.")
 
     gewichten = await haal_learning_weights()
     top_matches = await haal_top_matches_vector(
-        vacature_vector=vector,
-        vacature_skills=vector_skills,
-        vacature_cultuur=vector_cultuur,
+        vacature_zijn=vector_zijn,
+        vacature_willen=vector_willen,
+        vacature_kunnen=vector_kunnen,
         limit=req.limit,
         gewichten=gewichten
     )
@@ -367,10 +357,13 @@ async def batch_match(req: BatchMatchRequest):
             kandidaten_lijst = req.kandidaat_namen
         # Stap 1: Pre-filter met embeddings als gewenst
         elif req.use_prefilter:
-            vector = await get_provider().generate_embedding(vac_json)
-            if vector:
+            zijn_t = str(vac_profiel.get("zijn", ""))
+            willen_t = str(vac_profiel.get("willen", ""))
+            kunnen_t = f"{vac_profiel.get('kunnen', '')} {vac_profiel.get('titel', '')}".strip()
+            vec_zijn, vec_willen, vec_kunnen = await genereer_embeddings_batch([zijn_t, willen_t, kunnen_t])
+            if vec_zijn:
                 gewichten = await haal_learning_weights()
-                top = await haal_top_matches_vector(vector, limit=req.limit, gewichten=gewichten)
+                top = await haal_top_matches_vector(vacature_zijn=vec_zijn, vacature_willen=vec_willen, vacature_kunnen=vec_kunnen, limit=req.limit, gewichten=gewichten)
                 kandidaten_lijst = [m["naam"] for m in top]
                 yield json.dumps({
                     "type": "prefilter",
