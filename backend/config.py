@@ -37,12 +37,7 @@ Kijk vooral naar wat iemand kan (potentieel), wie iemand is (karakter), en wat i
 Je doel is om verrassende en inspirerende matches te maken. Wijs kandidaten op banen nadat ze daar zelf misschien niet aan hadden gedacht. Wijs werkgevers op talent dat ze normaal over het hoofd zouden zien.
 Wees eerlijk en objectief in je oordeel over de match. De manier waarop iemand in het team past (cultuurfit) en de persoonlijkheid tellen daarbij zwaar mee.
 BELANGRIJK: Gebruik GEEN DISC-termen (zoals Dominantie of Invloed) en geen kleurenmodellen. Benoem gewoon in heldere taal de concrete talenten en kwaliteiten.
-
-BEOORDELING DOSSIERCOMPLEETHEID:
-Geef bij elke match aan hoe compleet de informatie is:
-- HOOG: Er is genoeg informatie over de kandidaat en de vacature om een goede inschatting te maken van de match.
-- GEMIDDELD: Er missen kleine details, waardoor we een klein beetje moeten gissen.
-- LAAG: Belangrijke informatie ontbreekt (bijvoorbeeld over iemands karakter of de sfeer op de werkvloer). Bedenk in dat geval goede 'vervolgvragen' die we nog moeten stellen om meer helderheid te krijgen.
+Noem altijd SPECIFIEK gedrag of een CONCRETE vaardigheid — geen algemeenheden.
 
 BELANGRIJK VOOR HET SYSTEEM:
 Je antwoord moet ALTIJD uitsluitend een kloppend JSON-object zijn. Gebruik precies de indeling die wordt gevraagd. Laat geen velden weg. Anders kan het systeem het niet verwerken.
@@ -51,8 +46,11 @@ Je antwoord moet ALTIJD uitsluitend een kloppend JSON-object zijn. Gebruik preci
 # --- Gesplitste Match-prompts ---
 # Kern-prompt: de essentie van de match — direct en actiegericht
 KERN_MATCH_PROMPT = """Bekijk de match tussen deze kandidaat en de werkgeversvraag.
-Gebruik ALTIJD actie-gerichte, concrete taal (B1-niveau). 
-VERMIJD container-begrippen zoals 'goede communicatie', 'mooie kans' of 'passend profiel'. Wees specifiek: WAT gaat er goed? WAT is de actie?
+
+Beoordeel de dossiercompleetheid:
+- HOOG: Genoeg info voor goede inschatting.
+- GEMIDDELD: Kleine details missen.
+- LAAG: Belangrijke info ontbreekt — stel vervolgvragen.
 
 KANDIDAATPROFIEL:
 {cv_tekst}
@@ -75,9 +73,8 @@ Geef je antwoord in exact de volgende JSON-opmaak:
 }}"""
 
 # Verdieping-prompt: extra verdiepende inzichten zonder te herhalen
-VERDIEPING_MATCH_PROMPT = """Voeg extra diepgang toe aan de bestaande match-analyse. 
+VERDIEPING_MATCH_PROMPT = """Voeg extra diepgang toe aan de bestaande match-analyse.
 NIET de kernpunten herhalen, maar nieuwe perspectieven bieden.
-Gebruik actiegerichte taal en vermijd HR-jargon.
 
 KERN-ANALYSE:
 {kern_json}
@@ -120,53 +117,33 @@ Geef je uitgebreide analyse in exact deze JSON-opmaak:
 MATCH_PROMPT = KERN_MATCH_PROMPT
 
 # --- Prompts voor Profiel-extractie ---
-PROFIEL_KANDIDAAT_PROMPT = """Maak een profiel van deze persoon in JSON.
-Duidelijke taal (B1), actief en specifiek. Focus op wie iemand IS en potentieel.
-Blijf bij de feiten. Wees streng bij dossier_compleetheid (0-100).
+_PERSPECTIEF_KANDIDAAT = """Vanuit de KANDIDAAT:
+1. ZIJN — Wie IS deze persoon? Werkstijl, karakter, samenwerking, omgang met druk.
+2. WILLEN — Wat WILT deze persoon? Drijfveren, ambities, wat zoekt iemand in werk.
+3. KUNNEN — Wat KAN deze persoon en wat NIET? Skills, leervermogen, ervaring, beschikbaarheid, aandachtspunten."""
 
-Het profiel heeft 3 pijlers:
-1. ZIJN — Wie IS deze persoon? Persoonlijkheid, werkstijl, karakter, samenwerking, communicatie, omgang met druk. (2-4 zinnen)
-2. WILLEN — Wat WILT deze persoon en wat niet? Drijfveren, motivatie, ambities, wat zoekt iemand in werk. (2-4 zinnen)
-3. KUNNEN — Wat KAN deze persoon en wat (nog) NIET? Hard skills, soft skills, leervermogen, groeipotentie, technische vaardigheden, opleiding, werkervaring, beschikbaarheid, locatie, vervoer. Noem ook aandachtspunten en risico's. (2-4 zinnen)
+_PERSPECTIEF_WERKGEVER = """Vanuit de WERKGEVER (wat voor kandidaat zoeken we?):
+1. ZIJN — Wat voor persoon moet het zijn? Karakter, teamfit, cultuur, verborgen behoeften.
+2. WILLEN — Wat moet de kandidaat willen? Waarden, motivatie, wat biedt het bedrijf aan groei.
+3. KUNNEN — Wat moet de kandidaat kunnen? Skills, taken, werktijden, aandachtspunten."""
 
-{{
-    "naam": "Naam",
-    "kernrol": "Huidige rol/profiel",
-    "zijn": "Wie IS deze persoon? Persoonlijkheid, werkstijl, karakter, samenwerking, communicatie, omgang met druk.",
-    "willen": "Wat WILT deze persoon en wat niet? Drijfveren, motivatie, ambities, wat zoekt iemand in werk.",
-    "kunnen": "Wat KAN deze persoon en wat (nog) niet? Hard/soft skills, leervermogen, opleiding, ervaring, beschikbaarheid/locatie, én aandachtspunten.",
-    "dossier_compleetheid": <getal 0-100>,
-    "vervolgvragen": ["Max 5 vragen aan kandidaat"],
-    "stellingen": ["5 stellingen voor 1-4 schaal"]
-}}
+_JSON_KANDIDAAT = """{{"naam": "...", "kernrol": "...", "zijn": "...", "willen": "...", "kunnen": "...", "dossier_compleetheid": 0, "vervolgvragen": ["..."], "stellingen": ["..."]}}"""
+_JSON_WERKGEVER = """{{"titel": "...", "organisatie": "...", "zijn": "...", "willen": "...", "kunnen": "...", "dossier_compleetheid": 0, "vervolgvragen": ["..."], "stellingen": ["..."]}}"""
+
+_PROFIEL_PROMPT = """Maak een profiel in JSON. Wees streng bij dossier_compleetheid (0-100).
+
+3 pijlers (elk 2-4 zinnen):
+{perspectief}
+
+{json_template}
 
 TEKST:
 {tekst}"""
 
-PROFIEL_WERKGEVERSVRAAG_PROMPT = """Maak een profiel van deze werkgeversvraag in JSON.
-Duidelijke taal (B1), actief en specifiek. Focus op TYPE PERSOON.
-Blijf bij de feiten. Wees streng bij dossier_compleetheid (0-100).
+PROFIEL_KANDIDAAT_PROMPT = _PROFIEL_PROMPT.replace("{perspectief}", _PERSPECTIEF_KANDIDAAT).replace("{json_template}", _JSON_KANDIDAAT)
+PROFIEL_WERKGEVERSVRAAG_PROMPT = _PROFIEL_PROMPT.replace("{perspectief}", _PERSPECTIEF_WERKGEVER).replace("{json_template}", _JSON_WERKGEVER)
 
-Het profiel heeft 3 pijlers:
-1. ZIJN — Wat voor PERSOON moet de kandidaat zijn? Persoonlijkheid, karakter, teamfit, cultuur, werksfeer, verborgen behoeften qua type persoon. (2-4 zinnen)
-2. WILLEN — Wat moet de kandidaat WILLEN? Waarden, drijfveren, gewenste motivatie, wat biedt het bedrijf aan groei, begeleiding en ontwikkeling. (2-4 zinnen)
-3. KUNNEN — Wat moet de kandidaat KUNNEN? Must-have en nice-to-have skills, taken, verantwoordelijkheden, belangrijkste taak, werktijden, praktische zaken, én aandachtspunten/risico's. (2-4 zinnen)
-
-{{
-    "titel": "Naam baan",
-    "organisatie": "Bedrijfsnaam",
-    "zijn": "Wat voor PERSOON moet de kandidaat zijn? Persoonlijkheid, karakter, teamfit, cultuur, werksfeer, verborgen behoeften.",
-    "willen": "Wat moet de kandidaat WILLEN? Waarden, drijfveren, ambitie, ontwikkeling, wat biedt het bedrijf aan groei en begeleiding.",
-    "kunnen": "Wat moet de kandidaat KUNNEN? Must-have en nice-to-have skills, taken, verantwoordelijkheden, werktijden, praktische zaken, én aandachtspunten.",
-    "dossier_compleetheid": <getal 0-100>,
-    "vervolgvragen": ["Max 5 vragen AAN WERKGEVER (bijv. 'Wat is het budget?')"],
-    "stellingen": ["5 stellingen voor 1-4 schaal"]
-}}
-
-WERKGEVERSVRAAG:
-{tekst}"""
-
-EVALUEER_PROFIEL_PROMPT = """Je bent een expert in recruitment. Beoordeel de VOLLEDIGHEID van dit profiel.
+EVALUEER_PROFIEL_PROMPT = """Beoordeel de VOLLEDIGHEID van dit profiel.
 Zijn er nog gaten in de informatie die ingevuld moeten worden om een perfecte match te maken?
 
 Voor WERKGEVERSVRAGEN: Richt de vervolgvragen ALTIJD aan de WERKGEVER/RECRUITER (bijv. 'Wat is het budget?' of 'Hoe ziet het team eruit?' en NIET 'Kun jij dit?').
@@ -183,89 +160,45 @@ Geef je antwoord in precies deze JSON-opmaak (geen extra tekst eromheen).
 PROFIEL:
 {profiel_json}"""
 
-VERRIJK_KANDIDAAT_PROMPT = """Je hebt al een profiel van een kandidaat gemaakt. Nu heb je nieuwe informatie gekregen via extra vragen.
-Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter profiel.
+_VERRIJK_PROFIEL_PROMPT = """Voeg nieuwe antwoorden samen met het bestaande profiel.
 
-Aanwijzingen:
-- DE NIEUWE ANTWOORDEN ZIJN LEIDEND. Als een antwoord informatie geeft die in het bestaande profiel nog op "Onbekend" of "Niet genoemd" staat, mOET je dit veld nu bijwerken met de nieuwe informatie.
-- Verwerk de nieuwe informatie soepel in het hele profiel. Maak er geen los stukje van onderaan, maar weef het erdoorheen.
-- Gebruik ALTIJD begrijpelijke en duidelijke taal (B1-niveau). Spreek de gebruiker direct aan.
-- Verhoog de score voor de dossiercompleetheid (dossier_compleetheid) aanzienlijk als de antwoorden belangrijke gaten vullen.
-- Voeg nieuwe inzichten toe over iemands karakter (zijn), drijfveren (willen) en vaardigheden (kunnen) op basis van de antwoorden.
-- Bedenk nieuwe vervolgvragen voor de kandidaat als er nog steeds belangrijke zaken ontbreken (maximaal 5).
-- Bedenk 5 nieuwe prikkelende stellingen (stellingen) die de kandidaat kan beoordelen op een 4-punts schaal om extra informatie te verzamelen.
-- Als het profiel nu helemaal compleet is, mogen de lijstjes met vervolgvragen en stellingen leeg blijven of een lege lijst zijn [].
+Regels:
+- Nieuwe antwoorden zijn LEIDEND boven "Onbekend" waarden.
+- Weef door het hele profiel — geen los blokje.
+- Verhoog dossier_compleetheid als gaten worden gevuld.
+- Update zijn, willen en kunnen op basis van de antwoorden.
+- Bedenk vervolgvragen AAN DE {doelgroep} als er info mist (max 5).
+- Bedenk 5 stellingen (4-punts schaal). Leeg als profiel compleet is.
 
 BESTAAND PROFIEL:
 {profiel_json}
 
-NIEUWE ANTWOORDEN (vraag → antwoord):
+NIEUWE ANTWOORDEN:
 {antwoorden_json}
 
-OORSPRONKELIJKE TEKST (voor de zekerheid):
+OORSPRONKELIJKE TEKST:
 {ruwe_tekst}
 
-Maak het volledige bijgewerkte profiel in precies dezelfde JSON-opmaak als het eerste profiel."""
+Return het volledige bijgewerkte profiel in dezelfde JSON-opmaak."""
 
-VERRIJK_WERKGEVERSVRAAG_PROMPT = """Je hebt al een profiel gemaakt van een werkgeversvraag. Nu heb je nieuwe informatie gekregen via extra vragen.
-Voeg deze nieuwe informatie en de oude informatie samen tot één nieuw en beter profiel.
+VERRIJK_KANDIDAAT_PROMPT = _VERRIJK_PROFIEL_PROMPT.replace("{doelgroep}", "KANDIDAAT")
+VERRIJK_WERKGEVERSVRAAG_PROMPT = _VERRIJK_PROFIEL_PROMPT.replace("{doelgroep}", "WERKGEVER")
 
-Aanwijzingen:
-- DE NIEUWE ANTWOORDEN ZIJN LEIDEND. Als een antwoord informatie geeft die in het bestaande profiel nog op "Onbekend" of "Niet genoemd" staat, MOET je dit veld nu bijwerken met de nieuwe informatie.
-- Verwerk de nieuwe informatie soepel in het hele verhaal. Maak er geen los blokje van, maar weef het erdoorheen.
-- Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Spreek de lezer direct aan.
-- Verhoog de score voor de dossiercompleetheid (dossier_compleetheid) aanzienlijk als de antwoorden belangrijke gaten vullen.
-- Voeg nieuwe inzichten toe over het gezochte karakter (zijn), de gewenste motivatie (willen) en benodigde vaardigheden (kunnen).
-- Bedenk nieuwe vervolgvragen voor de werkgever/recruiter als er nog steeds belangrijke zaken ontbreken (maximaal 5). Stel deze vragen VRAAGSTELLEND aan de WERKGEVER (bijv. 'Wat zijn de exacte werktijden?' en NIET 'Wanneer kun jij werken?').
-- Bedenk 5 nieuwe prikkelende stellingen (stellingen) die de werkgever kan beoordelen op een 4-punts schaal om extra informatie te verzamelen.
-- Als het profiel nu helemaal compleet is, mogen de lijstjes met vervolgvragen en stellingen leeg blijven.
-
-BESTAAND PROFIEL:
-{profiel_json}
-
-NIEUWE ANTWOORDEN (vraag → antwoord):
-{antwoorden_json}
-
-OORSPRONKELIJKE TEKST (voor de zekerheid):
-{ruwe_tekst}
-
-Maak het volledige bijgewerkte profiel in precies dezelfde JSON-opmaak als het eerste profiel."""
-
-VERWERK_MATCH_FEEDBACK_PROMPT = """Je hebt onlangs een match beoordeeld. De recruiter heeft nu feedback gegeven op deze match.
-Gebruik deze feedback om het profiel van de KANDIDAAT verder te verrijken en aan te scherpen.
-
-KANDIDAATPROFIEL (HUIDIG):
-{profiel_json}
-
-MATCH RESULTAAT:
-{match_json}
-
-RECRUITER FEEDBACK:
-{feedback_tekst}
-
-FEEDBACK CATEGORIEËN (indien aanwezig):
-De feedback kan voorafgegaan worden door [Categorieën: ...]. Dit geeft aan welk TYPE feedback het is:
+_FEEDBACK_CATEGORIEEN_KANDIDAAT = """FEEDBACK CATEGORIEËN:
 - "Skills kloppen niet" → pas 'kunnen' aan
 - "Verkeerd senioriteitsniveau" → pas 'kernrol' en 'kunnen' aan
 - "Cultuur-mismatch" → pas 'zijn' aan
-- "Betere match dan verwacht" → verhoog 'dossier_compleetheid', voeg positieve inzichten toe
+- "Betere match dan verwacht" → verhoog 'dossier_compleetheid'
 - "Ontbrekende ervaring" → pas 'kunnen' aan
-- "Motivatie verkeerd ingeschat" → pas 'willen' en 'zijn' aan
+- "Motivatie verkeerd ingeschat" → pas 'willen' en 'zijn' aan"""
 
-Aanwijzingen:
-0. Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Geen wollig taalgebruik of HR-jargon.
-1. Extraheer nieuwe feiten, vaardigheden of karaktereigenschappen uit de feedback.
-2. Update relevante velden in het profiel: pas 'zijn', 'willen' en 'kunnen' aan waar nodig.
-3. Als de feedback aangeeft dat iets NIET klopt, pas dit dan aan.
-4. Verhoog de 'dossier_compleetheid' als de feedback waardevolle nieuwe informatie bevat.
-5. Behoud alle bestaande informatie die niet door de feedback wordt tegengesproken.
+_FEEDBACK_CATEGORIEEN_WERKGEVER = """FEEDBACK CATEGORIEËN:
+- Werkgever zoekt ander type persoon → pas 'zijn' en 'kunnen' aan
+- Andere skills gewenst → pas 'kunnen' aan"""
 
-Return het VOLLEDIG BIJGEWERKTE KANDIDAATPROFIEL in exact dezelfde JSON-opmaak als het origineel."""
+_VERWERK_FEEDBACK_PROMPT = """Verwerk recruiter-feedback in het {profiel_label}.
 
-VERWERK_WERKGEVER_FEEDBACK_PROMPT = """Je hebt onlangs een match beoordeeld. De recruiter heeft feedback gegeven op deze match.
-Gebruik deze feedback om het profiel van de WERKGEVERSVRAAG verder te verrijken en aan te scherpen.
-
-WERKGEVERSVRAAGPROFIEL (HUIDIG):
+{profiel_type_upper}PROFIEL (HUIDIG):
 {profiel_json}
 
 MATCH RESULTAAT:
@@ -274,15 +207,28 @@ MATCH RESULTAAT:
 RECRUITER FEEDBACK:
 {feedback_tekst}
 
-Aanwijzingen:
-0. Gebruik ALTIJD heldere, begrijpelijke taal (B1-niveau). Geen wollig taalgebruik of HR-jargon.
-1. Extraheer inzichten over teamcultuur, gezochte persoonlijkheid en verborgen behoeften uit de feedback.
-2. Als de feedback aangeeft dat de werkgever eigenlijk iets anders zoekt (bijv. "meer hands-on", "juist geen leidinggevende"), pas dan 'zijn' en 'kunnen' aan.
-3. Update 'kunnen' als de feedback nieuwe informatie geeft over gewenste skills of taken.
-4. Verhoog de 'dossier_compleetheid' als de feedback waardevolle nieuwe informatie over de werkgeversvraag bevat.
-5. Behoud alle bestaande informatie die niet door de feedback wordt tegengesproken.
+{categorie_mapping}
 
-Return het VOLLEDIG BIJGEWERKTE WERKGEVERSVRAAGPROFIEL in exact dezelfde JSON-opmaak als het origineel."""
+Regels:
+1. Extraheer nieuwe feiten uit de feedback.
+2. Update zijn, willen en kunnen waar nodig.
+3. Corrigeer wat niet klopt.
+4. Verhoog dossier_compleetheid bij waardevolle info.
+5. Behoud wat niet wordt tegengesproken.
+
+Return het VOLLEDIGE bijgewerkte profiel in dezelfde JSON-opmaak."""
+
+VERWERK_MATCH_FEEDBACK_PROMPT = _VERWERK_FEEDBACK_PROMPT.replace(
+    "{profiel_label}", "kandidaatprofiel"
+).replace("{profiel_type_upper}", "KANDIDAAT").replace(
+    "{categorie_mapping}", _FEEDBACK_CATEGORIEEN_KANDIDAAT
+)
+
+VERWERK_WERKGEVER_FEEDBACK_PROMPT = _VERWERK_FEEDBACK_PROMPT.replace(
+    "{profiel_label}", "werkgeversvraagprofiel"
+).replace("{profiel_type_upper}", "WERKGEVERSVRAAG").replace(
+    "{categorie_mapping}", _FEEDBACK_CATEGORIEEN_WERKGEVER
+)
 
 REFLECTIE_PROMPT = """Analyseer de verzamelde feedback-teksten van een recruiter op matches.
 Vat samen wat de recruiter belangrijk vindt en welk type kandidaat hoog of laag scoort.
