@@ -29,8 +29,8 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_URL = f"{OLLAMA_BASE_URL}/api/generate"
 OLLAMA_EMBED_URL = f"{OLLAMA_BASE_URL}/api/embeddings"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
-PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:8b")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:4b")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", OLLAMA_MODEL)
 
 SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert. Jij verbindt kandidaten met werkgevers.
 Kijk vooral naar wat iemand kan (potentieel), wie iemand is (karakter), en wat iemand wil (drijfveren). Kijk minder streng naar diploma's of de precieze werkervaring.
@@ -120,90 +120,62 @@ Geef je uitgebreide analyse in exact deze JSON-opmaak:
 MATCH_PROMPT = KERN_MATCH_PROMPT
 
 # --- Prompts voor Profiel-extractie ---
-PROFIEL_KANDIDAAT_PROMPT = """Maak een overzichtelijk profiel van deze persoon op basis van de tekst.
-Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tekst eromheen).
-
-Belangrijke aanwijzingen:
-- Gebruik begrijpelijke en duidelijke taal (B1-niveau). Vermijd jargon en ingewikkelde woorden.
-- Schrijf actief en actiegericht. Vermijd container-begrippen (zoals 'goede communicator' of 'flexibel'). Wees specifiek over WAT iemand doet.
-- Focus vooral op wie deze persoon IS, niet alleen op wat ze hebben gedaan.
-- Kijk ook naar kwaliteiten die niet letterlijk worden genoemd, maar die je wel kunt afleiden (bijvoorbeeld: iemand die jarenlang in de horeca werkt, is waarschijnlijk stressbestendig).
-- BELANGRIJK: Blijf bij de feiten. Als iets niet in de tekst staat, vul dan "Niet genoemd" in of laat het lijstje leeg. Verzin geen eigenschappen of hobby's die je niet kunt bewijzen.
-- UITZONDERING: Bij het veld "verrassende_functies" mag je wél creatief zijn. Bedenk op basis van iemands karakter welke banen goed zouden passen, ook al heeft diegene daar niet de juiste papieren voor. Noem altijd minstens 3 suggesties.
-- BEOORDELING DOSSIERCOMPLEETHEID: Wees heel streng!
-    - 0-20: Bijna geen info (alleen een naam of een kort zinnetje).
-    - 20-40: Alleen korte aantekeningen of een paar regels tekst. Zonder echt CV is de score altijd lager dan 40%.
-    - 40-70: Er is een goed CV met werkervaring, maar we weten nog weinig over iemands karakter of wat diegene echt drijft.
-    - 70-90: Het dossier is compleet (CV + verslag van een gesprek). We hebben een goed beeld van de persoon en de ambities.
-    - 90-100: Een zeer uitgebreid dossier met veel details en extra antwoorden op vragen.
+PROFIEL_KANDIDAAT_PROMPT = """Maak een profiel van deze persoon in JSON. 
+Duidelijke taal (B1), actief en specifiek. Focus op wie iemand IS en potentieel.
+Blijf bij de feiten. Wees streng bij dossier_compleetheid (0-100).
 
 {{
-    "naam": "Naam van de persoon",
-    "kernrol": "Wat is iemands huidige baan of het belangrijkste profiel?",
-    "persoonlijkheid": ["Lijstje met karaktereigenschappen"],
-    "kwaliteiten": ["Lijstje met sterke punten en talenten"],
-    "impliciete_kwaliteiten": ["Lijstje met verborgen talenten die je kunt afleiden uit ervaring of hobby's"],
-    "drijfveren": ["Lijstje met wat deze persoon belangrijk vindt in werk"],
-    "onderliggende_motivatie": "Wat drijft deze persoon in de kern? (Denk aan: zekerheid, anderen helpen, vrijheid, groei, enz.)",
-    "ideale_werkdag": "Beschrijf in 2 of 3 zinnen hoe een perfecte dag op het werk eruitziet voor deze persoon.",
-    "werkstijl": "Hoe gaat deze persoon te werk? (Bijvoorbeeld: werkt graag alleen, is een echte teamplayer, of stroopt graag de mouwen op.)",
-    "ambities_en_leerdoelen": ["Lijstje van wat de persoon nog wil bereiken of leren"],
-    "gewenste_bedrijfscultuur": "In wat voor soort werkomgeving voelt deze persoon zich het prettigst?",
-    "hobby_en_interesses": ["Lijstje van relevante hobby's die iets zeggen over iemands karakter"],
-    "hard_skills": ["Lijstje met technische vaardigheden en diploma's"],
-    "soft_skills": ["Lijstje met sociale en persoonlijke vaardigheden"],
-    "beschikbaarheid_en_locatie": "Praktische zaken zoals woonplaats of uren (indien genoemd)",
-    "opleiding_en_ervaring_samenvatting": "Korte samenvatting van de achtergrond",
-    "verrassende_functies": ["3 tot 5 banen die goed passen bij iemands karakter en talent, maar waar de persoon zelf misschien niet direct aan denkt. Wees creatief!"],
-    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is dit dossier om een goede match te maken?>,
-    "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten of die een risico kunnen zijn"],
-    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE KANDIDAAT over belangrijke informatie die nog ontbreekt (bijvoorbeeld over werkstijl of wat iemand écht motiveert)"],
-    "stellingen": ["Bedenk 5 prikkelende stellingen die de kandidaat kan beoordelen op een schaal van 1 tot 4 (bijv. 'Ik werk het liefst in een gestructureerde omgeving'). Gebruik stellingen om informatie te verkrijgen die nog niet in het profiel staat."],
-    "cultuur_vragen": ["3 KORTE, SIMPELE, verhalende vragen over cultuur en persoonlijkheid. Schrijf op B1-niveau (begrijpelijk voor iedereen). Vermijd moeilijke woorden of formele taal. Denk aan: 'Wanneer baalde je echt van een fout, maar leerde je er toch van?' of 'Heb je wel eens iets geks gedaan om een klant blij te maken?'. Schrijf zoals je tegen een vriend praat."]
+    "naam": "Naam",
+    "kernrol": "Huidige rol/profiel",
+    "persoonlijkheid": ["Karaktereigenschappen"],
+    "kwaliteiten": ["Sterke punten"],
+    "impliciete_kwaliteiten": ["Verborgen talenten uit ervaring"],
+    "drijfveren": ["Wat is belangrijk in werk"],
+    "onderliggende_motivatie": "Kern drijfveer",
+    "ideale_werkdag": "Perfecte dag in 2 zinnen",
+    "werkstijl": "Hoe werkt deze persoon?",
+    "ambities_en_leerdoelen": ["Wat wil men bereiken/leren"],
+    "gewenste_bedrijfscultuur": "Prettige werkomgeving",
+    "hobby_en_interesses": ["Relevante hobby's"],
+    "hard_skills": ["Technisch/diploma's"],
+    "soft_skills": ["Sociaal/persoonlijk"],
+    "beschikbaarheid_en_locatie": "Woonplaats/uren",
+    "opleiding_en_ervaring_samenvatting": "Korte samenvatting",
+    "verrassende_functies": ["3-5 creatieve suggesties op basis van karakter"],
+    "dossier_compleetheid": <getal 0-100>,
+    "aandachtspunten": ["Risico's/aandachtspunten"],
+    "vervolgvragen": ["Max 5 vragen aan kandidaat"],
+    "stellingen": ["5 stellingen voor 1-4 schaal"],
+    "cultuur_vragen": ["3 korte, simpele verhalende vragen (B1)"]
 }}
 
-BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop direct nadat je het JSON-object hebt afgesloten met }}.
-
-KANDIDAATTEKST:
+TEKST:
 {tekst}"""
 
-PROFIEL_WERKGEVERSVRAAG_PROMPT = """Maak een overzichtelijk profiel van deze werkgeversvraag of vacature.
-Zet de tekst om in precies deze JSON-opmaak (alleen de JSON-code, geen extra tekst eromheen).
-
-Belangrijke aanwijzingen:
-- Gebruik begrijpelijke en duidelijke taal (B1-niveau). Vermijd jargon en ingewikkelde woorden.
-- Schrijf actief en direct. Vermijd container-begrippen. Wees concreet.
-- Focus niet alleen op de harde eisen, maar vooral op het TYPE PERSOON dat wordt gezocht.
-- BELANGRIJK: Blijf bij de feiten uit de tekst. Als iets niet in de tekst staat, vul dan "Niet genoemd" in. Ga geen bedrijfscultuur verzinnen die niet in de tekst staat.
-- BEOORDELING DOSSIERCOMPLEETHEID: Wees heel streng!
-    - 0-20: Zeer korte tekst (bijvoorbeeld alleen de naam van de baan en de plaats).
-    - 20-40: Alleen korte aantekeningen of een paar zinnetjes. Zonder volledige tekst is de score altijd lager dan 40%.
-    - 40-70: De eisen zijn duidelijk, maar we weten nog niks over de sfeer, het team of de doorgroeimogelijkheden.
-    - 70-90: Een goede tekst met informatie over de taken, het team en het type persoon dat gezocht wordt.
-    - 90-100: Een zeer uitgebreid verhaal met details over de visie van het bedrijf en hoe iemand wordt ingewerkt.
+PROFIEL_WERKGEVERSVRAAG_PROMPT = """Maak een profiel van deze werkgeversvraag in JSON.
+Duidelijke taal (B1), actief en specifiek. Focus op TYPE PERSOON.
+Blijf bij de feiten. Wees streng bij dossier_compleetheid (0-100).
 
 {{
-    "titel": "Naam van de baan",
-    "organisatie": "Naam van het bedrijf",
-    "organisatiewaarden": ["Lijstje van belangrijkste waarden van het bedrijf/team"],
-    "gezochte_persoonlijkheid": ["Lijstje van gewenste karaktereigenschappen"],
-    "benodigde_kwaliteiten": ["Lijstje van belangrijkste talenten om succesvol te zijn in deze baan"],
-    "ideale_kandidaat_persona": "Beschrijf in 2 of 3 zinnen het type persoon dat hier echt gelukkig zou worden — niet op basis van het CV, maar qua karakter and instelling.",
-    "verborgen_behoeften": ["Lijstje van belangrijke zaken die niet letterlijk in de tekst staan, maar die wel cruciaal zijn voor succes"],
-    "team_en_cultuur": "Korte beschrijving van de werkomgeving, de sfeer and het team",
-    "ontwikkel_en_doorgroeimogelijkheden": "Wat biedt het bedrijf aan groei? (Bijvoorbeeld trainingen of cursussen)",
-    "begeleiding_en_inwerkperiode": "Hoe wordt iemand opgevangen and ingewerkt? (Zeker belangrijk voor mensen uit een andere sector)",
-    "must_have_skills": ["Lijstje van vaardigheden die echt onmisbaar zijn"],
-    "nice_to_have_skills": ["Lijstje van vaardigheden die mooi meegenomen zijn, maar die je ook nog kunt leren"],
-    "taken": ["Lijstje van de belangrijkste taken and verantwoordelijkheden"],
-    "werktijden_en_omstandigheden": "Praktische zaken over uren, tijden of de werkplek",
-    "belangrijkste_taak": "Wat is de allerbelangrijkste taak in deze baan?",
-    "dossier_compleetheid": <getal van 0 tot 100 — hoe compleet is de informatie om een goede match te maken?>,
-    "aandachtspunten": ["Lijstje van zaken waar we extra op moeten letten (bijvoorbeeld reistijd, ploegendienst of fysiek zwaar werk)"],
-    "vervolgvragen": ["Maximaal 5 DUIDELIJKE VRAGEN AAN DE WERKGEVER/RECRUITER over belangrijke details die nog ontbreken over de baan of het team. Stel deze vragen VRAAGSTELLEND aan de WERKGEVER (bijv. 'Hoeveel tijdsdruk is er?' in plaats van 'Kun jij onder druk werken?')"]
+    "titel": "Naam baan",
+    "organisatie": "Bedrijfsnaam",
+    "organisatiewaarden": ["Belangrijkste waarden"],
+    "gezochte_persoonlijkheid": ["Karaktereigenschappen"],
+    "benodigde_kwaliteiten": ["Talenten voor succes"],
+    "ideale_kandidaat_persona": "Type persoon dat hier gelukkig wordt (2-3 zinnen)",
+    "verborgen_behoeften": ["Cruciale niet-genoemde behoeften"],
+    "team_en_cultuur": "Werkomgeving en sfeer",
+    "ontwikkel_en_doorgroeimogelijkheden": "Groei/training",
+    "begeleiding_en_inwerkperiode": "Opvang en inwerken",
+    "must_have_skills": ["Onmisbare skills"],
+    "nice_to_have_skills": ["Mooi meegenomen"],
+    "taken": ["Taken en verantwoordelijkheden"],
+    "werktijden_en_omstandigheden": "Praktische zaken",
+    "belangrijkste_taak": "Kern taak",
+    "dossier_compleetheid": <getal 0-100>,
+    "aandachtspunten": ["Risico's (bijv. reistijd)"],
+    "vervolgvragen": ["Max 5 vragen AAN WERKGEVER (bijv. 'Wat is het budget?')"]
 }}
-
-BELANGRIJK: Zorg dat het veld "dossier_compleetheid" altijd een getal is. Stop direct nadat je het JSON-object hebt afgesloten met }}.
 
 WERKGEVERSVRAAG:
 {tekst}"""

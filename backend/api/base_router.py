@@ -290,17 +290,31 @@ def create_document_router(
                 )
                 return
 
-            # ── Semantische Deduplicatie Check (verwerking van resultaat) ──
+            # ── Semantische Deduplicatie Check (Numpy Batch) ──
             if vector:
-                from backend.database import haal_alle_embeddings, bereken_cosine_similarity
+                from backend.database import haal_alle_embeddings, _batch_cosine
                 bestaande_embeddings = await haal_alle_embeddings(doc_type)
-                for emb in bestaande_embeddings:
-                    if emb["naam"] != os.path.basename(map_pad):
-                        similarity = bereken_cosine_similarity(vector, emb["vector"])
-                        if similarity > 0.92:
-                            waarschuwingen.append(f"Let op: Dit document lijkt sterk op '{emb['naam']}'. Wil je doorgaan?")
-                            logger.info(f"Semantische deduplicatie: '{os.path.basename(map_pad)}' lijkt {int(similarity * 100)}% op '{emb['naam']}'")
-                            break # Één waarschuwing is genoeg
+                
+                valid_count = len(bestaande_embeddings)
+                if valid_count > 0:
+                    # Filter eigen naam eruit
+                    target_naam = os.path.basename(map_pad)
+                    valid_to_check = [emb for emb in bestaande_embeddings if emb["naam"] != target_naam]
+                    
+                    if valid_to_check:
+                        import numpy as np
+                        q = np.asarray(vector, dtype=np.float64)
+                        mat = np.array([emb["vector"] for emb in valid_to_check if emb["vector"]], dtype=np.float64)
+                        
+                        if mat.size > 0:
+                            similarities = _batch_cosine(mat, q)
+                            max_idx = np.argmax(similarities)
+                            max_sim = similarities[max_idx]
+                            
+                            if max_sim > 0.92:
+                                match_naam = valid_to_check[max_idx]["naam"]
+                                waarschuwingen.append(f"Let op: Dit document lijkt sterk op '{match_naam}'. Wil je doorgaan?")
+                                logger.info(f"Semantische deduplicatie: '{target_naam}' lijkt {int(max_sim * 100)}% op '{match_naam}'")
 
             await update_task_db(task_id, progress="Gegevens opslaan en indexeren...", progress_percent=90)
             try:
@@ -337,6 +351,7 @@ def create_document_router(
 
                     cultuur_tekst = " ".join(filter(None, cultuur_delen))
                     from backend.services.agents import genereer_embeddings_batch
+                    # We doen de extra dimensies in één batch request
                     vector_skills, vector_cultuur = await genereer_embeddings_batch([skills_tekst, cultuur_tekst])
 
                 # Save embedding (op geschoonde tekst — AVG-compliant)

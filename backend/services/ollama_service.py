@@ -147,7 +147,8 @@ class OllamaProvider(LLMProvider):
 
                 resultaat = _validate_json_antwoord(antwoord, schema) if schema else json.loads(antwoord)
                 if resultaat is not None:
-                    logger.info(f"Ollama native generate succesvol in {time.time()-t0:.2f}s")
+                    duration = time.time() - t0
+                    logger.info(f"Ollama native generate succesvol in {duration:.2f}s (model={model})")
                     return schema(**resultaat) if schema and isinstance(resultaat, dict) else resultaat
 
                 _bewaar_debug_output(antwoord, poging, model)
@@ -237,11 +238,14 @@ class OllamaProvider(LLMProvider):
                 yield {"type": "error", "data": f"Error: {e}"}
 
     async def generate_embedding(self, text: str) -> list[float]:
+        import time
+        t0 = time.time()
         payload = {
             "model": self.embedding_model,
             "prompt": text,
         }
         result = await self._post(self.embed_url, payload, timeout=120)
+        logger.info(f"Ollama generate_embedding succesvol in {time.time()-t0:.2f}s (model={self.embedding_model})")
         return result.get("embedding", [])
 
     async def check_status(self) -> dict:
