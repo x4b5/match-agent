@@ -50,15 +50,19 @@ class SuccesPlan(BaseModel):
     actie_kandidaat: List[str]
     actie_werkgever: List[str]
 
-class KernMatchResult(BaseModel):
-    """Kern-match: de 8 belangrijkste velden — betrouwbaar op elk model."""
+class BaseMatchResult(BaseModel):
+    """Gedeelde velden voor alle match-resultaten."""
     match_percentage: int = Field(ge=0, le=100)
     matchende_punten: List[str] = Field(max_length=5, description="Max 3-5 concrete matchpunten")
     ontbrekende_punten: List[str] = Field(max_length=5, description="Max 3-5 concrete ontbrekende punten")
-    succes_plan: SuccesPlan
+    succes_plan: SuccesPlan = Field(default=None)
     dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
     vervolgvragen: List[str] = Field(default_factory=list, max_length=5)
     stellingen: List[str] = Field(default_factory=list, max_length=5)
+
+class KernMatchResult(BaseMatchResult):
+    """Kern-match: de 8 belangrijkste velden — betrouwbaar op elk model."""
+    succes_plan: SuccesPlan  # verplicht bij kern-match
 
 class VerdiepingMatchResult(BaseModel):
     """Verdieping: extra velden die de kern-match verrijken."""
@@ -72,24 +76,13 @@ class VerdiepingMatchResult(BaseModel):
     personality_axes: PersonalityAxes
     score_breakdown: ScoreBreakdown = Field(description="Transparante sub-scores per dimensie")
 
-# QuickScan = kern-match + personality_axes + aandachtspunten (backwards compatible)
-class QuickScanMatchResult(BaseModel):
-    match_percentage: int = Field(ge=0, le=100)
-    matchende_punten: List[str]
-    ontbrekende_punten: List[str]
-    succes_plan: SuccesPlan = Field(default=None)
+class QuickScanMatchResult(BaseMatchResult):
+    """Quick scan: kern-match + personality axes."""
     personality_axes: PersonalityAxes = Field(default=None)
     aandachtspunten: List[str] = Field(default_factory=list)
-    dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
-    vervolgvragen: List[str] = Field(default_factory=list)
-    stellingen: List[str] = Field(default_factory=list)
 
-# Standaard = samenvoeging van kern + verdieping (backwards compatible)
-class StandaardMatchResult(BaseModel):
-    match_percentage: int = Field(ge=0, le=100)
-    matchende_punten: List[str]
-    ontbrekende_punten: List[str]
-    succes_plan: SuccesPlan = Field(default=None)
+class StandaardMatchResult(BaseMatchResult):
+    """Standaard: samenvoeging van kern + verdieping."""
     gespreksstarters: List[str] = Field(default_factory=list)
     risico_mitigatie: str = Field(default="")
     gedeelde_waarden: List[str] = Field(default_factory=list)
@@ -99,5 +92,3 @@ class StandaardMatchResult(BaseModel):
     match_narratief: str = Field(default="", description="Kort, inspirerend verhaal dat de match tot leven brengt")
     personality_axes: PersonalityAxes = Field(default=None)
     score_breakdown: ScoreBreakdown = Field(default=None, description="Transparante sub-scores per dimensie")
-    dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")
-    vervolgvragen: List[str] = Field(default_factory=list)
