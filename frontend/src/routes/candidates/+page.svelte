@@ -22,8 +22,10 @@
 
   let filteredCandidates = $derived(
     (() => {
+      const q = searchQuery.toLowerCase();
       let result = candidates.filter((c: any) =>
-        c.naam.toLowerCase().includes(searchQuery.toLowerCase()),
+        c.naam.toLowerCase().includes(q) ||
+        (c.tags || []).some((t: string) => t.toLowerCase().includes(q)),
       );
       if (filterProfile === "present")
         result = result.filter((c: any) => c.has_profile);
@@ -211,7 +213,7 @@
           type="text"
           class="input-field"
           style="flex: 1;"
-          placeholder="Zoek kandidaat op naam..."
+          placeholder="Zoek kandidaat op naam of kernwoord..."
           bind:value={searchQuery}
         />
       </div>
@@ -283,6 +285,11 @@
                 <span class="badge badge-success">✓ Profiel</span>
               {:else}
                 <span class="badge badge-warning">⚠ Ontbreekt</span>
+              {/if}
+              {#if candidate.tags?.length}
+                {#each candidate.tags as tag}
+                  <span class="badge" style="background: rgba(var(--neon-blue-rgb, 0, 200, 255), 0.15); color: var(--neon-blue); font-size: 0.7rem; font-weight: 400;">{tag}</span>
+                {/each}
               {/if}
             </h2>
             <div

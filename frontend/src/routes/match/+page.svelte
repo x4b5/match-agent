@@ -28,6 +28,10 @@
   let showRawOutput = $state(false);
   let batchCandidateSearch = $state("");
   let batchEmployerSearch = $state("");
+  let candidateSearch = $state("");
+  let employerSearch = $state("");
+  let showCandidateDropdown = $state(false);
+  let showEmployerDropdown = $state(false);
 
   // Voortgang & timer
   let currentPhase = $state("");
@@ -74,6 +78,40 @@
       e.naam.toLowerCase().includes(batchEmployerSearch.toLowerCase()),
     ),
   );
+
+  let filteredCandidateOptions = $derived(
+    (() => {
+      const q = candidateSearch.toLowerCase();
+      if (!q) return data.candidates;
+      return data.candidates.filter((c: any) =>
+        c.naam.toLowerCase().includes(q) ||
+        (c.tags || []).some((t: string) => t.toLowerCase().includes(q)),
+      );
+    })(),
+  );
+
+  let filteredEmployerOptions = $derived(
+    (() => {
+      const q = employerSearch.toLowerCase();
+      if (!q) return data.employers;
+      return data.employers.filter((e: any) =>
+        e.naam.toLowerCase().includes(q) ||
+        (e.tags || []).some((t: string) => t.toLowerCase().includes(q)),
+      );
+    })(),
+  );
+
+  function selectCandidate(naam: string) {
+    selectedCandidate = naam;
+    candidateSearch = naam;
+    showCandidateDropdown = false;
+  }
+
+  function selectEmployer(naam: string) {
+    selectedEmployer = naam;
+    employerSearch = naam;
+    showEmployerDropdown = false;
+  }
 
   function startTimer() {
     elapsedSeconds = 0;
@@ -450,7 +488,7 @@
 
 {#if !finalMatchData}
   <!-- ===== CONFIGURATIE + STREAMING PANEEL ===== -->
-  <div class="grid-2">
+  <div class="match-layout">
     <div class="card">
       <h3 class="section-title">
         <span class="material-icons" style="color: var(--neon-cyan);">tune</span
@@ -498,43 +536,101 @@
 
       {#if matchType === "individual" || (matchType === "batch" && batchDirection === "kandidaten")}
         <div class="input-group">
-          <label class="input-label" for="emp">Vacature / Vraag</label>
-          <select
-            id="emp"
-            class="input-field"
-            bind:value={selectedEmployer}
-            disabled={isMatching}
-          >
-            <option value="">Selecteer vacature...</option>
-            {#each data.employers as e}
-              <option value={e.naam}
-                >{e.naam}{e.profile_score != null
-                  ? ` (Score: ${e.profile_score}%)`
-                  : ""}</option
-              >
-            {/each}
-          </select>
+          <label class="input-label" for="emp">Werkgeversvraag</label>
+          <div class="search-select-wrapper">
+            <div style="position: relative;">
+              <span class="material-icons search-select-icon">search</span>
+              <input
+                id="emp"
+                type="text"
+                class="input-field"
+                style="padding-left: 35px; width: 100%; box-sizing: border-box;"
+                placeholder="Zoek op naam of kernwoord..."
+                bind:value={employerSearch}
+                onfocus={() => (showEmployerDropdown = true)}
+                onblur={() => (showEmployerDropdown = false)}
+                oninput={() => { showEmployerDropdown = true; selectedEmployer = ""; }}
+                disabled={isMatching}
+                autocomplete="off"
+              />
+            </div>
+            {#if showEmployerDropdown}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="search-select-dropdown" onmousedown={(e) => e.preventDefault()}>
+                {#each filteredEmployerOptions as e}
+                  <button
+                    class="search-select-item"
+                    class:selected={selectedEmployer === e.naam}
+                    onclick={() => selectEmployer(e.naam)}
+                  >
+                    <span class="search-select-name">{e.naam}</span>
+                    <span class="search-select-meta">
+                      {#if e.tags?.length}
+                        {#each e.tags as tag}
+                          <span class="search-select-tag">{tag}</span>
+                        {/each}
+                      {/if}
+                      {#if e.profile_score != null}
+                        <span class="search-select-score">{e.profile_score}%</span>
+                      {/if}
+                    </span>
+                  </button>
+                {:else}
+                  <div class="search-select-empty">Geen resultaten</div>
+                {/each}
+              </div>
+            {/if}
+          </div>
         </div>
       {/if}
 
       {#if matchType === "individual" || (matchType === "batch" && batchDirection === "vacatures")}
         <div class="input-group" style="animation: slideDown 0.3s ease;">
           <label class="input-label" for="cand">Kandidaat</label>
-          <select
-            id="cand"
-            class="input-field"
-            bind:value={selectedCandidate}
-            disabled={isMatching}
-          >
-            <option value="">Selecteer kandidaat...</option>
-            {#each data.candidates as c}
-              <option value={c.naam}
-                >{c.naam}{c.profile_score != null
-                  ? ` (Score: ${c.profile_score}%)`
-                  : ""}</option
-              >
-            {/each}
-          </select>
+          <div class="search-select-wrapper">
+            <div style="position: relative;">
+              <span class="material-icons search-select-icon">search</span>
+              <input
+                id="cand"
+                type="text"
+                class="input-field"
+                style="padding-left: 35px; width: 100%; box-sizing: border-box;"
+                placeholder="Zoek op naam of kernwoord..."
+                bind:value={candidateSearch}
+                onfocus={() => (showCandidateDropdown = true)}
+                onblur={() => (showCandidateDropdown = false)}
+                oninput={() => { showCandidateDropdown = true; selectedCandidate = ""; }}
+                disabled={isMatching}
+                autocomplete="off"
+              />
+            </div>
+            {#if showCandidateDropdown}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="search-select-dropdown" onmousedown={(e) => e.preventDefault()}>
+                {#each filteredCandidateOptions as c}
+                  <button
+                    class="search-select-item"
+                    class:selected={selectedCandidate === c.naam}
+                    onclick={() => selectCandidate(c.naam)}
+                  >
+                    <span class="search-select-name">{c.naam}</span>
+                    <span class="search-select-meta">
+                      {#if c.tags?.length}
+                        {#each c.tags as tag}
+                          <span class="search-select-tag">{tag}</span>
+                        {/each}
+                      {/if}
+                      {#if c.profile_score != null}
+                        <span class="search-select-score">{c.profile_score}%</span>
+                      {/if}
+                    </span>
+                  </button>
+                {:else}
+                  <div class="search-select-empty">Geen resultaten</div>
+                {/each}
+              </div>
+            {/if}
+          </div>
         </div>
       {/if}
 
@@ -1889,5 +1985,92 @@
   .feedback-chip:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .match-layout {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 1rem;
+  }
+  @media (max-width: 768px) {
+    .match-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Zoekbare select */
+  .search-select-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  .search-select-icon {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    z-index: 1;
+  }
+  .search-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--surface-1);
+    border: 1px solid var(--glass-border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    flex-direction: column;
+  }
+  .search-select-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .search-select-item:hover,
+  .search-select-item.selected {
+    background: rgba(255, 171, 0, 0.08);
+  }
+  .search-select-name {
+    font-weight: 600;
+  }
+  .search-select-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+  .search-select-tag {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-secondary);
+  }
+  .search-select-score {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--neon-green);
+    margin-left: auto;
+  }
+  .search-select-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
   }
 </style>

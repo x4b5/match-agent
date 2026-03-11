@@ -29,7 +29,7 @@
       <h1 class="brand-logo">
         <span style="color: var(--neon-cyan);">MATCH</span>FLIX
       </h1>
-      <p class="brand-tagline">niet normaal!</p>
+      <p class="brand-tagline">De mismatch die raak is!</p>
       <p class="brand-greeting">{greeting}</p>
     </div>
 
@@ -68,7 +68,7 @@
       </a>
       <a
         href="/history"
-        class="nav-link nav-cyan {page.url.pathname.startsWith('/history')
+        class="nav-link nav-pink {page.url.pathname.startsWith('/history')
           ? 'active'
           : ''}"
       >
@@ -85,7 +85,7 @@
       </a>
       <a
         href="/prompts"
-        class="nav-link nav-cyan {page.url.pathname.startsWith('/prompts')
+        class="nav-link nav-gold {page.url.pathname.startsWith('/prompts')
           ? 'active'
           : ''}"
       >

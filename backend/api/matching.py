@@ -13,7 +13,7 @@ logger = logging.getLogger("matchflix.matching")
 from backend.utils import laad_profiel_uit_map
 from backend.services.agents import match_kandidaat, match_kandidaat_stream, genereer_embeddings_batch
 from backend.database import (
-    bewaar_match, haal_top_matches_vector, haal_top_vacatures_vector, haal_document,
+    bewaar_match, haal_top_matches_vector, haal_top_werkgeversvragen_vector, haal_document,
     haal_laatste_matches, haal_cached_match, haal_alle_documenten,
     bewaar_recruiter_rating, tel_onverwerkte_ratings, haal_learning_weights
 )
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/matching", tags=["Matching"])
 
 
 class SemanticSearchRequest(BaseModel):
-    vacature_naam: str
+    vraag_naam: str
     limit: int = 5
 
 class ReverseSearchRequest(BaseModel):
@@ -31,14 +31,14 @@ class ReverseSearchRequest(BaseModel):
 
 class MatchRequest(BaseModel):
     kandidaat_naam: str
-    vacature_naam: str
+    vraag_naam: str
     modus: str = "quick_scan"
     force_refresh: bool = False
     provider_type: str = "local"
 
 
 class BatchMatchRequest(BaseModel):
-    vacature_naam: str
+    vraag_naam: str
     modus: str = "quick_scan"
     limit: int = 10
     use_prefilter: bool = True
@@ -47,13 +47,13 @@ class BatchMatchRequest(BaseModel):
     provider_type: str = "local"
 
 
-class BatchVacatureMatchRequest(BaseModel):
+class BatchWerkgeversvraagMatchRequest(BaseModel):
     kandidaat_naam: str
     modus: str = "quick_scan"
     limit: int = 10
     use_prefilter: bool = True
     force_refresh: bool = False
-    vacature_namen: list[str] | None = None
+    vraag_namen: list[str] | None = None
     provider_type: str = "local"
 
 
@@ -72,17 +72,17 @@ async def _krijg_profiel(naam: str, is_kandidaat: bool = True):
 
 async def _krijg_profielen(req: MatchRequest):
     cv_profiel = await _krijg_profiel(req.kandidaat_naam, is_kandidaat=True)
-    vac_profiel = await _krijg_profiel(req.vacature_naam, is_kandidaat=False)
+    vraag_profiel = await _krijg_profiel(req.vraag_naam, is_kandidaat=False)
 
     if not cv_profiel:
         raise HTTPException(status_code=400, detail=f"Kandidaat profiel niet gevonden voor {req.kandidaat_naam}")
-    if not vac_profiel:
-        raise HTTPException(status_code=400, detail=f"Vacature profiel niet gevonden voor {req.vacature_naam}")
+    if not vraag_profiel:
+        raise HTTPException(status_code=400, detail=f"Werkgeversvraag profiel niet gevonden voor {req.vraag_naam}")
 
     cv_json = json.dumps(cv_profiel, ensure_ascii=False)
-    vac_json = json.dumps(vac_profiel, ensure_ascii=False)
+    vraag_json = json.dumps(vraag_profiel, ensure_ascii=False)
 
-    return cv_profiel, vac_profiel, cv_json, vac_json
+    return cv_profiel, vraag_profiel, cv_json, vraag_json
 
 
 # --- Match Historie ---
@@ -136,7 +136,7 @@ async def reverse_search(req: ReverseSearchRequest):
         raise HTTPException(status_code=500, detail="Kon geen embedding genereren.")
 
     gewichten = await haal_learning_weights()
-    top_vacatures = await haal_top_vacatures_vector(
+    top_vacatures = await haal_top_werkgeversvragen_vector(
         kandidaat_zijn=vector_zijn,
         kandidaat_willen=vector_willen,
         kandidaat_kunnen=vector_kunnen,
@@ -169,26 +169,26 @@ async def reverse_search(req: ReverseSearchRequest):
 
 @router.post("/semantic-search")
 async def semantic_search(req: SemanticSearchRequest):
-    vac_profiel = await _krijg_profiel(req.vacature_naam, is_kandidaat=False)
+    vraag_profiel = await _krijg_profiel(req.vraag_naam, is_kandidaat=False)
 
-    if not vac_profiel:
-        raise HTTPException(status_code=400, detail=f"Vacature profiel niet gevonden voor {req.vacature_naam}")
+    if not vraag_profiel:
+        raise HTTPException(status_code=400, detail=f"Werkgeversvraag profiel niet gevonden voor {req.vraag_naam}")
 
-    zijn_tekst = str(vac_profiel.get("zijn", ""))
-    willen_tekst = str(vac_profiel.get("willen", ""))
-    kunnen_tekst = f"{vac_profiel.get('kunnen', '')} {vac_profiel.get('titel', '')}".strip()
+    zijn_tekst = str(vraag_profiel.get("zijn", ""))
+    willen_tekst = str(vraag_profiel.get("willen", ""))
+    kunnen_tekst = f"{vraag_profiel.get('kunnen', '')} {vraag_profiel.get('titel', '')}".strip()
 
     # Parallelle embedding generatie
     vector_zijn, vector_willen, vector_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
 
     if not vector_zijn:
-        raise HTTPException(status_code=500, detail="Kon geen embedding genereren voor vacature.")
+        raise HTTPException(status_code=500, detail="Kon geen embedding genereren voor werkgeversvraag.")
 
     gewichten = await haal_learning_weights()
     top_matches = await haal_top_matches_vector(
-        vacature_zijn=vector_zijn,
-        vacature_willen=vector_willen,
-        vacature_kunnen=vector_kunnen,
+        vraag_zijn=vector_zijn,
+        vraag_willen=vector_willen,
+        vraag_kunnen=vector_kunnen,
         limit=req.limit,
         gewichten=gewichten
     )
@@ -215,29 +215,29 @@ async def semantic_search(req: SemanticSearchRequest):
 async def run_match(req: MatchRequest):
     # Cache check
     if not req.force_refresh:
-        cached = await haal_cached_match(req.kandidaat_naam, req.vacature_naam, req.modus)
+        cached = await haal_cached_match(req.kandidaat_naam, req.vraag_naam, req.modus)
         if cached and cached.get("resultaat_dict"):
             return {"message": "Match voltooid (cache)", "result": cached["resultaat_dict"], "cached": True}
 
-    cv_profiel, vac_profiel, cv_json, vac_json = await _krijg_profielen(req)
-    
+    cv_profiel, vraag_profiel, cv_json, vraag_json = await _krijg_profielen(req)
+
     # Track duration en model
     start_time = time.time()
     modi = MATCH_MODI.get(req.modus)
     model_versie = (modi.get("model_override") if modi else None) or OLLAMA_MODEL
-    
-    result = await match_kandidaat(cv_json, vac_json, modus=req.modus, provider_type=req.provider_type)
+
+    result = await match_kandidaat(cv_json, vraag_json, modus=req.modus, provider_type=req.provider_type)
     duur_ms = int((time.time() - start_time) * 1000)
 
     kandidaat_id = cv_profiel.get("id", req.kandidaat_naam)
-    vacature_id = vac_profiel.get("id", req.vacature_naam)
-    vacature_titel = vac_profiel.get("titel", req.vacature_naam)
-    
+    vraag_id = vraag_profiel.get("id", req.vraag_naam)
+    vraag_titel = vraag_profiel.get("titel", req.vraag_naam)
+
     await bewaar_match(
         kandidaat_naam=req.kandidaat_naam,
         kandidaat_id=kandidaat_id,
-        vacature_titel=vacature_titel,
-        vacature_id=vacature_id,
+        vacature_titel=vraag_titel,
+        vacature_id=vraag_id,
         percentage=result.get("match_percentage", 0),
         modus=req.modus,
         resultaat_dict=result,
@@ -254,25 +254,25 @@ async def run_match(req: MatchRequest):
 async def stream_match(req: MatchRequest):
     # Cache check
     if not req.force_refresh:
-        cached = await haal_cached_match(req.kandidaat_naam, req.vacature_naam, req.modus)
+        cached = await haal_cached_match(req.kandidaat_naam, req.vraag_naam, req.modus)
         if cached and cached.get("resultaat_dict"):
             async def cached_generator():
                 yield json.dumps({"type": "result", "data": cached["resultaat_dict"], "cached": True}, ensure_ascii=False)
             return EventSourceResponse(cached_generator())
 
-    cv_profiel, vac_profiel, cv_json, vac_json = await _krijg_profielen(req)
+    cv_profiel, vraag_profiel, cv_json, vraag_json = await _krijg_profielen(req)
 
     async def event_generator():
         kandidaat_id = cv_profiel.get("id", req.kandidaat_naam)
-        vacature_id = vac_profiel.get("id", req.vacature_naam)
-        vacature_titel = vac_profiel.get("titel", req.vacature_naam)
+        vraag_id = vraag_profiel.get("id", req.vraag_naam)
+        vraag_titel = vraag_profiel.get("titel", req.vraag_naam)
         final_result = None
 
         modi = MATCH_MODI.get(req.modus, {})
         stappen = modi.get("stappen", ["kern"])
         yield json.dumps({"type": "phase", "data": "profielen_geladen", "stappen": stappen}, ensure_ascii=False)
 
-        async for chunk in match_kandidaat_stream(cv_json, vac_json, modus=req.modus, provider_type=req.provider_type):
+        async for chunk in match_kandidaat_stream(cv_json, vraag_json, modus=req.modus, provider_type=req.provider_type):
             if chunk.get("type") == "result":
                 final_result = chunk.get("data")
             yield json.dumps(chunk, ensure_ascii=False)
@@ -282,8 +282,8 @@ async def stream_match(req: MatchRequest):
             await bewaar_match(
                 kandidaat_naam=req.kandidaat_naam,
                 kandidaat_id=kandidaat_id,
-                vacature_titel=vacature_titel,
-                vacature_id=vacature_id,
+                vacature_titel=vraag_titel,
+                vacature_id=vraag_id,
                 percentage=final_result.get("match_percentage", 0),
                 modus=req.modus,
                 resultaat_dict=final_result,
@@ -353,13 +353,13 @@ async def get_weights():
 
 @router.post("/batch")
 async def batch_match(req: BatchMatchRequest):
-    vac_profiel = await _krijg_profiel(req.vacature_naam, is_kandidaat=False)
-    if not vac_profiel:
-        raise HTTPException(status_code=400, detail=f"Vacature profiel niet gevonden voor {req.vacature_naam}")
+    vraag_profiel = await _krijg_profiel(req.vraag_naam, is_kandidaat=False)
+    if not vraag_profiel:
+        raise HTTPException(status_code=400, detail=f"Werkgeversvraag profiel niet gevonden voor {req.vraag_naam}")
 
-    vac_json = json.dumps(vac_profiel, ensure_ascii=False)
-    vacature_id = vac_profiel.get("id", req.vacature_naam)
-    vacature_titel = vac_profiel.get("titel", req.vacature_naam)
+    vraag_json = json.dumps(vraag_profiel, ensure_ascii=False)
+    vraag_id = vraag_profiel.get("id", req.vraag_naam)
+    vraag_titel = vraag_profiel.get("titel", req.vraag_naam)
 
     async def batch_generator():
         kandidaten_lijst = []

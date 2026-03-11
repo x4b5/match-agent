@@ -357,6 +357,17 @@ p {
 }
 .nav-link.nav-gold:hover { background: rgba(255, 171, 0, 0.06); }
 
+.nav-link.nav-pink.active {
+  color: var(--neon-pink);
+  background: linear-gradient(135deg, rgba(255, 64, 129, 0.1), rgba(255, 64, 129, 0.04));
+  border-color: rgba(255, 64, 129, 0.2);
+}
+.nav-link.nav-pink.active::before {
+  background: var(--neon-pink);
+  box-shadow: 0 0 10px var(--neon-pink);
+}
+.nav-link.nav-pink:hover { background: rgba(255, 64, 129, 0.06); }
+
 /* Forms */
 .input-group {
     display: flex;

@@ -16,11 +16,6 @@
     style="font-size: 1.2rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 3px; margin-top: 0.5rem;"
   >
     niet normaal!
-    <span
-      style="display: block; font-size: 0.8rem; margin-top: 0.5rem; color: var(--neon-green);"
-    >
-      PRIVACY-FIRST & AVG/GDPR-COMPLIANT
-    </span>
   </p>
 </div>
 

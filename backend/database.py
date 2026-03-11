@@ -318,22 +318,22 @@ async def haal_laatste_matches(limit=50):
     finally:
         await conn.close()
 
-async def haal_matches_voor_vacature(vacature_id):
-    """Haal alle matches op voor een specifieke vacature UUID, gesorteerd op percentage."""
+async def haal_matches_voor_werkgeversvraag(vraag_id):
+    """Haal alle matches op voor een specifieke werkgeversvraag UUID, gesorteerd op percentage."""
     conn = await _get_connection()
     try:
         cursor = await conn.execute("""
-            SELECT * FROM matches 
-            WHERE vacature_id = ? 
+            SELECT * FROM matches
+            WHERE vacature_id = ?
             ORDER BY match_percentage DESC, timestamp DESC
-        """, (vacature_id,))
+        """, (vraag_id,))
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
     finally:
         await conn.close()
 
-async def haal_unieke_vacatures():
-    """Haal lijst van unieke vacatures waarvoor gematcht is."""
+async def haal_unieke_werkgeversvragen():
+    """Haal lijst van unieke werkgeversvragen waarvoor gematcht is."""
     conn = await _get_connection()
     try:
         cursor = await conn.execute("SELECT DISTINCT vacature_titel FROM matches ORDER BY vacature_titel")
@@ -409,9 +409,9 @@ def _batch_cosine(matrix: np.ndarray, query: np.ndarray) -> np.ndarray:
 
 
 async def haal_top_matches_vector(
-    vacature_zijn: list[float] = None,
-    vacature_willen: list[float] = None,
-    vacature_kunnen: list[float] = None,
+    vraag_zijn: list[float] = None,
+    vraag_willen: list[float] = None,
+    vraag_kunnen: list[float] = None,
     limit: int = 5,
     gewichten: dict[str, float] = None
 ) -> list[dict]:
@@ -430,8 +430,8 @@ async def haal_top_matches_vector(
     scores_willen = np.zeros(len(valid))
     scores_kunnen = np.zeros(len(valid))
 
-    if vacature_zijn:
-        q = np.asarray(vacature_zijn, dtype=np.float64)
+    if vraag_zijn:
+        q = np.asarray(vraag_zijn, dtype=np.float64)
         indices = [i for i, k in enumerate(valid) if k["vector_zijn"]]
         if indices:
             mat = np.array([valid[i]["vector_zijn"] for i in indices], dtype=np.float64)
@@ -439,8 +439,8 @@ async def haal_top_matches_vector(
             for j, idx in enumerate(indices):
                 scores_zijn[idx] = batch_scores[j]
 
-    if vacature_kunnen:
-        q_k = np.asarray(vacature_kunnen, dtype=np.float64)
+    if vraag_kunnen:
+        q_k = np.asarray(vraag_kunnen, dtype=np.float64)
         indices = [i for i, k in enumerate(valid) if k["vector_kunnen"]]
         if indices:
             mat_k = np.array([valid[i]["vector_kunnen"] for i in indices], dtype=np.float64)
@@ -448,8 +448,8 @@ async def haal_top_matches_vector(
             for j, idx in enumerate(indices):
                 scores_kunnen[idx] = batch_scores[j]
 
-    if vacature_willen:
-        q_w = np.asarray(vacature_willen, dtype=np.float64)
+    if vraag_willen:
+        q_w = np.asarray(vraag_willen, dtype=np.float64)
         indices = [i for i, k in enumerate(valid) if k["vector_willen"]]
         if indices:
             mat_w = np.array([valid[i]["vector_willen"] for i in indices], dtype=np.float64)
@@ -464,7 +464,7 @@ async def haal_top_matches_vector(
     w_kunnen = w.get("kunnen", 0.34)
 
     has_sub = np.array([
-        bool(vacature_zijn and vacature_willen and vacature_kunnen
+        bool(vraag_zijn and vraag_willen and vraag_kunnen
              and k["vector_zijn"] and k["vector_willen"] and k["vector_kunnen"])
         for k in valid
     ])
@@ -496,15 +496,15 @@ async def haal_top_matches_vector(
         for i in top_idx
     ]
 
-async def haal_top_vacatures_vector(
+async def haal_top_werkgeversvragen_vector(
     kandidaat_zijn: list[float] = None,
     kandidaat_willen: list[float] = None,
     kandidaat_kunnen: list[float] = None,
     limit: int = 5,
     gewichten: dict[str, float] = None
 ) -> list[dict]:
-    """Reverse matching: multi-dimensional vacature discovery (numpy batch)."""
-    vacatures = await haal_alle_embeddings("vacature")
+    """Reverse matching: multi-dimensional werkgeversvraag discovery (numpy batch)."""
+    vacatures = await haal_alle_embeddings("werkgeversvraag")
     if not vacatures:
         return []
 
@@ -681,7 +681,7 @@ async def haal_alle_documenten(doc_type: str) -> list[dict]:
 
 # ── Match Cache ──
 
-async def haal_cached_match(kandidaat_naam: str, vacature_naam: str, modus: str) -> dict | None:
+async def haal_cached_match(kandidaat_naam: str, vraag_naam: str, modus: str) -> dict | None:
     """Check of er al een match-resultaat bestaat voor deze combinatie."""
     conn = await _get_connection()
     try:
@@ -692,7 +692,7 @@ async def haal_cached_match(kandidaat_naam: str, vacature_naam: str, modus: str)
             WHERE m.kandidaat_naam = ? AND m.vacature_titel = ? AND m.modus = ?
             ORDER BY m.timestamp DESC
             LIMIT 1
-        """, (kandidaat_naam, vacature_naam, modus))
+        """, (kandidaat_naam, vraag_naam, modus))
         row = await cursor.fetchone()
         if not row:
             return None

@@ -52,7 +52,7 @@ KANDIDAATPROFIEL:
 {cv_tekst}
 
 WERKGEVERSVRAAGPROFIEL:
-{vacature_tekst}
+{vraag_tekst}
 
 Geef je antwoord in exact de volgende JSON-opmaak:
 {{
@@ -79,7 +79,7 @@ KANDIDAATPROFIEL:
 {cv_tekst}
 
 WERKGEVERSVRAAGPROFIEL:
-{vacature_tekst}
+{vraag_tekst}
 
 Geef je uitgebreide analyse in exact deze JSON-opmaak:
 {{

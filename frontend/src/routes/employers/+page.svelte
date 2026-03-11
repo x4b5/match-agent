@@ -22,8 +22,10 @@
 
   let filteredEmployers = $derived(
     (() => {
+      const q = searchQuery.toLowerCase();
       let result = employers.filter((e: any) =>
-        e.naam.toLowerCase().includes(searchQuery.toLowerCase()),
+        e.naam.toLowerCase().includes(q) ||
+        (e.tags || []).some((t: string) => t.toLowerCase().includes(q)),
       );
       if (filterProfile === "present")
         result = result.filter((e: any) => e.has_profile);
@@ -212,7 +214,7 @@
           type="text"
           class="input-field"
           style="flex: 1;"
-          placeholder="Zoek werkgeversvraag op naam..."
+          placeholder="Zoek werkgeversvraag op naam of kernwoord..."
           bind:value={searchQuery}
         />
       </div>
@@ -284,6 +286,11 @@
                 <span class="badge badge-success">✓ Profiel</span>
               {:else}
                 <span class="badge badge-warning">⚠ Ontbreekt</span>
+              {/if}
+              {#if employer.tags?.length}
+                {#each employer.tags as tag}
+                  <span class="badge" style="background: rgba(var(--neon-purple-rgb, 187, 134, 252), 0.15); color: var(--neon-purple); font-size: 0.7rem; font-weight: 400;">{tag}</span>
+                {/each}
               {/if}
             </h2>
             <div

@@ -93,6 +93,7 @@ def create_document_router(
                     tags.append(profiel_data["titel"])
                 if profiel_data.get("organisatie"):
                     tags.append(profiel_data["organisatie"])
+                tags.extend(profiel_data.get("kernwoorden", []))
 
             response.append({
                 "id": doc["document_id"],

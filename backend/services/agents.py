@@ -97,9 +97,9 @@ def _modus_params(modus: str | None) -> dict:
     }
 
 
-async def _doe_kern_match(model: str, cv_tekst: str, vacature_tekst: str, params: dict, provider_type: str = "local") -> dict:
+async def _doe_kern_match(model: str, cv_tekst: str, vraag_tekst: str, params: dict, provider_type: str = "local") -> dict:
     """Stap 1: kern-match met 8 velden."""
-    prompt = params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst)
+    prompt = params["prompt_template"].format(cv_tekst=cv_tekst, vraag_tekst=vraag_tekst)
     result = await get_provider(provider_type).generate_json(
         model=model,
         prompt=prompt,
@@ -111,13 +111,13 @@ async def _doe_kern_match(model: str, cv_tekst: str, vacature_tekst: str, params
     )
     return result.model_dump() if hasattr(result, "model_dump") else result
 
-async def _doe_verdieping(model: str, kern_result: dict, cv_tekst: str, vacature_tekst: str, params: dict, provider_type: str = "local") -> dict:
+async def _doe_verdieping(model: str, kern_result: dict, cv_tekst: str, vraag_tekst: str, params: dict, provider_type: str = "local") -> dict:
     """Stap 2: verdieping met kern-resultaat als context."""
     kern_json = json.dumps(kern_result, ensure_ascii=False)
     prompt = VERDIEPING_MATCH_PROMPT.format(
         kern_json=kern_json,
         cv_tekst=cv_tekst,
-        vacature_tekst=vacature_tekst
+        vraag_tekst=vraag_tekst
     )
     result = await get_provider(provider_type).generate_json(
         model=model,
@@ -131,24 +131,24 @@ async def _doe_verdieping(model: str, kern_result: dict, cv_tekst: str, vacature
     return result.model_dump() if hasattr(result, "model_dump") else result
 
 
-async def match_kandidaat(cv_tekst: str, vacature_tekst: str, modus: str | None = None, provider_type: str = "local") -> dict:
+async def match_kandidaat(cv_tekst: str, vraag_tekst: str, modus: str | None = None, provider_type: str = "local") -> dict:
     params = _modus_params(modus)
     if params["max_tekst_lengte"]:
         cv_tekst, _ = _verkort_tekst(cv_tekst, params["max_tekst_lengte"])
-        vacature_tekst, _ = _verkort_tekst(vacature_tekst, params["max_tekst_lengte"])
+        vraag_tekst, _ = _verkort_tekst(vraag_tekst, params["max_tekst_lengte"])
 
     model = params["model_override"] or OLLAMA_MODEL
     stappen = params["stappen"]
 
     # Stap 1: Kern-match
-    kern_result = await _doe_kern_match(model, cv_tekst, vacature_tekst, params, provider_type=provider_type)
+    kern_result = await _doe_kern_match(model, cv_tekst, vraag_tekst, params, provider_type=provider_type)
     if "match_percentage" in kern_result:
         kern_result["match_percentage"] = int(round(kern_result.get("match_percentage", 0)))
 
     # Stap 2: Verdieping (indien modus dit vereist)
     if "verdieping" in stappen:
         try:
-            verdieping = await _doe_verdieping(model, kern_result, cv_tekst, vacature_tekst, params, provider_type=provider_type)
+            verdieping = await _doe_verdieping(model, kern_result, cv_tekst, vraag_tekst, params, provider_type=provider_type)
             # Merge: kern + verdieping = volledig resultaat
             kern_result.update(verdieping)
         except OllamaError as e:
@@ -158,11 +158,11 @@ async def match_kandidaat(cv_tekst: str, vacature_tekst: str, modus: str | None 
     return kern_result
 
 
-async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str | None = None, provider_type: str = "local"):
+async def match_kandidaat_stream(cv_tekst: str, vraag_tekst: str, modus: str | None = None, provider_type: str = "local"):
     params = _modus_params(modus)
     if params["max_tekst_lengte"]:
         cv_tekst, cv_afgekapt = _verkort_tekst(cv_tekst, params["max_tekst_lengte"])
-        vacature_tekst, vac_afgekapt = _verkort_tekst(vacature_tekst, params["max_tekst_lengte"])
+        vraag_tekst, vac_afgekapt = _verkort_tekst(vraag_tekst, params["max_tekst_lengte"])
         if cv_afgekapt or vac_afgekapt:
             yield {"type": "warning", "data": "Profiel te lang voor quick scan modus."}
 
@@ -175,7 +175,7 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
     volledig_antwoord = ""
     async for chunk in get_provider(provider_type).generate_json_stream(
         model=model,
-        prompt=params["prompt_template"].format(cv_tekst=cv_tekst, vacature_tekst=vacature_tekst),
+        prompt=params["prompt_template"].format(cv_tekst=cv_tekst, vraag_tekst=vraag_tekst),
         schema=kern_schema,
         temperature=params["temperature"],
         num_predict=params["num_predict"],
@@ -207,7 +207,7 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
     if "verdieping" in stappen:
         yield {"type": "phase", "data": "verdieping"}
         try:
-            verdieping = await _doe_verdieping(model, kern_result, cv_tekst, vacature_tekst, params, provider_type=provider_type)
+            verdieping = await _doe_verdieping(model, kern_result, cv_tekst, vraag_tekst, params, provider_type=provider_type)
             kern_result.update(verdieping)
         except OllamaError as e:
             logger.warning(f"Verdieping mislukt bij stream: {e}")
@@ -396,7 +396,7 @@ async def verwerk_werkgever_feedback(match_id: int, feedback_tekst: str) -> dict
         cursor = await conn.execute("""
             SELECT m.resultaat_json, m.vacature_titel, d.document_id, d.profiel_json, d.naam
             FROM matches m
-            JOIN documenten d ON d.naam = m.vacature_titel AND d.doc_type = 'vacature'
+            JOIN documenten d ON d.naam = m.vacature_titel AND d.doc_type = 'werkgeversvraag'
             WHERE m.id = ?
         """, (match_id,))
         row = await cursor.fetchone()
@@ -436,7 +436,7 @@ async def verwerk_werkgever_feedback(match_id: int, feedback_tekst: str) -> dict
 
             vec_zijn, vec_willen, vec_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
 
-            await bewaar_embedding(doc_id, "vacature", naam, vec_zijn, vec_willen, vec_kunnen)
+            await bewaar_embedding(doc_id, "werkgeversvraag", naam, vec_zijn, vec_willen, vec_kunnen)
             logger.info(f"Werkgever-embeddings herberekend voor {naam} na match-feedback.")
         except Exception as e:
             logger.error(f"Fout bij herberekenen werkgever-embeddings na feedback voor {naam}: {e}")
