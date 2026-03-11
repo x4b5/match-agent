@@ -26,8 +26,8 @@
 </script>
 
 <div class="page-hero">
-  <h1>
-    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px;"
+  <h1 style="color: var(--neon-cyan);">
+    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-cyan);"
       >bar_chart</span
     > Dashboard
   </h1>
@@ -201,16 +201,20 @@
   Snelkoppelingen
 </h2>
 <div class="grid-3">
-  <a href="/candidates" class="quick-action">
-    <span class="material-icons">person_add</span>
-    <span>Kandidaat toevoegen</span>
+  <a href="/candidates" class="quick-action" style="border-color: var(--neon-blue); background: rgba(0, 132, 255, 0.05);">
+    <span class="material-icons" style="color: var(--neon-blue);">person_add</span>
+    <span style="color: var(--neon-blue);">Kandidaat toevoegen</span>
   </a>
-  <a href="/employers" class="quick-action">
-    <span class="material-icons">post_add</span>
-    <span>Werkgeversvraag toevoegen</span>
+  <a href="/employers" class="quick-action" style="border-color: var(--neon-purple); background: rgba(187, 134, 252, 0.05);">
+    <span class="material-icons" style="color: var(--neon-purple);">post_add</span>
+    <span style="color: var(--neon-purple);">Werkgeversvraag toevoegen</span>
   </a>
-  <a href="/match" class="quick-action">
-    <span class="material-icons">play_circle</span>
-    <span>Nieuwe match maken</span>
+  <a href="/match" class="quick-action" style="border-color: var(--neon-gold); background: rgba(255, 171, 0, 0.05);">
+    <span class="material-icons" style="color: var(--neon-gold);">play_circle</span>
+    <span style="color: var(--neon-gold);">Nieuwe match maken</span>
+  </a>
+  <a href="/generator" class="quick-action" style="border-color: var(--neon-green); background: rgba(0, 230, 118, 0.05);">
+    <span class="material-icons" style="color: var(--neon-green);">auto_awesome</span>
+    <span style="color: var(--neon-green);">Profiel Generator</span>
   </a>
 </div>

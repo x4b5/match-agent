@@ -1,0 +1,57 @@
+{
+  "naam": "Willem",
+  "kernrol": "Medewerker Groenvoorziening",
+  "persoonlijkheid": [
+    "werkzaam",
+    "praktisch",
+    "buitenbezig",
+    "niet genoemd"
+  ],
+  "kwaliteiten": [
+    "buitenbezig",
+    "rijbewijs B",
+    "duurzaam werk",
+    "niet genoemd"
+  ],
+  "impliciete_kwaliteiten": [
+    "stressbestendig (uit ervaring met intensieve zomertijden)",
+    "verantwoordelijk (uit het uitvoeren van werkzaamheden voor gemeente)",
+    "niet genoemd"
+  ],
+  "drijfveren": [
+    "werk buiten",
+    "niet genoemd"
+  ],
+  "onderliggende_motivatie": "niet genoemd",
+  "ideale_werkdag": "niet genoemd",
+  "werkstijl": "niet genoemd",
+  "ambities_en_leerdoelen": [
+    "niet genoemd"
+  ],
+  "gewenste_bedrijfscultuur": "niet genoemd",
+  "hobby_en_interesses": [
+    "niet genoemd"
+  ],
+  "hard_skills": [
+    "gras maaien",
+    "grondwerk",
+    "niet genoemd"
+  ],
+  "soft_skills": [
+    "niet genoemd"
+  ],
+  "beschikbaarheid_en_locatie": "niet genoemd",
+  "opleiding_en_ervaring_samenvatting": "Geen opleiding genoemd. 3 zomeren werkzaam bij gemeente in groenvoorziening.",
+  "dossier_compleetheid": 20,
+  "aandachtspunten": [],
+  "vervolgvragen": [
+    "Wat is de exacte functie die je zoekt?",
+    "Wat is je beschikbaarheid en locatie?",
+    "Wat is je voorkeur voor werkstijl (zelfstandig, team, hands-on)?",
+    "Wat zijn je doelen binnen de sector groenvoorziening?",
+    "Wat is je ideale werkplek (bijvoorbeeld in de open lucht, in een team, met beperkte of veel contact met mensen)?"
+  ],
+  "_waarschuwingen": [
+    "PII gemaskeerd: {'email': 2}"
+  ]
+}

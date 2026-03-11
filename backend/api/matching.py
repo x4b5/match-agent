@@ -45,6 +45,15 @@ class BatchMatchRequest(BaseModel):
     kandidaat_namen: list[str] | None = None
 
 
+class BatchVacatureMatchRequest(BaseModel):
+    kandidaat_naam: str
+    modus: str = "quick_scan"
+    limit: int = 10
+    use_prefilter: bool = True
+    force_refresh: bool = False
+    vacature_namen: list[str] | None = None
+
+
 async def _krijg_profiel(naam: str, is_kandidaat: bool = True):
     """Haal profiel op uit DB of filesystem."""
     doc = await haal_document(naam)
@@ -440,6 +449,111 @@ async def batch_match(req: BatchMatchRequest):
                     }, ensure_ascii=False)
 
         # Stap 3: Gesorteerd eindresultaat
+        alle_resultaten.sort(key=lambda x: x.get("match_percentage", 0), reverse=True)
+        yield json.dumps({
+            "type": "batch_complete",
+            "data": alle_resultaten
+        }, ensure_ascii=False)
+
+    return EventSourceResponse(batch_generator())
+
+
+# --- Batch Match (één kandidaat tegen meerdere vacatures) ---
+
+@router.post("/batch-vacatures")
+async def batch_vacatures_match(req: BatchVacatureMatchRequest):
+    cv_profiel = await _krijg_profiel(req.kandidaat_naam, is_kandidaat=True)
+    if not cv_profiel:
+        raise HTTPException(status_code=400, detail=f"Kandidaat profiel niet gevonden voor {req.kandidaat_naam}")
+
+    cv_json = json.dumps(cv_profiel, ensure_ascii=False)
+    kandidaat_id = cv_profiel.get("id", req.kandidaat_naam)
+
+    async def batch_generator():
+        vacature_lijst = []
+
+        if req.vacature_namen:
+            vacature_lijst = req.vacature_namen
+        elif req.use_prefilter:
+            zijn_t = str(cv_profiel.get("zijn", ""))
+            willen_t = str(cv_profiel.get("willen", ""))
+            kunnen_t = f"{cv_profiel.get('kunnen', '')} {cv_profiel.get('kernrol', '')}".strip()
+            vec_zijn, vec_willen, vec_kunnen = await genereer_embeddings_batch([zijn_t, willen_t, kunnen_t])
+            if vec_zijn:
+                gewichten = await haal_learning_weights()
+                top = await haal_top_vacatures_vector(
+                    kandidaat_zijn=vec_zijn, kandidaat_willen=vec_willen,
+                    kandidaat_kunnen=vec_kunnen, limit=req.limit, gewichten=gewichten
+                )
+                vacature_lijst = [m["naam"] for m in top]
+                yield json.dumps({
+                    "type": "prefilter",
+                    "data": [{"naam": m["naam"], "percentage": m["percentage"]} for m in top]
+                }, ensure_ascii=False)
+
+        if not vacature_lijst:
+            alle_docs = await haal_alle_documenten("werkgeversvraag")
+            vacature_lijst = [
+                d["naam"] for d in alle_docs
+                if d.get("profiel_dict")
+            ]
+            if not req.vacature_namen:
+                vacature_lijst = vacature_lijst[:req.limit]
+
+        total = len(vacature_lijst)
+        alle_resultaten = []
+        sem = asyncio.Semaphore(3)
+
+        async def worker(vac_naam, idx):
+            async with sem:
+                if not req.force_refresh:
+                    cached = await haal_cached_match(req.kandidaat_naam, vac_naam, req.modus)
+                    if cached and cached.get("resultaat_dict"):
+                        return {"naam": vac_naam, "result": cached["resultaat_dict"], "cached": True}
+
+                vac_profiel = await _krijg_profiel(vac_naam, is_kandidaat=False)
+                if not vac_profiel:
+                    return None
+
+                vac_json = json.dumps(vac_profiel, ensure_ascii=False)
+                vacature_id = vac_profiel.get("id", vac_naam)
+                vacature_titel = vac_profiel.get("titel", vac_naam)
+
+                try:
+                    result = await match_kandidaat(cv_json, vac_json, modus=req.modus)
+
+                    modi = MATCH_MODI.get(req.modus)
+                    await bewaar_match(
+                        kandidaat_naam=req.kandidaat_naam,
+                        kandidaat_id=kandidaat_id,
+                        vacature_titel=vacature_titel,
+                        vacature_id=vacature_id,
+                        percentage=result.get("match_percentage", 0),
+                        modus=req.modus,
+                        resultaat_dict=result,
+                        temperature=modi.get("temperature") if modi else None
+                    )
+                    return {"naam": vac_naam, "titel": vacature_titel, "result": result, "cached": False}
+                except Exception as e:
+                    logger.error(f"Fout bij matchen van vacature {vac_naam}: {e}")
+                    return {"naam": vac_naam, "error": str(e)}
+
+        tasks = [worker(naam, i) for i, naam in enumerate(vacature_lijst)]
+        for fut in asyncio.as_completed(tasks):
+            res = await fut
+            if res:
+                if "error" in res:
+                    yield json.dumps({"type": "error", "data": f"Fout bij {res['naam']}: {res['error']}"}, ensure_ascii=False)
+                else:
+                    item = {"naam": res["naam"], **res["result"], "cached": res.get("cached", False)}
+                    if res.get("titel"):
+                        item["vacature_titel"] = res["titel"]
+                    alle_resultaten.append(item)
+                    yield json.dumps({
+                        "type": "match_result",
+                        "data": {"naam": res["naam"], "result": res["result"], "cached": res.get("cached", False)}
+                    }, ensure_ascii=False)
+
         alle_resultaten.sort(key=lambda x: x.get("match_percentage", 0), reverse=True)
         yield json.dumps({
             "type": "batch_complete",

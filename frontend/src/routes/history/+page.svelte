@@ -61,8 +61,8 @@
 </script>
 
 <div class="page-hero">
-  <h1>
-    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px;"
+  <h1 style="color: var(--neon-pink);">
+    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-pink);"
       >history</span
     > Match Historie
   </h1>

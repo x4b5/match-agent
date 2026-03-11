@@ -38,9 +38,17 @@ cd frontend && npm install && cd ..
 
 ### Start de app
 
+**Met Docker (Aanbevolen):**
+```bash
+docker compose up --build
+```
+Hierna is de app bereikbaar op [http://localhost](http://localhost).
+
+**Handmatig (Ontwikkeling):**
 ```bash
 ./start.sh
 ```
+In dit geval is de backend op 8000 en de frontend op 5173 bereikbaar.
 
 Dit start de FastAPI backend (poort 8000) en de SvelteKit frontend.
 

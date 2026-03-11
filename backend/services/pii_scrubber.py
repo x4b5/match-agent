@@ -55,8 +55,8 @@ PATRONEN: list[Tuple[str, str, str]] = [
     
     # Telefoonnummer (NL) — diverse formaten
     (r'(?:\+31|0031)\s?[1-9](?:[\s\-]?\d){8}', '[TELEFOON-VERWIJDERD]', 'telefoon'),
-    (r'\b06[\s\-]?\d{2}[\s\-]?\d{2}[\s\-]?\d{2}[\s\-]?\d{2}\b', '[TELEFOON-VERWIJDERD]', 'telefoon'),
-    (r'\b0[1-9][\s\-]?\d{2}[\s\-]?\d{2}[\s\-]?\d{2}[\s\-]?\d{2}\b', '[TELEFOON-VERWIJDERD]', 'telefoon'),
+    (r'\b06[\s\-]*(?:[\s\-]*\d){8}\b', '[TELEFOON-VERWIJDERD]', 'telefoon'),
+    (r'\b0[1-9]\d[\s\-]*(?:[\s\-]*\d){7}\b', '[TELEFOON-VERWIJDERD]', 'telefoon'),
     
     # IBAN
     (r'\b[A-Z]{2}\d{2}\s?[A-Z]{4}\s?\d{4}\s?\d{4}\s?\d{2,4}\b', '[IBAN-VERWIJDERD]', 'iban'),
@@ -86,17 +86,61 @@ def _scrub_bsn(tekst: str) -> Tuple[str, int]:
     return tekst, aantal
 
 
-def scrub_pii(tekst: str) -> Tuple[str, dict]:
+def _naam_varianten(naam: str) -> list[str]:
+    """
+    Genereer varianten van een dossiernaam voor case-insensitive vervanging.
+    Bijv. 'jan_jansen' → ['jan_jansen', 'Jan Jansen', 'jan jansen', 'J. Jansen']
+    """
+    varianten = [naam]
+    # Spatie-variant (underscore → spatie)
+    spatie_naam = naam.replace('_', ' ')
+    varianten.append(spatie_naam)
+    # Title-case variant
+    varianten.append(spatie_naam.title())
+    # Lowercase variant
+    varianten.append(spatie_naam.lower())
+    # Initiaal + achternaam (bijv. "J. Jansen")
+    delen = spatie_naam.split()
+    if len(delen) >= 2:
+        initiaal = delen[0][0].upper() + '. ' + ' '.join(d.capitalize() for d in delen[1:])
+        varianten.append(initiaal)
+    # Dedupliceren met behoud van volgorde
+    gezien = set()
+    uniek = []
+    for v in varianten:
+        if v.lower() not in gezien:
+            gezien.add(v.lower())
+            uniek.append(v)
+    return uniek
+
+
+def scrub_pii(tekst: str, naam: str | None = None, vervanging: str | None = None) -> Tuple[str, dict]:
     """
     Maskeert PII in de gegeven tekst.
-    
+
+    Args:
+        tekst: De tekst om te scrubben.
+        naam: Optionele dossiernaam om te vervangen (bijv. 'jan_jansen').
+        vervanging: Optionele vervangtekst voor de naam (bijv. '[NAAM:abc123]').
+
     Returns:
         Tuple van (geschoonde_tekst, rapport) waar rapport een dict is met
         het aantal gevonden en gemaskeerde items per categorie.
     """
     rapport = {}
     geschoond = tekst
-    
+
+    # Naam scrubbing (eerst, voordat andere patronen de tekst wijzigen)
+    if naam and vervanging:
+        naam_aantal = 0
+        for variant in _naam_varianten(naam):
+            patroon = re.compile(re.escape(variant), re.IGNORECASE)
+            matches = patroon.findall(geschoond)
+            naam_aantal += len(matches)
+            geschoond = patroon.sub(vervanging, geschoond)
+        if naam_aantal > 0:
+            rapport['naam'] = naam_aantal
+
     # BSN scrubbing met elfproef (eerst, voordat andere patronen cijfers matchen)
     geschoond, bsn_aantal = _scrub_bsn(geschoond)
     if bsn_aantal > 0:

@@ -6,6 +6,7 @@ import shutil
 from backend.config import KANDIDATEN_DIR, WERKGEVERSVRAGEN_DIR
 from backend.database import verwijder_alle_data, haal_document
 from backend.utils import zorg_voor_uuid
+from backend.services.pii_scrubber import scrub_pii
 
 router = APIRouter(prefix="/gdpr", tags=["GDPR / AVG"])
 
@@ -48,5 +49,25 @@ async def vergeet_mij(req: VergeetMijRequest):
     
     return {
         "message": f"Alle data voor '{req.naam}' is succesvol verwijderd conform AVG/GDPR.",
+        "rapport": rapport
+    }
+
+class ScrubRequest(BaseModel):
+    tekst: str
+    naam: str | None = None
+    uuid: str | None = None
+
+@router.post("/scrub-preview")
+async def scrub_preview(req: ScrubRequest):
+    """
+    Scrub PII uit tekst en geef het resultaat terug zonder op te slaan.
+    """
+    kwargs = {}
+    if req.naam and req.uuid:
+        kwargs["naam"] = req.naam
+        kwargs["vervanging"] = f"[NAAM:{req.uuid}]"
+    geschoond, rapport = scrub_pii(req.tekst, **kwargs)
+    return {
+        "geschoonde_tekst": geschoond,
         "rapport": rapport
     }

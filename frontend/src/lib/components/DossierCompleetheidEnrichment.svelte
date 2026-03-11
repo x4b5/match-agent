@@ -3,14 +3,12 @@
 
   let {
     questions = [],
-    cultuurQuestions = [],
     stellingen = [],
     name,
     docType,
     onSuccess,
   } = $props<{
     questions: string[];
-    cultuurQuestions?: string[];
     stellingen?: string[];
     name: string;
     docType: "candidates" | "employers";
@@ -29,7 +27,7 @@
 
   // Initialize answers for all questions
   $effect(() => {
-    [...questions, ...cultuurQuestions, ...stellingen].forEach((q: string) => {
+    [...questions, ...stellingen].forEach((q: string) => {
       if (!(q in answers)) {
         answers[q] = "";
       }
@@ -108,31 +106,6 @@
               </button>
             {/each}
           </div>
-        </div>
-      {/each}
-    </div>
-  {/if}
-
-  {#if cultuurQuestions.length > 0}
-    <div class="culture-insights-header">
-      <span class="material-icons neon-pulse">auto_awesome</span>
-      Prikkelende Cultuur & Persoonlijkheid Inzichten
-    </div>
-    <p class="enrichment-intro">
-      Deze vragen helpen om een dieper beeld te krijgen van wie de kandidaat
-      écht is:
-    </p>
-    <div class="questions-list culture-questions">
-      {#each cultuurQuestions as question, i}
-        <div class="question-item provocative">
-          <label for="cq-{i}" class="input-label">{question}</label>
-          <textarea
-            id="cq-{i}"
-            class="input-field enrichment-textarea culture-field"
-            placeholder="Bijv. Een verhaal over een situatie waarin..."
-            bind:value={answers[question]}
-            disabled={isEnriching}
-          ></textarea>
         </div>
       {/each}
     </div>

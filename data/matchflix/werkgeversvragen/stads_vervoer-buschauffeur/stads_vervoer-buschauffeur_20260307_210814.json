@@ -1,0 +1,28 @@
+{
+  "titel": "Buschauffeur",
+  "organisatie": "Stads Vervoer OVV",
+  "kernrol": "Gastheer/gastvrouw in de bus",
+  "domeinen": [
+    "vervoer",
+    "openbaar vervoer"
+  ],
+  "must_have_skills": [
+    "Rijbewijs D",
+    "geldige Code 95"
+  ],
+  "nice_to_have_skills": [
+    "Flexibele werktijden"
+  ],
+  "min_ervaring": 0,
+  "senioriteit": "medior",
+  "opleiding_eis": {
+    "niveau": "MBO",
+    "richtingen": [
+      "vervoer",
+      "logistiek"
+    ]
+  },
+  "talen": [
+    "Nederlands"
+  ]
+}

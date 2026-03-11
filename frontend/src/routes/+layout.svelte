@@ -38,6 +38,13 @@
         <span class="material-icons">bar_chart</span> Dashboard
       </a>
       <a
+        href="/generator"
+        id="nav-profiel-generator"
+        class="nav-link {page.url.pathname.startsWith('/generator') ? 'active' : ''}"
+      >
+        <span class="material-icons">shield</span> Profiel Generator
+      </a>
+      <a
         href="/candidates"
         class="nav-link {page.url.pathname.startsWith('/candidates')
           ? 'active'
@@ -55,19 +62,9 @@
       </a>
       <a
         href="/match"
-        class="nav-link {page.url.pathname.startsWith('/match')
-          ? 'active'
-          : ''}"
+        class="nav-link {page.url.pathname === '/match' ? 'active' : ''}"
       >
         <span class="material-icons">gps_fixed</span> Match maken
-      </a>
-      <a
-        href="/prompts"
-        class="nav-link {page.url.pathname.startsWith('/prompts')
-          ? 'active'
-          : ''}"
-      >
-        <span class="material-icons">code</span> Prompts & Openheid
       </a>
       <a
         href="/history"
@@ -85,6 +82,14 @@
         class="nav-link {page.url.pathname.startsWith('/over') ? 'active' : ''}"
       >
         <span class="material-icons">info</span> Over MATCHFLIX
+      </a>
+      <a
+        href="/prompts"
+        class="nav-link {page.url.pathname.startsWith('/prompts')
+          ? 'active'
+          : ''}"
+      >
+        <span class="material-icons">code</span> Prompts & Openheid
       </a>
     </nav>
 

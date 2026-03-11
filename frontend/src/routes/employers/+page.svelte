@@ -2,6 +2,7 @@
   import type { PageData } from "./$types";
   import { toasts } from "$lib/toast";
   import DossierCompleetheidEnrichment from "$lib/components/DossierCompleetheidEnrichment.svelte";
+  import { goto } from "$app/navigation";
 
   let { data } = $props<{ data: PageData }>();
 
@@ -11,15 +12,13 @@
   let searchQuery = $state("");
   let sortOption = $state("alpha-asc");
   let filterProfile = $state("all");
-  let generatingNames: Set<string> = $state(new Set());
   let confirmingDelete: string | null = $state(null);
   let expandedName: string | null = $state(null);
-  let editingName: string | null = $state(null);
+  let isLoadingDetail = $state(false);
+  let editingName = $state("");
   let editJson = $state("");
   let isSaving = $state(false);
   let detailCache: Record<string, any> = $state({});
-  let taskDetails: Record<string, { progress: string; percent: number }> =
-    $state({});
 
   let filteredEmployers = $derived(
     (() => {
@@ -46,11 +45,11 @@
   async function toggleDetail(name: string) {
     if (expandedName === name) {
       expandedName = null;
-      editingName = null;
+      editingName = "";
       return;
     }
     expandedName = name;
-    editingName = null;
+    editingName = "";
     if (!detailCache[name]) {
       try {
         const res = await fetch(`/api/employers/${encodeURIComponent(name)}`);
@@ -74,7 +73,7 @@
   }
 
   function cancelEditing() {
-    editingName = null;
+    editingName = "";
     editJson = "";
   }
 
@@ -97,7 +96,7 @@
           profile_data: parsed,
           has_profile: true,
         };
-        editingName = null;
+        editingName = "";
         await refreshEmployers();
       } else {
         toasts.add("Fout bij opslaan profiel", "error");
@@ -152,85 +151,6 @@
     employers = await res.json();
   }
 
-  async function generateProfile(name: string) {
-    generatingNames = new Set([...generatingNames, name]);
-    try {
-      const res = await fetch(
-        `/api/employers/${encodeURIComponent(name)}/generate-profile`,
-        { method: "POST" },
-      );
-      if (!res.ok) {
-        toasts.add("Fout bij starten generatie", "error");
-        return;
-      }
-      const responseData = await res.json();
-      const taskId = responseData.task_id;
-      toasts.add(`Profiel generatie gestart voor "${name}"`, "info");
-
-      const poll = setInterval(async () => {
-        const taskRes = await fetch(`/api/tasks/${taskId}`);
-        if (!taskRes.ok) return;
-        const taskData = await taskRes.json();
-
-        // Update task details for voor visuele feedback
-        taskDetails[name] = {
-          progress: taskData.progress || "In behandeling...",
-          percent: taskData.progress_percent || 0,
-        };
-
-        if (taskData.status === "done" || taskData.status === "failed") {
-          clearInterval(poll);
-          generatingNames = new Set(
-            [...generatingNames].filter((n) => n !== name),
-          );
-          delete taskDetails[name];
-
-          if (taskData.status === "failed") {
-            toasts.add(
-              `Generatie mislukt: ${taskData.error || "Onbekende fout"}`,
-              "error",
-            );
-            return;
-          }
-
-          const data = await fetch("/api/employers/").then((r) => r.json());
-          employers = data;
-          delete detailCache[name];
-
-          // Herlaad detail als het panel open staat
-          if (expandedName === name) {
-            try {
-              const res = await fetch(
-                `/api/employers/${encodeURIComponent(name)}`,
-              );
-              if (res.ok) {
-                detailCache[name] = await res.json();
-              }
-            } catch {}
-          }
-          toasts.add(`Profiel voor "${name}" is klaar!`, "success");
-        }
-      }, 3000);
-      setTimeout(() => {
-        clearInterval(poll);
-        if (generatingNames.has(name)) {
-          generatingNames = new Set(
-            [...generatingNames].filter((n) => n !== name),
-          );
-          delete taskDetails[name];
-          toasts.add(
-            `Time-out bij generatie van "${name}". Probeer opnieuw.`,
-            "warning",
-          );
-        }
-      }, 300000);
-    } catch {
-      toasts.add("Fout bij starten generatie", "error");
-      generatingNames = new Set([...generatingNames].filter((n) => n !== name));
-      delete taskDetails[name];
-    }
-  }
-
   function renderValue(val: any): string {
     if (val === null || val === undefined) return "—";
     if (Array.isArray(val)) return val.join(", ");
@@ -242,8 +162,8 @@
 </script>
 
 <div class="page-hero">
-  <h1>
-    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px;"
+  <h1 style="color: var(--neon-purple);">
+    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-purple);"
       >business</span
     > Werkgeversvragen Beheren
   </h1>
@@ -265,21 +185,22 @@
       bind:value={newEmployerName}
       onkeydown={(e) => e.key === "Enter" && createEmployer()}
     />
-    <button class="btn-primary" onclick={createEmployer} disabled={isCreating}>
+    <button class="btn-primary" style="border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(187, 134, 252, 0.1);" onclick={createEmployer} disabled={isCreating}>
       {#if isCreating}
         <span
           class="material-icons spin"
-          style="font-size: 1rem; vertical-align: middle;">autorenew</span
+          style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);">autorenew</span
         > Bezig...
       {:else}
         <span
           class="material-icons"
-          style="font-size: 1rem; vertical-align: middle;">add</span
+          style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);">add</span
         > Aanmaken
       {/if}
     </button>
   </div>
 </div>
+
 
 <div style="margin-top: 2rem;">
   {#if employers.length > 0}
@@ -408,30 +329,6 @@
                   : "details te bekijken"}
               </span>
             </div>
-            {#if generatingNames.has(employer.naam) && taskDetails[employer.naam]}
-              <div style="margin-top: 1rem; margin-left: 1.6rem;">
-                <div
-                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"
-                >
-                  <span
-                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 500;"
-                  >
-                    {taskDetails[employer.naam].progress}
-                  </span>
-                  <span
-                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 600;"
-                  >
-                    {taskDetails[employer.naam].percent}%
-                  </span>
-                </div>
-                <div class="progress-bar" style="height: 4px;">
-                  <div
-                    class="progress-bar-fill"
-                    style="width: {taskDetails[employer.naam].percent}%;"
-                  ></div>
-                </div>
-              </div>
-            {/if}
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
             {#if confirmingDelete === employer.naam}
@@ -449,22 +346,14 @@
             {:else}
               <button
                 class="btn-primary"
-                onclick={() => generateProfile(employer.naam)}
-                disabled={generatingNames.has(employer.naam)}
+                style="border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(187, 134, 252, 0.1);"
+                onclick={() => goto(`/generator?type=employers&name=${encodeURIComponent(employer.naam)}`)}
               >
-                {#if generatingNames.has(employer.naam)}
-                  <span
-                    class="material-icons spin"
-                    style="font-size: 1rem; vertical-align: middle;"
-                    >autorenew</span
-                  > Bezig...
-                {:else}
-                  <span
-                    class="material-icons"
-                    style="font-size: 1rem; vertical-align: middle;"
-                    >auto_awesome</span
-                  > Genereer
-                {/if}
+                <span
+                  class="material-icons"
+                  style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);"
+                  >auto_awesome</span
+                > Verrijk profiel
               </button>
               <button
                 class="btn-icon-danger"
@@ -500,12 +389,18 @@
               >
                 <span
                   class="material-icons"
-                  style="font-size: 2rem; opacity: 0.3;">description</span
+                  style="font-size: 2rem; opacity: 0.3;">business_center</span
                 >
                 <p style="margin-top: 0.5rem; font-size: 0.85rem;">
-                  Nog geen profiel gegenereerd. Klik op "Genereer" om een
-                  profiel aan te maken.
+                  Nog geen profiel gegenereerd.
                 </p>
+                <button
+                  class="btn-primary"
+                  style="margin-top: 1rem; border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(187, 134, 252, 0.1);"
+                  onclick={() => goto(`/generator?type=employers&name=${encodeURIComponent(employer.naam)}`)}
+                >
+                  <span class="material-icons" style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);">auto_awesome</span> Profiel Genereren
+                </button>
               </div>
             {:else}
               <div
@@ -541,6 +436,15 @@
                     <span class="material-icons" style="font-size: 0.9rem;"
                       >edit</span
                     > Bewerken
+                  </button>
+                  <button
+                    class="btn-edit"
+                    style="border-color: var(--neon-purple); color: var(--neon-purple);"
+                    onclick={() => goto(`/generator?type=employers&name=${encodeURIComponent(employer.naam)}`)}
+                  >
+                    <span class="material-icons" style="font-size: 0.9rem;"
+                      >auto_awesome</span
+                    > Opnieuw genereren
                   </button>
                 {/if}
               </div>

@@ -9,8 +9,12 @@
   let selectedEmployer = $state(data.employers?.[0]?.naam || "");
   let selectedMode = $state("quick_scan");
   let matchType = $state("individual"); // 'individual' or 'batch'
+  let batchDirection = $state("kandidaten"); // 'kandidaten' or 'vacatures'
   let selectedCandidates: Set<string> = $state(
     new Set(data.candidates.map((c: any) => c.naam)),
+  );
+  let selectedEmployers: Set<string> = $state(
+    new Set(data.employers.map((e: any) => e.naam)),
   );
 
   let isMatching = $state(false);
@@ -22,6 +26,7 @@
   let currentStep = $state(0);
   let showRawOutput = $state(false);
   let batchCandidateSearch = $state("");
+  let batchEmployerSearch = $state("");
 
   // Voortgang & timer
   let currentPhase = $state("");
@@ -60,6 +65,12 @@
   let filteredBatchCandidates = $derived(
     data.candidates.filter((c: any) =>
       c.naam.toLowerCase().includes(batchCandidateSearch.toLowerCase()),
+    ),
+  );
+
+  let filteredBatchEmployers = $derived(
+    data.employers.filter((e: any) =>
+      e.naam.toLowerCase().includes(batchEmployerSearch.toLowerCase()),
     ),
   );
 
@@ -105,6 +116,23 @@
     selectedCandidates = new Set();
   }
 
+  function toggleEmployer(name: string) {
+    if (selectedEmployers.has(name)) {
+      selectedEmployers.delete(name);
+    } else {
+      selectedEmployers.add(name);
+    }
+    selectedEmployers = new Set(selectedEmployers);
+  }
+
+  function selectAllEmployers() {
+    selectedEmployers = new Set(data.employers.map((e: any) => e.naam));
+  }
+
+  function selectNoneEmployers() {
+    selectedEmployers = new Set();
+  }
+
   function stopMatch() {
     abortController?.abort();
     isMatching = false;
@@ -122,13 +150,23 @@
       toasts.add("Selecteer kandidaat én vacature.", "warning");
       return;
     }
-    if (matchType === "batch") {
+    if (matchType === "batch" && batchDirection === "kandidaten") {
       if (!selectedEmployer) {
         toasts.add("Selecteer een vacature voor de batch analyse.", "warning");
         return;
       }
       if (selectedCandidates.size === 0) {
         toasts.add("Selecteer minimaal één kandidaat.", "warning");
+        return;
+      }
+    }
+    if (matchType === "batch" && batchDirection === "vacatures") {
+      if (!selectedCandidate) {
+        toasts.add("Selecteer een kandidaat voor de batch analyse.", "warning");
+        return;
+      }
+      if (selectedEmployers.size === 0) {
+        toasts.add("Selecteer minimaal één vacature.", "warning");
         return;
       }
     }
@@ -148,18 +186,25 @@
     abortController = new AbortController();
     startTimer();
 
+    const isBatchVacatures = matchType === "batch" && batchDirection === "vacatures";
     const endpoint =
       matchType === "individual"
         ? "/api/matching/stream"
-        : "/api/matching/batch";
-    const body = {
+        : isBatchVacatures
+          ? "/api/matching/batch-vacatures"
+          : "/api/matching/batch";
+    const body: any = {
       modus: selectedMode,
-      vacature_naam: selectedEmployer,
       force_refresh: true, // Altijd verversen voor nieuwe prompt-aanpassingen
     };
     if (matchType === "individual") {
       body.kandidaat_naam = selectedCandidate;
+      body.vacature_naam = selectedEmployer;
+    } else if (isBatchVacatures) {
+      body.kandidaat_naam = selectedCandidate;
+      body.vacature_namen = Array.from(selectedEmployers);
     } else {
+      body.vacature_naam = selectedEmployer;
       body.kandidaat_namen = Array.from(selectedCandidates);
     }
 
@@ -236,7 +281,8 @@
     } else if (payload.type === "match_start") {
       currentBatchItem = payload.data;
       currentPhase = "kern_analyse";
-      matchResult = `Analyseren: ${payload.data.naam} (${payload.data.index}/${payload.data.total})...\n\n`;
+      const label = batchDirection === "vacatures" ? "vacature" : "kandidaat";
+      matchResult = `Analyseren ${label}: ${payload.data.naam} (${payload.data.index}/${payload.data.total})...\n\n`;
     } else if (payload.type === "token") {
       matchResult += payload.data;
     } else if (payload.type === "match_result") {
@@ -273,11 +319,16 @@
     expectedStappen = [];
     recruiterRating = null;
     ratingHover = null;
+    feedbackCategorieen = [];
   }
 
   function selectBatchDetail(item: any) {
     finalMatchData = item;
-    selectedCandidate = item.naam;
+    if (batchDirection === "vacatures") {
+      selectedEmployer = item.naam;
+    } else {
+      selectedCandidate = item.naam;
+    }
     recruiterRating = null;
     ratingHover = null;
   }
@@ -288,9 +339,27 @@
 
   // --- Feedback ---
   let feedbackTekst = $state("");
+  let feedbackCategorieen: string[] = $state([]);
   let isSubmittingFeedback = $state(false);
   let recruiterRating: number | null = $state(null);
   let ratingHover: number | null = $state(null);
+
+  const FEEDBACK_CHIPS = [
+    "Skills kloppen niet",
+    "Verkeerd senioriteitsniveau",
+    "Cultuur-mismatch",
+    "Betere match dan verwacht",
+    "Ontbrekende ervaring",
+    "Motivatie verkeerd ingeschat",
+  ];
+
+  function toggleChip(chip: string) {
+    if (feedbackCategorieen.includes(chip)) {
+      feedbackCategorieen = feedbackCategorieen.filter((c) => c !== chip);
+    } else {
+      feedbackCategorieen = [...feedbackCategorieen, chip];
+    }
+  }
 
   async function rateMatch(rating: number) {
     recruiterRating = rating;
@@ -314,7 +383,7 @@
   }
 
   async function submitFeedback() {
-    if (!feedbackTekst.trim() && recruiterRating === null) return;
+    if (!feedbackTekst.trim() && feedbackCategorieen.length === 0 && recruiterRating === null) return;
     isSubmittingFeedback = true;
 
     try {
@@ -324,6 +393,7 @@
         body: JSON.stringify({
           match_id: finalMatchData.id,
           feedback_tekst: feedbackTekst,
+          feedback_categorieen: feedbackCategorieen,
           recruiter_rating: recruiterRating,
         }),
       });
@@ -332,6 +402,7 @@
       if (res.ok) {
         toasts.add("Feedback verwerkt! Profiel is verrijkt.", "success");
         feedbackTekst = "";
+        feedbackCategorieen = [];
       } else {
         toasts.add(
           data.message || "Feedback kon niet worden verwerkt.",
@@ -347,8 +418,8 @@
 </script>
 
 <div class="page-hero">
-  <h1>
-    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px;"
+  <h1 style="color: var(--neon-gold);">
+    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-gold);"
       >gps_fixed</span
     >
     Nieuwe Match
@@ -392,37 +463,63 @@
         >
           <button
             class="btn-toggle {matchType === 'individual' ? 'active' : ''}"
+            style={matchType === 'individual' ? 'background: var(--neon-gold); color: #000;' : ''}
             onclick={() => (matchType = "individual")}
             disabled={isMatching}>Individueel</button
           >
           <button
             class="btn-toggle {matchType === 'batch' ? 'active' : ''}"
+            style={matchType === 'batch' ? 'background: var(--neon-gold); color: #000;' : ''}
             onclick={() => (matchType = "batch")}
             disabled={isMatching}>Batch (Allen)</button
           >
         </div>
       </div>
 
-      <div class="input-group">
-        <label class="input-label" for="emp">Vacature / Vraag</label>
-        <select
-          id="emp"
-          class="input-field"
-          bind:value={selectedEmployer}
-          disabled={isMatching}
-        >
-          <option value="">Selecteer vacature...</option>
-          {#each data.employers as e}
-            <option value={e.naam}
-              >{e.naam}{e.profile_score != null
-                ? ` (Score: ${e.profile_score}%)`
-                : ""}</option
+      {#if matchType === "batch"}
+        <div class="input-group" style="margin-bottom: 1.5rem; animation: slideDown 0.3s ease;">
+          <label class="input-label">Batch Richting</label>
+          <div
+            style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; border: 1px solid var(--glass-border);"
+          >
+            <button
+              class="btn-toggle {batchDirection === 'kandidaten' ? 'active' : ''}"
+              style={batchDirection === 'kandidaten' ? 'background: var(--neon-gold); color: #000;' : ''}
+              onclick={() => (batchDirection = "kandidaten")}
+              disabled={isMatching}>Kandidaten</button
             >
-          {/each}
-        </select>
-      </div>
+            <button
+              class="btn-toggle {batchDirection === 'vacatures' ? 'active' : ''}"
+              style={batchDirection === 'vacatures' ? 'background: var(--neon-gold); color: #000;' : ''}
+              onclick={() => (batchDirection = "vacatures")}
+              disabled={isMatching}>Vacatures</button
+            >
+          </div>
+        </div>
+      {/if}
 
-      {#if matchType === "individual"}
+      {#if matchType === "individual" || (matchType === "batch" && batchDirection === "kandidaten")}
+        <div class="input-group">
+          <label class="input-label" for="emp">Vacature / Vraag</label>
+          <select
+            id="emp"
+            class="input-field"
+            bind:value={selectedEmployer}
+            disabled={isMatching}
+          >
+            <option value="">Selecteer vacature...</option>
+            {#each data.employers as e}
+              <option value={e.naam}
+                >{e.naam}{e.profile_score != null
+                  ? ` (Score: ${e.profile_score}%)`
+                  : ""}</option
+              >
+            {/each}
+          </select>
+        </div>
+      {/if}
+
+      {#if matchType === "individual" || (matchType === "batch" && batchDirection === "vacatures")}
         <div class="input-group" style="animation: slideDown 0.3s ease;">
           <label class="input-label" for="cand">Kandidaat</label>
           <select
@@ -441,7 +538,9 @@
             {/each}
           </select>
         </div>
-      {:else}
+      {/if}
+
+      {#if matchType === "batch" && batchDirection === "kandidaten"}
         <div class="input-group" style="animation: slideDown 0.3s ease;">
           <div
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;"
@@ -504,6 +603,69 @@
         </div>
       {/if}
 
+      {#if matchType === "batch" && batchDirection === "vacatures"}
+        <div class="input-group" style="animation: slideDown 0.3s ease;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;"
+          >
+            <label class="input-label" style="margin: 0;"
+              >Selecteer Vacatures</label
+            >
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-text" onclick={selectAllEmployers} disabled={isMatching}
+                >Alles</button
+              >
+              <button
+                class="btn-text"
+                onclick={selectNoneEmployers}
+                disabled={isMatching}>Niets</button
+              >
+            </div>
+          </div>
+
+          <div class="candidate-search-wrapper" style="margin-bottom: 0.5rem;">
+            <div style="position: relative;">
+              <span
+                class="material-icons"
+                style="position: absolute; left: 10px; top: 10px; font-size: 1.1rem; color: var(--text-secondary);"
+                >search</span
+              >
+              <input
+                type="text"
+                class="input-field"
+                style="padding-left: 35px; height: 38px; font-size: 0.85rem;"
+                placeholder="Zoek vacature..."
+                bind:value={batchEmployerSearch}
+              />
+            </div>
+          </div>
+
+          <div class="candidate-select-list">
+            {#each filteredBatchEmployers as e}
+              <label
+                class="candidate-select-item"
+                class:selected={selectedEmployers.has(e.naam)}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedEmployers.has(e.naam)}
+                  onchange={() => toggleEmployer(e.naam)}
+                  disabled={isMatching}
+                />
+                <span class="cand-details">
+                  <span class="cand-name">{e.naam}</span>
+                  <span class="cand-score"
+                    >{e.profile_score != null
+                      ? `${e.profile_score}%`
+                      : "—"}</span
+                  >
+                </span>
+              </label>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
       <div class="input-group" style="margin-bottom: 2rem;">
         <label class="input-label" for="mode">Matching Modus</label>
         <select
@@ -520,21 +682,21 @@
 
       <button
         class="btn-primary"
-        style="width: 100%;"
+        style="width: 100%; border-color: var(--neon-gold); color: var(--neon-gold); background: rgba(255, 171, 0, 0.1);"
         onclick={startMatch}
         disabled={isMatching}
       >
         {#if isMatching}
           <span
             class="material-icons spin"
-            style="vertical-align: middle; font-size: 1.1rem;">sync</span
+            style="vertical-align: middle; font-size: 1.1rem; color: var(--neon-gold);">sync</span
           >
-          {matchType === "individual" ? "Analyseren..." : "Batch Analyseren..."}
+          {matchType === "individual" ? "Analyseren..." : `Batch Analyseren (${batchDirection})...`}
         {:else}
-          <span class="material-icons" style="vertical-align: middle;"
+          <span class="material-icons" style="vertical-align: middle; color: var(--neon-gold);"
             >play_arrow</span
           >
-          {matchType === "individual" ? "Start Match" : "Start Batch Match"}
+          {matchType === "individual" ? "Start Match" : `Start Batch Match (${batchDirection})`}
         {/if}
       </button>
     </div>
@@ -631,7 +793,7 @@
       <h3 class="section-title" style="margin: 0;">
         <span class="material-icons" style="color: var(--neon-cyan);">list</span
         >
-        Batch Resultaten: {selectedEmployer}
+        Batch Resultaten: {batchDirection === "vacatures" ? selectedCandidate : selectedEmployer}
       </h3>
       <button class="btn-secondary" onclick={resetMatch}>Nieuwe Match</button>
     </div>
@@ -661,7 +823,7 @@
                   {res.naam}
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                  {res.kernrol || "Kandidaat"}
+                  {res.vacature_titel || res.kernrol || (batchDirection === "vacatures" ? "Vacature" : "Kandidaat")}
                 </div>
               </div>
             </div>
@@ -931,23 +1093,6 @@
     </div>
   {/if}
 
-  <!-- Aandachtspunten -->
-  {#if finalMatchData.aandachtspunten?.length}
-    <div class="card">
-      <h3 class="section-title">
-        <span class="material-icons" style="color: var(--neon-pink);"
-          >priority_high</span
-        >
-        Aandachtspunten
-      </h3>
-      <ul class="result-list result-list-neutral">
-        {#each finalMatchData.aandachtspunten as punt}
-          <li>{punt}</li>
-        {/each}
-      </ul>
-    </div>
-  {/if}
-
   <!-- Match Feedback Loop -->
   <div class="card feedback-card">
     <h3 class="section-title">
@@ -1000,6 +1145,18 @@
         >{selectedCandidate}</strong
       > direct te verbeteren.
     </p>
+    <div class="feedback-chips">
+      {#each FEEDBACK_CHIPS as chip}
+        <button
+          class="feedback-chip"
+          class:chip-active={feedbackCategorieen.includes(chip)}
+          onclick={() => toggleChip(chip)}
+          disabled={isSubmittingFeedback}
+        >
+          {chip}
+        </button>
+      {/each}
+    </div>
     <div class="feedback-input-wrapper">
       <textarea
         placeholder="Bijv: 'De kandidaat heeft ook veel ervaring met React, wat niet in het CV stond.' of 'Deze persoon is minder senior voor deze rol dan de AI denkt.'"
@@ -1011,7 +1168,7 @@
         class="btn-primary"
         style="margin-top: 0.75rem; width: 100%;"
         onclick={submitFeedback}
-        disabled={isSubmittingFeedback || !feedbackTekst.trim()}
+        disabled={isSubmittingFeedback || (!feedbackTekst.trim() && feedbackCategorieen.length === 0)}
       >
         {#if isSubmittingFeedback}
           <span
@@ -1127,10 +1284,10 @@
     transition: all 0.4s ease;
   }
   .step-active .step-circle {
-    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
+    background: linear-gradient(135deg, var(--neon-gold), #FFAB00);
     border-color: transparent;
     color: #0a0e18;
-    box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+    box-shadow: 0 0 15px rgba(255, 171, 0, 0.3);
   }
   .step-current .step-circle {
     animation: stepPulse 2s ease infinite;
@@ -1152,16 +1309,16 @@
     transition: background 0.5s;
   }
   .step-line-active {
-    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-blue));
-    box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+    background: linear-gradient(90deg, var(--neon-gold), #FFAB00);
+    box-shadow: 0 0 8px rgba(255, 171, 0, 0.2);
   }
   @keyframes stepPulse {
     0%,
     100% {
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+      box-shadow: 0 0 15px rgba(255, 171, 0, 0.3);
     }
     50% {
-      box-shadow: 0 0 25px rgba(0, 229, 255, 0.6);
+      box-shadow: 0 0 25px rgba(255, 171, 0, 0.6);
     }
   }
 
@@ -1303,14 +1460,14 @@
     transition: all 0.2s;
   }
   .btn-toggle.active {
-    background: var(--neon-cyan);
+    background: var(--neon-gold);
     color: #0a0e18;
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    box-shadow: 0 0 10px rgba(255, 171, 0, 0.4);
   }
 
   .batch-item:hover {
-    border-color: var(--neon-cyan) !important;
-    background: rgba(0, 229, 255, 0.05) !important;
+    border-color: var(--neon-gold) !important;
+    background: rgba(255, 171, 0, 0.05) !important;
     transform: translateX(5px);
   }
 
@@ -1342,7 +1499,7 @@
   }
   .btn-icon-secondary:hover {
     background: var(--surface-3);
-    border-color: var(--neon-cyan);
+    border-color: var(--neon-gold);
   }
 
   .candidate-select-list {
@@ -1374,8 +1531,8 @@
   }
 
   .candidate-select-item.selected {
-    background: rgba(0, 229, 255, 0.08);
-    border-color: rgba(0, 229, 255, 0.2);
+    background: rgba(255, 171, 0, 0.08);
+    border-color: rgba(255, 171, 0, 0.2);
   }
 
   .cand-details {
@@ -1401,7 +1558,7 @@
   .btn-text {
     background: transparent;
     border: none;
-    color: var(--neon-cyan);
+    color: var(--neon-gold);
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -1431,9 +1588,9 @@
     font-size: 0.8rem;
     font-weight: 600;
     font-family: "JetBrains Mono", monospace;
-    color: var(--neon-cyan);
-    background: rgba(0, 229, 255, 0.08);
-    border: 1px solid rgba(0, 229, 255, 0.2);
+    color: var(--neon-gold);
+    background: rgba(255, 171, 0, 0.08);
+    border: 1px solid rgba(255, 171, 0, 0.2);
     padding: 2px 10px;
     border-radius: 12px;
   }
@@ -1468,7 +1625,7 @@
   }
 
   .phase-active .phase-icon {
-    color: var(--neon-cyan);
+    color: var(--neon-gold);
     opacity: 1;
     animation: phasePulse 1.5s ease infinite;
   }
@@ -1487,7 +1644,7 @@
   }
 
   .phase-active .phase-label {
-    color: var(--neon-cyan);
+    color: var(--neon-gold);
     opacity: 1;
     font-weight: 600;
   }
@@ -1584,5 +1741,42 @@
 
   .star-btn.active {
     color: var(--neon-gold, #ffab00);
+  }
+
+  .feedback-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .feedback-chip {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .feedback-chip:hover {
+    border-color: var(--neon-gold);
+    color: var(--text-primary);
+    background: rgba(255, 171, 0, 0.05);
+  }
+
+  .feedback-chip.chip-active {
+    border-color: var(--neon-gold);
+    background: rgba(255, 171, 0, 0.15);
+    color: var(--neon-gold);
+    font-weight: 600;
+  }
+
+  .feedback-chip:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

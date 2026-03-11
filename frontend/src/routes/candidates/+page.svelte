@@ -2,6 +2,7 @@
   import type { PageData } from "./$types";
   import { toasts } from "$lib/toast";
   import DossierCompleetheidEnrichment from "$lib/components/DossierCompleetheidEnrichment.svelte";
+  import { goto } from "$app/navigation";
 
   let { data } = $props<{ data: PageData }>();
 
@@ -11,15 +12,13 @@
   let searchQuery = $state("");
   let sortOption = $state("alpha-asc");
   let filterProfile = $state("all");
-  let generatingNames: Set<string> = $state(new Set());
   let confirmingDelete: string | null = $state(null);
   let expandedName: string | null = $state(null);
-  let editingName: string | null = $state(null);
+  let isLoadingDetail = $state(false);
+  let editingName = $state("");
   let editJson = $state("");
   let isSaving = $state(false);
   let detailCache: Record<string, any> = $state({});
-  let taskDetails: Record<string, { progress: string; percent: number }> =
-    $state({});
 
   let filteredCandidates = $derived(
     (() => {
@@ -46,12 +45,13 @@
   async function toggleDetail(name: string) {
     if (expandedName === name) {
       expandedName = null;
-      editingName = null;
+      editingName = "";
       return;
     }
     expandedName = name;
-    editingName = null;
+    editingName = "";
     if (!detailCache[name]) {
+      isLoadingDetail = true;
       try {
         const res = await fetch(`/api/candidates/${encodeURIComponent(name)}`);
         if (res.ok) {
@@ -59,6 +59,8 @@
         }
       } catch {
         toasts.add("Kon details niet ophalen", "error");
+      } finally {
+        isLoadingDetail = false;
       }
     }
   }
@@ -74,7 +76,7 @@
   }
 
   function cancelEditing() {
-    editingName = null;
+    editingName = "";
     editJson = "";
   }
 
@@ -97,7 +99,7 @@
           profile_data: parsed,
           has_profile: true,
         };
-        editingName = null;
+        editingName = "";
         await refreshCandidates();
       } else {
         toasts.add("Fout bij opslaan profiel", "error");
@@ -149,84 +151,6 @@
     candidates = await res.json();
   }
 
-  async function generateProfile(name: string) {
-    generatingNames = new Set([...generatingNames, name]);
-    try {
-      const res = await fetch(
-        `/api/candidates/${encodeURIComponent(name)}/generate-profile`,
-        { method: "POST" },
-      );
-      if (!res.ok) {
-        toasts.add("Fout bij starten generatie", "error");
-        return;
-      }
-      const responseData = await res.json();
-      const taskId = responseData.task_id;
-      toasts.add(`Profiel generatie gestart voor "${name}"`, "info");
-
-      const poll = setInterval(async () => {
-        const taskRes = await fetch(`/api/tasks/${taskId}`);
-        if (!taskRes.ok) return;
-        const taskData = await taskRes.json();
-
-        // Update task details for visual feedback
-        taskDetails[name] = {
-          progress: taskData.progress || "In behandeling...",
-          percent: taskData.progress_percent || 0,
-        };
-
-        if (taskData.status === "done" || taskData.status === "failed") {
-          clearInterval(poll);
-          generatingNames = new Set(
-            [...generatingNames].filter((n) => n !== name),
-          );
-          delete taskDetails[name];
-
-          if (taskData.status === "failed") {
-            toasts.add(
-              `Generatie mislukt: ${taskData.error || "Onbekende fout"}`,
-              "error",
-            );
-            return;
-          }
-
-          const data = await fetch("/api/candidates/").then((r) => r.json());
-          candidates = data;
-          delete detailCache[name];
-
-          // Herlaad detail als het panel open staat
-          if (expandedName === name) {
-            try {
-              const res = await fetch(
-                `/api/candidates/${encodeURIComponent(name)}`,
-              );
-              if (res.ok) {
-                detailCache[name] = await res.json();
-              }
-            } catch {}
-          }
-          toasts.add(`Profiel voor "${name}" is klaar!`, "success");
-        }
-      }, 3000);
-      setTimeout(() => {
-        clearInterval(poll);
-        if (generatingNames.has(name)) {
-          generatingNames = new Set(
-            [...generatingNames].filter((n) => n !== name),
-          );
-          toasts.add(
-            `Time-out bij generatie van "${name}". Probeer opnieuw.`,
-            "warning",
-          );
-        }
-      }, 300000);
-    } catch {
-      toasts.add("Fout bij starten generatie", "error");
-      generatingNames = new Set([...generatingNames].filter((n) => n !== name));
-      delete taskDetails[name];
-    }
-  }
-
   function renderValue(val: any): string {
     if (val === null || val === undefined) return "—";
     if (Array.isArray(val)) return val.join(", ");
@@ -238,8 +162,8 @@
 </script>
 
 <div class="page-hero">
-  <h1>
-    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px;"
+  <h1 style="color: var(--neon-blue);">
+    <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-blue);"
       >group</span
     > Kandidaten Beheren
   </h1>
@@ -261,16 +185,16 @@
       bind:value={newCandidateName}
       onkeydown={(e) => e.key === "Enter" && createCandidate()}
     />
-    <button class="btn-primary" onclick={createCandidate} disabled={isCreating}>
+    <button class="btn-primary" style="border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 132, 255, 0.1);" onclick={createCandidate} disabled={isCreating}>
       {#if isCreating}
         <span
           class="material-icons spin"
-          style="font-size: 1rem; vertical-align: middle;">autorenew</span
+          style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);">autorenew</span
         > Bezig...
       {:else}
         <span
           class="material-icons"
-          style="font-size: 1rem; vertical-align: middle;">add</span
+          style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);">add</span
         > Aanmaken
       {/if}
     </button>
@@ -405,30 +329,6 @@
                   : "details te bekijken"}
               </span>
             </div>
-            {#if generatingNames.has(candidate.naam) && taskDetails[candidate.naam]}
-              <div style="margin-top: 1rem; margin-left: 1.6rem;">
-                <div
-                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"
-                >
-                  <span
-                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 500;"
-                  >
-                    {taskDetails[candidate.naam].progress}
-                  </span>
-                  <span
-                    style="font-size: 0.75rem; color: var(--neon-cyan); font-weight: 600;"
-                  >
-                    {taskDetails[candidate.naam].percent}%
-                  </span>
-                </div>
-                <div class="progress-bar" style="height: 4px;">
-                  <div
-                    class="progress-bar-fill"
-                    style="width: {taskDetails[candidate.naam].percent}%;"
-                  ></div>
-                </div>
-              </div>
-            {/if}
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
             {#if confirmingDelete === candidate.naam}
@@ -446,22 +346,14 @@
             {:else}
               <button
                 class="btn-primary"
-                onclick={() => generateProfile(candidate.naam)}
-                disabled={generatingNames.has(candidate.naam)}
+                style="border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 132, 255, 0.1);"
+                onclick={() => goto(`/generator?type=candidates&name=${encodeURIComponent(candidate.naam)}`)}
               >
-                {#if generatingNames.has(candidate.naam)}
-                  <span
-                    class="material-icons spin"
-                    style="font-size: 1rem; vertical-align: middle;"
-                    >autorenew</span
-                  > Bezig...
-                {:else}
-                  <span
-                    class="material-icons"
-                    style="font-size: 1rem; vertical-align: middle;"
-                    >auto_awesome</span
-                  > Genereer
-                {/if}
+                <span
+                  class="material-icons"
+                  style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);"
+                  >auto_awesome</span
+                > Verrijk profiel
               </button>
               <button
                 class="btn-icon-danger"
@@ -500,9 +392,15 @@
                   style="font-size: 2rem; opacity: 0.3;">description</span
                 >
                 <p style="margin-top: 0.5rem; font-size: 0.85rem;">
-                  Nog geen profiel gegenereerd. Klik op "Genereer" om een
-                  profiel aan te maken.
+                  Nog geen profiel gegenereerd.
                 </p>
+                <button
+                  class="btn-primary"
+                  style="margin-top: 1rem; border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 132, 255, 0.1);"
+                  onclick={() => goto(`/generator?type=candidates&name=${encodeURIComponent(candidate.naam)}`)}
+                >
+                  <span class="material-icons" style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);">auto_awesome</span> Profiel Genereren
+                </button>
               </div>
             {:else}
               <div
@@ -538,6 +436,15 @@
                     <span class="material-icons" style="font-size: 0.9rem;"
                       >edit</span
                     > Bewerken
+                  </button>
+                  <button
+                    class="btn-edit"
+                    style="border-color: var(--neon-blue); color: var(--neon-blue);"
+                    onclick={() => goto(`/generator?type=candidates&name=${encodeURIComponent(candidate.naam)}`)}
+                  >
+                    <span class="material-icons" style="font-size: 0.9rem;"
+                      >auto_awesome</span
+                    > Opnieuw genereren
                   </button>
                 {/if}
               </div>
@@ -607,10 +514,9 @@
                   </tbody>
                 </table>
 
-                {#if (detail.vervolgvragen?.length > 0 || detail.cultuur_vragen?.length > 0 || detail.stellingen?.length > 0) && editingName !== candidate.naam}
+                {#if (detail.vervolgvragen?.length > 0 || detail.stellingen?.length > 0) && editingName !== candidate.naam}
                   <DossierCompleetheidEnrichment
                     questions={detail.vervolgvragen}
-                    cultuurQuestions={detail.cultuur_vragen}
                     stellingen={detail.stellingen}
                     name={candidate.naam}
                     docType="candidates"
@@ -620,7 +526,6 @@
                         profile_data: result.profiel,
                         profile_score: result.nieuwe_score,
                         vervolgvragen: result.vervolgvragen,
-                        cultuur_vragen: result.cultuur_vragen,
                         stellingen: result.stellingen,
                       };
                       // Update the main list as well

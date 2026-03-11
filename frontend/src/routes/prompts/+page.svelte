@@ -32,14 +32,14 @@
 </script>
 
 <div class="page-container">
-  <header class="page-header">
+  <header class="page-header" style="border-color: rgba(255, 157, 0, 0.2);">
     <div class="header-content">
-      <h1 class="page-title">Prompts & Openheid</h1>
+      <h1 class="page-title" style="background: linear-gradient(135deg, #fff 0%, #ff9d00 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Prompts & Openheid</h1>
       <p class="page-subtitle">
         Transparantie over hoe onze AI-agents denken en matchen.
       </p>
     </div>
-    <div class="header-badge">
+    <div class="header-badge" style="border-color: #ff9d00; color: #ff9d00;">
       <span class="material-icons">visibility</span>
       Open Source Ethos
     </div>
@@ -254,7 +254,7 @@
 
   .prompt-card:hover {
     transform: translateY(-4px);
-    border-color: var(--neon-cyan);
+    border-color: #ff9d00;
   }
 
   .prompt-card.wide {
@@ -266,7 +266,7 @@
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 1rem;
-    color: var(--neon-cyan);
+    color: #ff9d00;
   }
 
   .card-header h2 {
@@ -331,7 +331,7 @@
   }
 
   .model-tag {
-    color: var(--neon-cyan);
+    color: #ff9d00;
     font-family: "Fira Code", monospace;
   }
 

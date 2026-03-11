@@ -116,6 +116,10 @@ Geef je uitgebreide analyse in exact deze JSON-opmaak:
 # Backwards compat alias
 MATCH_PROMPT = KERN_MATCH_PROMPT
 
+# --- Anthropic (Claude) ---
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
+
 # --- Prompts voor Profiel-extractie ---
 _PERSPECTIEF_KANDIDAAT = """Vanuit de KANDIDAAT:
 1. ZIJN — Wie IS deze persoon? Werkstijl, karakter, samenwerking, omgang met druk.

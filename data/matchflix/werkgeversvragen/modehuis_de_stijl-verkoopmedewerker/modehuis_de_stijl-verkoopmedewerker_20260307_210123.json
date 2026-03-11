@@ -1,0 +1,25 @@
+{
+  "titel": "Verkoopmedewerker Kleding",
+  "organisatie": "Modehuis De Stijl",
+  "kernrol": "Klanten adviseren, kassa draaien, winkel netjes houden",
+  "domeinen": [
+    "verkoop",
+    "klantenservice",
+    "winkelbeheer"
+  ],
+  "must_have_skills": [
+    "klantgerichtheid",
+    "kassabediening",
+    "winkelhygiëne"
+  ],
+  "nice_to_have_skills": [],
+  "min_ervaring": 0,
+  "senioriteit": "junior",
+  "opleiding_eis": {
+    "niveau": "geen eis",
+    "richtingen": []
+  },
+  "talen": [
+    "nederlands"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "titel": "Objectbeveiliger",
+  "organisatie": "Beveiliging 123 B.V.",
+  "kernrol": "Beveiliging en toezicht op objecten",
+  "domeinen": [
+    "beveiliging",
+    "veiligheid"
+  ],
+  "must_have_skills": [
+    "Diploma Beveiliger 2 (MBO-2)",
+    "Onbesproken gedrag",
+    "Screening Politie verreist",
+    "Standvastig en representatief"
+  ],
+  "nice_to_have_skills": [],
+  "min_ervaring": 0,
+  "senioriteit": "medior",
+  "opleiding_eis": {
+    "niveau": "MBO",
+    "richtingen": [
+      "Beveiliger"
+    ]
+  },
+  "talen": []
+}

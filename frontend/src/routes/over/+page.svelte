@@ -6,7 +6,7 @@
   class="page-hero"
   style="text-align: center; border-bottom: none; margin-bottom: 3rem; margin-top: 2rem;"
 >
-  <h1 style="font-size: 3.5rem; letter-spacing: 4px; display: inline-block;">
+  <h1 style="font-size: 3.5rem; letter-spacing: 4px; display: inline-block; color: var(--text-primary);">
     <span
       style="color: var(--neon-cyan); text-shadow: 0 0 20px rgba(0,229,255,0.4);"
       >MATCH</span

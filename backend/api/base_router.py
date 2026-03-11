@@ -238,11 +238,15 @@ def create_document_router(
         os.remove(pad)
         return {"message": "Verwijderd"}
 
-    async def _generate_profile_task(map_pad: str, task_id: str, skip_pii: bool = False):
+    async def _generate_profile_task(map_pad: str, task_id: str, skip_pii: bool = False, direct_text: str | None = None, provider_type: str = "local"):
         await update_task_db(task_id, status="running", progress="Starten...", progress_percent=5)
         try:
-            from fastapi.concurrency import run_in_threadpool
-            gecombineerde_tekst, waarschuwingen = await run_in_threadpool(extract_text_sync, map_pad)
+            if direct_text:
+                gecombineerde_tekst = direct_text
+                waarschuwingen = []
+            else:
+                from fastapi.concurrency import run_in_threadpool
+                gecombineerde_tekst, waarschuwingen = await run_in_threadpool(extract_text_sync, map_pad)
 
             schone_tekst = gecombineerde_tekst.strip()
             inhoud = "\n".join(
@@ -311,7 +315,7 @@ def create_document_router(
             ticker_task = asyncio.create_task(_progress_ticker())
             try:
                 resultaat = await asyncio.wait_for(
-                    profiel_agent_fn(geschoonde_tekst),
+                    profiel_agent_fn(geschoonde_tekst, provider_type=provider_type),
                     timeout=600
                 )
             except asyncio.TimeoutError:
@@ -517,6 +521,65 @@ def create_document_router(
             "message": f"Bulk import gestart voor {import_count} items.",
             "task_ids": tasks
         }
+
+    class GenerateFromTextRequest(PydanticBaseModel):
+        tekst: str
+        provider_type: str = "local"
+
+    class ExtractTextRequest(PydanticBaseModel):
+        filenames: list[str]
+
+    @router.post("/{name}/generate-from-text")
+    async def generate_from_text(name: str, req: GenerateFromTextRequest, background_tasks: BackgroundTasks):
+        """Genereer een volledig nieuw profiel vanuit geschoonde tekst."""
+        base_dir = get_base_dir()
+        doel_pad = os.path.join(base_dir, name)
+        if not os.path.exists(doel_pad):
+            os.makedirs(doel_pad, exist_ok=True)
+
+        task_id = maak_task("profile_generation", name)
+        background_tasks.add_task(
+            _generate_profile_task, doel_pad, task_id,
+            skip_pii=True, direct_text=req.tekst, provider_type=req.provider_type
+        )
+        return {"message": "Profiel generatie gestart.", "task_id": task_id}
+
+    @router.post("/{name}/enrich-from-text")
+    async def enrich_from_text(name: str, req: GenerateFromTextRequest, background_tasks: BackgroundTasks):
+        """Voeg nieuwe tekst toe aan een bestaand profiel en regenereer."""
+        base_dir = get_base_dir()
+        doel_pad = os.path.join(base_dir, name)
+        
+        doc = await haal_document(name)
+        if not doc or not doc.get("profiel_dict"):
+            raise HTTPException(status_code=400, detail="Geen bestaand profiel om te verrijken.")
+            
+        task_id = maak_task("profile_enrichment", name)
+        
+        async def _enrich_task():
+            await update_task_db(task_id, status="running", progress="Profiel verrijken met nieuwe data...", progress_percent=10)
+            
+            # Combineer bestaande ruwe tekst met nieuwe tekst
+            bestaande_tekst = doc.get("ruwe_tekst", "")
+            gecombineerde_tekst = f"{bestaande_tekst}\n\n--- Toegevoegde informatie ---\n\n{req.tekst}"
+            
+            # Gebruik de bestaande generatie logic maar met de gecombineerde tekst
+            await _generate_profile_task(doel_pad, task_id, skip_pii=True, direct_text=gecombineerde_tekst, provider_type=req.provider_type)
+
+        background_tasks.add_task(_enrich_task)
+        return {"message": "Profiel verrijking gestart.", "task_id": task_id}
+
+    @router.post("/{name}/extract-text")
+    async def extract_item_text(name: str, req: ExtractTextRequest):
+        """Haal tekst op uit specifieke documenten in een dossier."""
+        base_dir = get_base_dir()
+        pad = os.path.join(base_dir, name)
+        if not os.path.exists(pad):
+            raise HTTPException(status_code=404, detail="Dossier niet gevonden.")
+        
+        from fastapi.concurrency import run_in_threadpool
+        tekst, waarschuwingen = await run_in_threadpool(extract_text_sync, pad, req.filenames)
+        return {"tekst": tekst, "waarschuwingen": waarschuwingen}
 
     return router
 

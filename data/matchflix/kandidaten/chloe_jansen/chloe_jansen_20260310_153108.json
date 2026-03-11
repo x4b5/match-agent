@@ -1,0 +1,83 @@
+{
+  "naam": "Chloë Jansen",
+  "kernrol": "Orderpicker in supermarkt distributie",
+  "gedrag": {
+    "openheid": {
+      "score": 3,
+      "toelichting": "Ze is open voor nieuwe technologieën en efficiëntie, maar er is weinig informatie over creativiteit of interesse voor nieuwe ideeën."
+    },
+    "conscientieusheid": {
+      "score": 5,
+      "toelichting": "Ze is nauwkeurig, verantwoordelijk en doelgericht, met een sterke focus op zekerheid in haar werkprocessen."
+    },
+    "extraversie": {
+      "score": 3,
+      "toelichting": "Ze is doelgericht en zelfstandig, maar er is weinig informatie over sociale interactie of energie in sociale situaties."
+    },
+    "vriendelijkheid": {
+      "score": 4,
+      "toelichting": "Ze is behulpzaam en heeft een voorkeur voor interactie met collega's en klanten, wat wijst op een mate van samenwerking en empathie."
+    },
+    "neuroticisme": {
+      "score": 2,
+      "toelichting": "Ze heeft een stabiele werkomgeving en zekerheid in haar werkprocessen, wat wijst op een lage gevoeligheid voor stress."
+    }
+  },
+  "leervermogen": {
+    "mental_agility": {
+      "score": 4,
+      "toelichting": "Ze heeft een vermogen om snel te leren en zich aan te passen, met een drijfveer om efficiëntie te verhogen en nieuwe technologieën te leren gebruiken."
+    },
+    "people_agility": {
+      "score": 4,
+      "toelichting": "Ze is in staat om samen te werken en interactie te hebben met collega's en klanten, wat wijst op een mate van empathie en effectieve communicatie."
+    },
+    "change_agility": {
+      "score": 4,
+      "toelichting": "Ze heeft een capaciteit om zich aan te passen en nieuwe technologieën te leren, wat wijst op flexibiliteit in onzekerheid."
+    },
+    "results_agility": {
+      "score": 5,
+      "toelichting": "Ze heeft een sterke focus op zekerheid in haar werkprocessen en kan onder druk presteren, met een drijfveer om haar pick-rate te verbeteren."
+    },
+    "self_awareness": {
+      "score": 4,
+      "toelichting": "Ze heeft een duidelijke onderliggende motivatie en weet wat haar ideale werkdag is, wat wijst op een mate van zelfinzicht en kennis van haar sterktes en zwaktes."
+    }
+  },
+  "vaardigheden": [
+    "pakketten scannen",
+    "rolcontainers vullen",
+    "orderpicking",
+    "klantcontact"
+  ],
+  "beschikbaarheid_en_locatie": "Niet genoemd in de tekst",
+  "opleiding_en_ervaring_samenvatting": "VMBO-Kader afgerond, ervaring als orderpicker in supermarkt distributie (2023-2025). Daarnaast heb ik ervaring met klantcontact in een winkel.",
+  "verrassende_functies": [
+    "Klantenservice",
+    "Logistiek medewerker met klantcontact",
+    "Trainingsteamlid"
+  ],
+  "dossier_compleetheid": 85,
+  "aandachtspunten": [],
+  "vervolgvragen": [
+    "Wat is je beschikbaarheid en voorkeur voor locatie?",
+    "Heb je ervaring met specifieke logistieke systemen of software?",
+    "Wat is jouw voorkeur voor werkuren en werkomgeving?",
+    "Wat is jouw ideale balans tussen zelfstandig werken en samenwerking?",
+    "Heb je interesse in rollen waarin je ook interactie kunt hebben met klanten of collega's?"
+  ],
+  "stellingen": [
+    "Ik ben doelgericht en verantwoordelijk in mijn werkprocessen.",
+    "Ik heb een sterke focus op nauwkeurigheid en efficiëntie.",
+    "Ik ben open voor nieuwe technologieën en wil leren groeien.",
+    "Ik ben in staat om onder druk te presteren en mijn werk te leveren met zekerheid.",
+    "Ik ben geïnteresseerd in rollen waarin ik ook interactie kan hebben met anderen."
+  ],
+  "cultuur_vragen": [
+    "Wat is jouw ideale werkomgeving? Wat is belangrijk voor je in een werkplek?",
+    "Heb je ervaring met werken in een team of met klanten?",
+    "Wat is jouw voorkeur voor een werkdag met duidelijke doelen en een stabiele omgeving?"
+  ],
+  "last_generated": "2026-03-10T15:31:08.499397"
+}

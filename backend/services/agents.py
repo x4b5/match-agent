@@ -48,14 +48,14 @@ async def genereer_embeddings_batch(teksten: list[str]) -> list[list[float] | No
     return await asyncio.gather(*tasks)
 
 
-async def profileer_kandidaat(tekst: str) -> dict:
+async def profileer_kandidaat(tekst: str, provider_type: str = "local") -> dict:
     prompt = PROFIEL_KANDIDAAT_PROMPT.format(tekst=tekst)
-    result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1, num_predict=4096)
+    result = await get_provider(provider_type).generate_json(PROFIEL_MODEL, prompt, schema=KandidaatProfiel, temperature=0.1, num_predict=4096)
     return result.model_dump() if hasattr(result, "model_dump") else result
 
-async def profileer_werkgeversvraag(tekst: str) -> dict:
+async def profileer_werkgeversvraag(tekst: str, provider_type: str = "local") -> dict:
     prompt = PROFIEL_WERKGEVERSVRAAG_PROMPT.format(tekst=tekst)
-    result = await get_provider().generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1, num_predict=4096)
+    result = await get_provider(provider_type).generate_json(PROFIEL_MODEL, prompt, schema=WerkgeversvraagProfiel, temperature=0.1, num_predict=4096)
     return result.model_dump() if hasattr(result, "model_dump") else result
 
 async def verrijk_kandidaat_profiel(profiel_json: str, antwoorden_json: str, ruwe_tekst: str) -> dict:
@@ -222,17 +222,20 @@ async def match_kandidaat_stream(cv_tekst: str, vacature_tekst: str, modus: str 
     yield {"type": "result", "data": kern_result}
 
 
-def extract_text_sync(map_pad: str) -> tuple[str, list[str]]:
+def extract_text_sync(map_pad: str, filenames: list[str] | None = None) -> tuple[str, list[str]]:
     """Synchronous file IO block for reading documents, run via executor in FastAPI"""
     if not os.path.isdir(map_pad):
         return "", [f"{map_pad} is geen geldige map."]
 
     gecombineerde_tekst = ""
     waarschuwingen = []
-
-    baseless_bestanden = os.listdir(map_pad)
     tekst_extensies = (".txt", ".text", ".md", ".markdown", ".csv", ".eml", ".json", ".log", ".rtf")
-    verwerkbare_bestanden = [f for f in baseless_bestanden if f.lower().endswith(tekst_extensies) or f.lower().endswith(".docx") or f.lower().endswith(".pdf")]
+
+    if filenames:
+        verwerkbare_bestanden = [f for f in filenames if os.path.join(map_pad, f)]
+    else:
+        baseless_bestanden = os.listdir(map_pad)
+        verwerkbare_bestanden = [f for f in baseless_bestanden if f.lower().endswith(tekst_extensies) or f.lower().endswith(".docx") or f.lower().endswith(".pdf")]
 
     for doc in sorted(verwerkbare_bestanden):
         pad = os.path.join(map_pad, doc)
