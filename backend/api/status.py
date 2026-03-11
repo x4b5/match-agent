@@ -22,6 +22,7 @@ async def get_prompts():
         "MATCH_MODI": config.MATCH_MODI,
         "GLOBAL_MODELS": {
             "OLLAMA_MODEL": config.OLLAMA_MODEL,
+            "CLAUDE_MODEL": config.CLAUDE_MODEL,
             "PROFIEL_MODEL": config.PROFIEL_MODEL,
             "EMBEDDING_MODEL": config.EMBEDDING_MODEL
         },

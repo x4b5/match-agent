@@ -8,6 +8,7 @@
   let selectedCandidate = $state(data.candidates?.[0]?.naam || "");
   let selectedEmployer = $state(data.employers?.[0]?.naam || "");
   let selectedMode = $state("quick_scan");
+  let provider = $state("local");
   let matchType = $state("individual"); // 'individual' or 'batch'
   let batchDirection = $state("kandidaten"); // 'kandidaten' or 'vacatures'
   let selectedCandidates: Set<string> = $state(
@@ -196,6 +197,7 @@
     const body: any = {
       modus: selectedMode,
       force_refresh: true, // Altijd verversen voor nieuwe prompt-aanpassingen
+      provider_type: provider,
     };
     if (matchType === "individual") {
       body.kandidaat_naam = selectedCandidate;
@@ -422,7 +424,7 @@
     <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-gold);"
       >gps_fixed</span
     >
-    Nieuwe Match
+    Matchen
   </h1>
   <p>Selecteer configuratie om de AI screening te starten.</p>
 </div>
@@ -458,18 +460,16 @@
 
       <div class="input-group" style="margin-bottom: 1.5rem;">
         <label class="input-label">Type Match</label>
-        <div
-          style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; border: 1px solid var(--glass-border);"
-        >
+        <div class="toggle-group">
           <button
-            class="btn-toggle {matchType === 'individual' ? 'active' : ''}"
-            style={matchType === 'individual' ? 'background: var(--neon-gold); color: #000;' : ''}
+            class="btn-toggle"
+            class:active={matchType === 'individual'}
             onclick={() => (matchType = "individual")}
             disabled={isMatching}>Individueel</button
           >
           <button
-            class="btn-toggle {matchType === 'batch' ? 'active' : ''}"
-            style={matchType === 'batch' ? 'background: var(--neon-gold); color: #000;' : ''}
+            class="btn-toggle"
+            class:active={matchType === 'batch'}
             onclick={() => (matchType = "batch")}
             disabled={isMatching}>Batch (Allen)</button
           >
@@ -479,18 +479,16 @@
       {#if matchType === "batch"}
         <div class="input-group" style="margin-bottom: 1.5rem; animation: slideDown 0.3s ease;">
           <label class="input-label">Batch Richting</label>
-          <div
-            style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; border: 1px solid var(--glass-border);"
-          >
+          <div class="toggle-group">
             <button
-              class="btn-toggle {batchDirection === 'kandidaten' ? 'active' : ''}"
-              style={batchDirection === 'kandidaten' ? 'background: var(--neon-gold); color: #000;' : ''}
+              class="btn-toggle"
+              class:active={batchDirection === 'kandidaten'}
               onclick={() => (batchDirection = "kandidaten")}
               disabled={isMatching}>Kandidaten</button
             >
             <button
-              class="btn-toggle {batchDirection === 'vacatures' ? 'active' : ''}"
-              style={batchDirection === 'vacatures' ? 'background: var(--neon-gold); color: #000;' : ''}
+              class="btn-toggle"
+              class:active={batchDirection === 'vacatures'}
               onclick={() => (batchDirection = "vacatures")}
               disabled={isMatching}>Vacatures</button
             >
@@ -666,7 +664,7 @@
         </div>
       {/if}
 
-      <div class="input-group" style="margin-bottom: 2rem;">
+      <div class="input-group" style="margin-bottom: 1.5rem;">
         <label class="input-label" for="mode">Matching Modus</label>
         <select
           id="mode"
@@ -680,22 +678,53 @@
         </select>
       </div>
 
+      <div class="input-group" style="margin-bottom: 2rem;">
+        <label class="input-label">AI Model</label>
+        <div class="provider-selection">
+          <div
+            class="provider-card"
+            class:active={provider === 'local'}
+            onclick={() => (provider = "local")}
+            role="presentation"
+          >
+            <div class="provider-info">
+              <span class="material-icons">memory</span>
+              <div class="provider-text">
+                <span class="provider-name">Lokaal (Ollama)</span>
+                <span class="provider-desc">100% Privé, iets trager</span>
+              </div>
+            </div>
+            <div class="radio-circle"></div>
+          </div>
+          <div
+            class="provider-card"
+            class:active={provider === 'api'}
+            onclick={() => (provider = "api")}
+            role="presentation"
+          >
+            <div class="provider-info">
+              <span class="material-icons">bolt</span>
+              <div class="provider-text">
+                <span class="provider-name">Claude Sonnet</span>
+                <span class="provider-desc">Snel & slim (via API)</span>
+              </div>
+            </div>
+            <div class="radio-circle"></div>
+          </div>
+        </div>
+      </div>
+
       <button
-        class="btn-primary"
-        style="width: 100%; border-color: var(--neon-gold); color: var(--neon-gold); background: rgba(255, 171, 0, 0.1);"
+        class="btn-primary btn-gold"
+        style="width: 100%;"
         onclick={startMatch}
         disabled={isMatching}
       >
         {#if isMatching}
-          <span
-            class="material-icons spin"
-            style="vertical-align: middle; font-size: 1.1rem; color: var(--neon-gold);">sync</span
-          >
+          <span class="material-icons spin">sync</span>
           {matchType === "individual" ? "Analyseren..." : `Batch Analyseren (${batchDirection})...`}
         {:else}
-          <span class="material-icons" style="vertical-align: middle; color: var(--neon-gold);"
-            >play_arrow</span
-          >
+          <span class="material-icons">play_arrow</span>
           {matchType === "individual" ? "Start Match" : `Start Batch Match (${batchDirection})`}
         {/if}
       </button>
@@ -1165,23 +1194,16 @@
         disabled={isSubmittingFeedback}
       ></textarea>
       <button
-        class="btn-primary"
+        class="btn-primary btn-gold"
         style="margin-top: 0.75rem; width: 100%;"
         onclick={submitFeedback}
         disabled={isSubmittingFeedback || (!feedbackTekst.trim() && feedbackCategorieen.length === 0)}
       >
         {#if isSubmittingFeedback}
-          <span
-            class="material-icons spin"
-            style="font-size: 1.1rem; vertical-align: middle;">sync</span
-          >
+          <span class="material-icons spin">sync</span>
           Verwerken...
         {:else}
-          <span
-            class="material-icons"
-            style="font-size: 1.1rem; vertical-align: middle;"
-            >auto_awesome</span
-          >
+          <span class="material-icons">auto_awesome</span>
           Feedback Verzenden & Profiel Verrijken
         {/if}
       </button>
@@ -1213,11 +1235,8 @@
           Lijst
         </button>
       {/if}
-      <button class="btn-primary" onclick={resetMatch}>
-        <span
-          class="material-icons"
-          style="font-size: 1rem; vertical-align: middle;">refresh</span
-        >
+      <button class="btn-primary btn-gold" onclick={resetMatch}>
+        <span class="material-icons">refresh</span>
         Nieuwe Match
       </button>
     </div>
@@ -1447,6 +1466,15 @@
     text-align: right;
   }
 
+  .toggle-group {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+  }
+
   .btn-toggle {
     flex: 1;
     padding: 8px;
@@ -1463,6 +1491,89 @@
     background: var(--neon-gold);
     color: #0a0e18;
     box-shadow: 0 0 10px rgba(255, 171, 0, 0.4);
+  }
+
+  .provider-selection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .provider-card {
+    padding: 0.8rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .provider-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .provider-card.active {
+    background: rgba(255, 171, 0, 0.03);
+    border-color: var(--neon-gold);
+    box-shadow: 0 0 15px rgba(255, 171, 0, 0.1);
+  }
+
+  .provider-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .provider-info .material-icons {
+    font-size: 1.4rem;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+  }
+
+  .provider-card.active .material-icons {
+    color: var(--neon-gold);
+  }
+
+  .provider-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .provider-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .provider-desc {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  .radio-circle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    transition: all 0.2s;
+  }
+
+  .provider-card.active .radio-circle {
+    border-color: var(--neon-gold);
+  }
+
+  .provider-card.active .radio-circle::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px; right: 3px; bottom: 3px;
+    background: var(--neon-gold);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(255, 171, 0, 0.5);
   }
 
   .batch-item:hover {

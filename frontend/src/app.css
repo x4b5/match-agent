@@ -138,23 +138,51 @@ body::after {
 
 /* Buttons */
 .btn-primary {
-  background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-blue) 100%);
   border: none;
   border-radius: var(--radius-sm);
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 1.5px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
   color: #0a0e18;
-  text-transform: uppercase;
-  padding: 0.65rem 2rem;
-  transition: all 0.35s var(--transition-smooth);
-  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  padding: 0.6rem 1.5rem;
+  transition: all 0.25s ease;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--neon-cyan);
+  box-shadow: 0 2px 12px rgba(0, 229, 255, 0.25);
 }
-.btn-primary:hover {
-  box-shadow: 0 0 30px rgba(0, 229, 255, 0.6), 0 8px 35px rgba(0, 229, 255, 0.45);
-  transform: translateY(-2px) scale(1.02);
-  background: linear-gradient(135deg, #44f0ff 0%, #5599ff 100%);
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary .material-icons {
+  font-size: 1.1rem;
+}
+
+/* Kleurvarianten */
+.btn-primary.btn-blue {
+  background: var(--neon-blue);
+  box-shadow: 0 2px 12px rgba(41, 121, 255, 0.25);
+}
+.btn-primary.btn-green {
+  background: var(--neon-green);
+  box-shadow: 0 2px 12px rgba(0, 230, 118, 0.25);
+}
+.btn-primary.btn-purple {
+  background: var(--neon-purple);
+  box-shadow: 0 2px 12px rgba(124, 77, 255, 0.25);
+  color: #fff;
+}
+.btn-primary.btn-gold {
+  background: var(--neon-gold);
+  box-shadow: 0 2px 12px rgba(255, 171, 0, 0.25);
 }
 
 .btn-secondary {
@@ -271,18 +299,63 @@ p {
   color: var(--text-primary);
 }
 .nav-link.active {
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(41, 121, 255, 0.08));
   border: 1px solid rgba(0, 229, 255, 0.2);
   color: var(--neon-cyan);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(41, 121, 255, 0.08));
   box-shadow: var(--glow-sm);
   position: relative;
 }
 .nav-link.active::before {
   content: ""; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px;
-  background: linear-gradient(180deg, var(--neon-cyan), var(--neon-blue));
+  background: var(--neon-cyan);
   border-radius: 0 3px 3px 0;
   box-shadow: 0 0 10px var(--neon-cyan);
 }
+
+/* Nav kleurvarianten */
+.nav-link.nav-green.active {
+  color: var(--neon-green);
+  background: linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 230, 118, 0.04));
+  border-color: rgba(0, 230, 118, 0.2);
+}
+.nav-link.nav-green.active::before {
+  background: var(--neon-green);
+  box-shadow: 0 0 10px var(--neon-green);
+}
+.nav-link.nav-green:hover { background: rgba(0, 230, 118, 0.06); }
+
+.nav-link.nav-blue.active {
+  color: var(--neon-blue);
+  background: linear-gradient(135deg, rgba(41, 121, 255, 0.1), rgba(41, 121, 255, 0.04));
+  border-color: rgba(41, 121, 255, 0.2);
+}
+.nav-link.nav-blue.active::before {
+  background: var(--neon-blue);
+  box-shadow: 0 0 10px var(--neon-blue);
+}
+.nav-link.nav-blue:hover { background: rgba(41, 121, 255, 0.06); }
+
+.nav-link.nav-purple.active {
+  color: var(--neon-purple);
+  background: linear-gradient(135deg, rgba(124, 77, 255, 0.1), rgba(124, 77, 255, 0.04));
+  border-color: rgba(124, 77, 255, 0.2);
+}
+.nav-link.nav-purple.active::before {
+  background: var(--neon-purple);
+  box-shadow: 0 0 10px var(--neon-purple);
+}
+.nav-link.nav-purple:hover { background: rgba(124, 77, 255, 0.06); }
+
+.nav-link.nav-gold.active {
+  color: var(--neon-gold);
+  background: linear-gradient(135deg, rgba(255, 171, 0, 0.1), rgba(255, 171, 0, 0.04));
+  border-color: rgba(255, 171, 0, 0.2);
+}
+.nav-link.nav-gold.active::before {
+  background: var(--neon-gold);
+  box-shadow: 0 0 10px var(--neon-gold);
+}
+.nav-link.nav-gold:hover { background: rgba(255, 171, 0, 0.06); }
 
 /* Forms */
 .input-group {

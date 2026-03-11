@@ -86,6 +86,14 @@ def create_document_router(
             if profiel_data and not profiel_data.get("last_generated"):
                 profiel_data["last_generated"] = doc.get("timestamp")
 
+            # Tags genereren uit profieldata (voor zoekfunctie)
+            tags = []
+            if profiel_data:
+                if profiel_data.get("titel"):
+                    tags.append(profiel_data["titel"])
+                if profiel_data.get("organisatie"):
+                    tags.append(profiel_data["organisatie"])
+
             response.append({
                 "id": doc["document_id"],
                 "naam": naam,
@@ -94,6 +102,7 @@ def create_document_router(
                 "has_profile": doc["profiel_compleet"],
                 "profile_score": profiel_data.get("dossier_compleetheid", profiel_data.get("profiel_betrouwbaarheid")) if profiel_data else None,
                 "profile_data": profiel_data,
+                "tags": tags,
                 "waarschuwingen": doc.get("waarschuwingen_list", []),
                 "exists_on_disk": bestaat_fysiek,
                 "timestamp": doc["timestamp"]

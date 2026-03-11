@@ -165,9 +165,9 @@
   <h1 style="color: var(--neon-blue);">
     <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-blue);"
       >group</span
-    > Kandidaten Beheren
+    > Kandidaten
   </h1>
-  <p>Beheer dossiers, documenten en LLM-profielen voor kandidaten.</p>
+  <p>Beheer profielen van kandidaten</p>
 </div>
 
 <div class="card">
@@ -185,17 +185,11 @@
       bind:value={newCandidateName}
       onkeydown={(e) => e.key === "Enter" && createCandidate()}
     />
-    <button class="btn-primary" style="border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 132, 255, 0.1);" onclick={createCandidate} disabled={isCreating}>
+    <button class="btn-primary btn-blue" onclick={createCandidate} disabled={isCreating}>
       {#if isCreating}
-        <span
-          class="material-icons spin"
-          style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);">autorenew</span
-        > Bezig...
+        <span class="material-icons spin">autorenew</span> Bezig...
       {:else}
-        <span
-          class="material-icons"
-          style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);">add</span
-        > Aanmaken
+        <span class="material-icons">add</span> Aanmaken
       {/if}
     </button>
   </div>
@@ -345,15 +339,10 @@
               </div>
             {:else}
               <button
-                class="btn-primary"
-                style="border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 132, 255, 0.1);"
+                class="btn-primary btn-blue"
                 onclick={() => goto(`/generator?type=candidates&name=${encodeURIComponent(candidate.naam)}`)}
               >
-                <span
-                  class="material-icons"
-                  style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);"
-                  >auto_awesome</span
-                > Verrijk profiel
+                <span class="material-icons">auto_awesome</span> Verrijk profiel
               </button>
               <button
                 class="btn-icon-danger"
@@ -395,11 +384,11 @@
                   Nog geen profiel gegenereerd.
                 </p>
                 <button
-                  class="btn-primary"
-                  style="margin-top: 1rem; border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 132, 255, 0.1);"
+                  class="btn-primary btn-blue"
+                  style="margin-top: 1rem;"
                   onclick={() => goto(`/generator?type=candidates&name=${encodeURIComponent(candidate.naam)}`)}
                 >
-                  <span class="material-icons" style="font-size: 1rem; vertical-align: middle; color: var(--neon-blue);">auto_awesome</span> Profiel Genereren
+                  <span class="material-icons">auto_awesome</span> Profiel Genereren
                 </button>
               </div>
             {:else}

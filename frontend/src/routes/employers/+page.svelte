@@ -165,9 +165,9 @@
   <h1 style="color: var(--neon-purple);">
     <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-purple);"
       >business</span
-    > Werkgeversvragen Beheren
+    > Werkgeversvragen
   </h1>
-  <p>Beheer vacatures en profielen voor werkgeversvragen.</p>
+  <p>Beheer profielen van werkgeversvragen</p>
 </div>
 
 <div class="card">
@@ -185,17 +185,11 @@
       bind:value={newEmployerName}
       onkeydown={(e) => e.key === "Enter" && createEmployer()}
     />
-    <button class="btn-primary" style="border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(187, 134, 252, 0.1);" onclick={createEmployer} disabled={isCreating}>
+    <button class="btn-primary btn-purple" onclick={createEmployer} disabled={isCreating}>
       {#if isCreating}
-        <span
-          class="material-icons spin"
-          style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);">autorenew</span
-        > Bezig...
+        <span class="material-icons spin">autorenew</span> Bezig...
       {:else}
-        <span
-          class="material-icons"
-          style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);">add</span
-        > Aanmaken
+        <span class="material-icons">add</span> Aanmaken
       {/if}
     </button>
   </div>
@@ -345,15 +339,10 @@
               </div>
             {:else}
               <button
-                class="btn-primary"
-                style="border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(187, 134, 252, 0.1);"
+                class="btn-primary btn-purple"
                 onclick={() => goto(`/generator?type=employers&name=${encodeURIComponent(employer.naam)}`)}
               >
-                <span
-                  class="material-icons"
-                  style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);"
-                  >auto_awesome</span
-                > Verrijk profiel
+                <span class="material-icons">auto_awesome</span> Verrijk profiel
               </button>
               <button
                 class="btn-icon-danger"
@@ -395,11 +384,11 @@
                   Nog geen profiel gegenereerd.
                 </p>
                 <button
-                  class="btn-primary"
-                  style="margin-top: 1rem; border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(187, 134, 252, 0.1);"
+                  class="btn-primary btn-purple"
+                  style="margin-top: 1rem;"
                   onclick={() => goto(`/generator?type=employers&name=${encodeURIComponent(employer.naam)}`)}
                 >
-                  <span class="material-icons" style="font-size: 1rem; vertical-align: middle; color: var(--neon-purple);">auto_awesome</span> Profiel Genereren
+                  <span class="material-icons">auto_awesome</span> Profiel Genereren
                 </button>
               </div>
             {:else}

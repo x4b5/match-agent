@@ -60,7 +60,7 @@
     <div
       style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;"
     >
-      AI-systeem (Ollama)
+      Lokaal AI-systeem (Ollama)
     </div>
     <div class="metric-value">{online ? "Actief" : "Inactief"}</div>
   </div>
@@ -91,11 +91,11 @@
     >
       Systeemlocatie
     </div>
-    <div class="metric-value" style="font-size: 2.2rem;">Lokaal</div>
+    <div class="metric-value" style="font-size: 2.2rem;">Hybride</div>
     <div
       style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);"
     >
-      Draait volledig lokaal.
+      Lokaal via Ollama of via Claude API.
     </div>
   </div>
 </div>
@@ -196,25 +196,3 @@
   </div>
 </div>
 
-<!-- Quick Actions -->
-<h2 style="font-size: 1.3rem; margin-top: 2rem; margin-bottom: 1rem;">
-  Snelkoppelingen
-</h2>
-<div class="grid-3">
-  <a href="/candidates" class="quick-action" style="border-color: var(--neon-blue); background: rgba(0, 132, 255, 0.05);">
-    <span class="material-icons" style="color: var(--neon-blue);">person_add</span>
-    <span style="color: var(--neon-blue);">Kandidaat toevoegen</span>
-  </a>
-  <a href="/employers" class="quick-action" style="border-color: var(--neon-purple); background: rgba(187, 134, 252, 0.05);">
-    <span class="material-icons" style="color: var(--neon-purple);">post_add</span>
-    <span style="color: var(--neon-purple);">Werkgeversvraag toevoegen</span>
-  </a>
-  <a href="/match" class="quick-action" style="border-color: var(--neon-gold); background: rgba(255, 171, 0, 0.05);">
-    <span class="material-icons" style="color: var(--neon-gold);">play_circle</span>
-    <span style="color: var(--neon-gold);">Nieuwe match maken</span>
-  </a>
-  <a href="/generator" class="quick-action" style="border-color: var(--neon-green); background: rgba(0, 230, 118, 0.05);">
-    <span class="material-icons" style="color: var(--neon-green);">auto_awesome</span>
-    <span style="color: var(--neon-green);">Profiel Generator</span>
-  </a>
-</div>

@@ -17,6 +17,7 @@
     MATCH_MODI: Record<string, MatchMode>;
     GLOBAL_MODELS: {
       OLLAMA_MODEL: string;
+      CLAUDE_MODEL: string;
       PROFIEL_MODEL: string;
       EMBEDDING_MODEL: string;
     };
@@ -59,9 +60,15 @@
           </p>
           <div class="settings-grid">
             <div class="setting-item">
-              <span class="setting-label">Match LLM (Standaard)</span>
+              <span class="setting-label">Lokaal Model (Ollama)</span>
               <span class="setting-value model-tag"
                 >{data.prompts.GLOBAL_MODELS.OLLAMA_MODEL}</span
+              >
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">API Model (Claude)</span>
+              <span class="setting-value model-tag"
+                >{data.prompts.GLOBAL_MODELS.CLAUDE_MODEL}</span
               >
             </div>
             <div class="setting-item">

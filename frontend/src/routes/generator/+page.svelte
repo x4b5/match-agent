@@ -14,7 +14,12 @@
 
   let filteredDossiers = $derived(
     searchQuery.trim()
-      ? dossiers.filter((d: any) => d.naam.toLowerCase().includes(searchQuery.toLowerCase()))
+      ? dossiers.filter((d: any) => {
+          const q = searchQuery.toLowerCase();
+          if (d.naam.toLowerCase().includes(q)) return true;
+          if (d.tags?.some((t: string) => t.toLowerCase().includes(q))) return true;
+          return false;
+        })
       : dossiers
   );
 
@@ -57,15 +62,13 @@
 </script>
 
 <div class="generator-container" in:fade>
-  <header class="page-header">
-    <div class="header-content">
-      <span class="material-icons header-icon" style="color: var(--neon-green); filter: drop-shadow(0 0 10px rgba(0, 230, 118, 0.3));">auto_awesome</span>
-      <div>
-        <h1 style="color: var(--neon-green);">Profiel Generator</h1>
-        <p class="subtitle">Selecteer een dossier of maak een nieuwe om een PII-veilig profiel te genereren.</p>
-      </div>
-    </div>
-  </header>
+  <div class="page-hero">
+    <h1 style="color: var(--neon-green);">
+      <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-green);">auto_awesome</span>
+      Profiel Generator
+    </h1>
+    <p>Selecteer een dossier of maak een nieuwe om een PII-veilig profiel te genereren.</p>
+  </div>
 
   <div class="selection-grid">
     <div class="type-selector">
@@ -134,6 +137,13 @@
                 <div class="card-text">
                   <span class="dossier-name">{dossier.naam}</span>
                   <span class="dossier-meta">{dossier.doc_count} documenten | {dossier.has_profile ? 'Heeft profiel' : 'Geen profiel'}</span>
+                  {#if dossier.tags?.length}
+                    <div class="card-tags">
+                      {#each dossier.tags as tag}
+                        <span class="card-tag">{tag}</span>
+                      {/each}
+                    </div>
+                  {/if}
                 </div>
               </div>
               <span class="material-icons arrow">chevron_right</span>
@@ -159,34 +169,6 @@
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
-  }
-
-  .page-header {
-    margin-bottom: 2rem;
-  }
-
-  .header-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .header-icon {
-    font-size: 2.5rem;
-    color: var(--neon-cyan);
-    filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.3));
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    letter-spacing: -0.02em;
-  }
-
-  .subtitle {
-    margin: 5px 0 0 0;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
   }
 
   .selection-grid {
@@ -371,6 +353,22 @@
   .dossier-meta {
     font-size: 0.75rem;
     color: var(--text-secondary);
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .card-tag {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    border-radius: 4px;
+    color: var(--neon-cyan);
   }
 
   .arrow {

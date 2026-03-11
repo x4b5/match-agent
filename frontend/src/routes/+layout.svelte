@@ -29,24 +29,24 @@
       <h1 class="brand-logo">
         <span style="color: var(--neon-cyan);">MATCH</span>FLIX
       </h1>
-      <p class="brand-tagline">Agent Kompas</p>
+      <p class="brand-tagline">niet normaal!</p>
       <p class="brand-greeting">{greeting}</p>
     </div>
 
     <nav style="display: flex; flex-direction: column; gap: 0.5rem;">
-      <a href="/" class="nav-link {page.url.pathname === '/' ? 'active' : ''}">
+      <a href="/" class="nav-link nav-cyan {page.url.pathname === '/' ? 'active' : ''}">
         <span class="material-icons">bar_chart</span> Dashboard
       </a>
       <a
         href="/generator"
         id="nav-profiel-generator"
-        class="nav-link {page.url.pathname.startsWith('/generator') ? 'active' : ''}"
+        class="nav-link nav-green {page.url.pathname.startsWith('/generator') ? 'active' : ''}"
       >
         <span class="material-icons">shield</span> Profiel Generator
       </a>
       <a
         href="/candidates"
-        class="nav-link {page.url.pathname.startsWith('/candidates')
+        class="nav-link nav-blue {page.url.pathname.startsWith('/candidates')
           ? 'active'
           : ''}"
       >
@@ -54,7 +54,7 @@
       </a>
       <a
         href="/employers"
-        class="nav-link {page.url.pathname.startsWith('/employers')
+        class="nav-link nav-purple {page.url.pathname.startsWith('/employers')
           ? 'active'
           : ''}"
       >
@@ -62,13 +62,13 @@
       </a>
       <a
         href="/match"
-        class="nav-link {page.url.pathname === '/match' ? 'active' : ''}"
+        class="nav-link nav-gold {page.url.pathname === '/match' ? 'active' : ''}"
       >
-        <span class="material-icons">gps_fixed</span> Match maken
+        <span class="material-icons">gps_fixed</span> Matchen
       </a>
       <a
         href="/history"
-        class="nav-link {page.url.pathname.startsWith('/history')
+        class="nav-link nav-cyan {page.url.pathname.startsWith('/history')
           ? 'active'
           : ''}"
       >
@@ -79,13 +79,13 @@
       />
       <a
         href="/over"
-        class="nav-link {page.url.pathname.startsWith('/over') ? 'active' : ''}"
+        class="nav-link nav-cyan {page.url.pathname.startsWith('/over') ? 'active' : ''}"
       >
         <span class="material-icons">info</span> Over MATCHFLIX
       </a>
       <a
         href="/prompts"
-        class="nav-link {page.url.pathname.startsWith('/prompts')
+        class="nav-link nav-cyan {page.url.pathname.startsWith('/prompts')
           ? 'active'
           : ''}"
       >
@@ -100,7 +100,7 @@
           style="font-size: 0.9rem; color: var(--neon-green);"
           >verified_user</span
         >
-        100% Lokaal & AVG-Proof
+        Privacy-First & AVG-Proof
       </div>
       <div
         style="font-size: 0.6rem; color: rgba(255,255,255,0.2); margin-top: 6px;"

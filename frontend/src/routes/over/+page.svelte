@@ -15,11 +15,11 @@
   <p
     style="font-size: 1.2rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 3px; margin-top: 0.5rem;"
   >
-    Agent Kompas
+    niet normaal!
     <span
       style="display: block; font-size: 0.8rem; margin-top: 0.5rem; color: var(--neon-green);"
     >
-      100% LOKAAL & AVG/GDPR-COMPLIANT
+      PRIVACY-FIRST & AVG/GDPR-COMPLIANT
     </span>
   </p>
 </div>
@@ -32,27 +32,14 @@
       <span class="material-icons" style="color: var(--neon-cyan);"
         >lock</span
       >
-      Alles blijft op jouw computer
+      Privacy-first: jij kiest
     </h2>
     <p>
-      De AI draait volledig lokaal. Er wordt geen data naar de cloud of externe
-      diensten gestuurd — wat je invoert, blijft bij jou.
-    </p>
-  </div>
-
-  <div class="card element-container">
-    <h2
-      style="display: flex; align-items: center; gap: 10px; font-size: 1.3rem;"
-    >
-      <span class="material-icons" style="color: var(--neon-purple);"
-        >verified_user</span
-      >
-      Automatische bescherming van persoonsgegevens
-    </h2>
-    <p>
-      Voordat tekst wordt geanalyseerd, worden gevoelige gegevens zoals
-      e-mailadressen, IBAN-nummers en BSN-nummers automatisch onherkenbaar
-      gemaakt. BSN-nummers worden zelfs wiskundig gecontroleerd op echtheid.
+      Standaard draait de AI lokaal via Ollama — dan verlaat er geen data je
+      computer. Optioneel kun je ook de Claude API inzetten voor hogere
+      kwaliteit. Persoonsgegevens zoals namen, BSN-nummers en e-mailadressen
+      worden dan altijd eerst automatisch onherkenbaar gemaakt voordat tekst
+      wordt verstuurd.
     </p>
   </div>
 
@@ -69,22 +56,6 @@
       Matchflix kijkt verder dan diploma's en functietitels. Het draait om wie
       iemand is: karakter, drijfveren en of iemand past bij het team en de
       cultuur.
-    </p>
-  </div>
-
-  <div class="card element-container">
-    <h2
-      style="display: flex; align-items: center; gap: 10px; font-size: 1.3rem;"
-    >
-      <span class="material-icons" style="color: var(--neon-blue);"
-        >translate</span
-      >
-      Heldere taal, geen jargon
-    </h2>
-    <p>
-      Alle communicatie is geschreven op B1-niveau — begrijpelijk voor iedereen,
-      zonder vakjargon. Zo is het toegankelijk voor zowel recruiters als
-      kandidaten.
     </p>
   </div>
 

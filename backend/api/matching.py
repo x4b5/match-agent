@@ -34,6 +34,7 @@ class MatchRequest(BaseModel):
     vacature_naam: str
     modus: str = "quick_scan"
     force_refresh: bool = False
+    provider_type: str = "local"
 
 
 class BatchMatchRequest(BaseModel):
@@ -43,6 +44,7 @@ class BatchMatchRequest(BaseModel):
     use_prefilter: bool = True
     force_refresh: bool = False
     kandidaat_namen: list[str] | None = None
+    provider_type: str = "local"
 
 
 class BatchVacatureMatchRequest(BaseModel):
@@ -52,6 +54,7 @@ class BatchVacatureMatchRequest(BaseModel):
     use_prefilter: bool = True
     force_refresh: bool = False
     vacature_namen: list[str] | None = None
+    provider_type: str = "local"
 
 
 async def _krijg_profiel(naam: str, is_kandidaat: bool = True):
@@ -224,7 +227,7 @@ async def run_match(req: MatchRequest):
     modi = MATCH_MODI.get(req.modus)
     model_versie = (modi.get("model_override") if modi else None) or OLLAMA_MODEL
     
-    result = await match_kandidaat(cv_json, vac_json, modus=req.modus)
+    result = await match_kandidaat(cv_json, vac_json, modus=req.modus, provider_type=req.provider_type)
     duur_ms = int((time.time() - start_time) * 1000)
 
     kandidaat_id = cv_profiel.get("id", req.kandidaat_naam)
@@ -270,7 +273,7 @@ async def stream_match(req: MatchRequest):
         stappen = modi.get("stappen", ["kern"])
         yield json.dumps({"type": "phase", "data": "profielen_geladen", "stappen": stappen}, ensure_ascii=False)
 
-        async for chunk in match_kandidaat_stream(cv_json, vac_json, modus=req.modus):
+        async for chunk in match_kandidaat_stream(cv_json, vac_json, modus=req.modus, provider_type=req.provider_type):
             if chunk.get("type") == "result":
                 final_result = chunk.get("data")
             yield json.dumps(chunk, ensure_ascii=False)
@@ -416,7 +419,7 @@ async def batch_match(req: BatchMatchRequest):
                 kandidaat_id = cv_profiel.get("id", naam)
 
                 try:
-                    result = await match_kandidaat(cv_json, vac_json, modus=req.modus)
+                    result = await match_kandidaat(cv_json, vac_json, modus=req.modus, provider_type=req.provider_type)
                     
                     modi = MATCH_MODI.get(req.modus)
                     await bewaar_match(
@@ -520,7 +523,7 @@ async def batch_vacatures_match(req: BatchVacatureMatchRequest):
                 vacature_titel = vac_profiel.get("titel", vac_naam)
 
                 try:
-                    result = await match_kandidaat(cv_json, vac_json, modus=req.modus)
+                    result = await match_kandidaat(cv_json, vac_json, modus=req.modus, provider_type=req.provider_type)
 
                     modi = MATCH_MODI.get(req.modus)
                     await bewaar_match(
