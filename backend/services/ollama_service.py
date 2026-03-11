@@ -3,9 +3,8 @@ import json
 import re
 import asyncio
 import logging
-import typing
 from collections.abc import AsyncGenerator
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 import instructor
 from openai import AsyncOpenAI
@@ -207,6 +206,9 @@ class OllamaProvider(LLMProvider):
             if fallback:
                 logger.warning(f"Fallback: JSON valide maar voldoet niet aan schema (model={model}). Ruwe data geretourneerd.")
                 fallback["_waarschuwing"] = "Profiel voldoet niet volledig aan het verwachte schema. Sommige velden kunnen ontbreken."
+                # Zorg dat kernwoorden altijd aanwezig is
+                if "kernwoorden" not in fallback:
+                    fallback["kernwoorden"] = []
                 return fallback
 
         raise OllamaError(

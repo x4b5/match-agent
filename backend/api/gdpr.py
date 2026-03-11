@@ -5,7 +5,6 @@ import shutil
 
 from backend.config import KANDIDATEN_DIR, WERKGEVERSVRAGEN_DIR
 from backend.database import verwijder_alle_data, haal_document
-from backend.utils import zorg_voor_uuid
 from backend.services.pii_scrubber import scrub_pii
 
 router = APIRouter(prefix="/gdpr", tags=["GDPR / AVG"])

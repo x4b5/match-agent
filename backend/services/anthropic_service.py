@@ -1,9 +1,7 @@
 import logging
-import typing
 import json
 from collections.abc import AsyncGenerator
 import anthropic
-from pydantic import BaseModel
 
 from backend.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, SYSTEM_PROMPT
 from backend.services.llm_provider import LLMProvider, T

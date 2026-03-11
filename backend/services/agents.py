@@ -1,9 +1,6 @@
 import json
 import os
-import uuid
-import datetime
 import logging
-import traceback
 from backend.config import (
     PROFIEL_KANDIDAAT_PROMPT,
     PROFIEL_WERKGEVERSVRAAG_PROMPT,
@@ -14,7 +11,6 @@ from backend.config import (
     OLLAMA_MODEL,
     KERN_MATCH_PROMPT,
     VERDIEPING_MATCH_PROMPT,
-    MATCH_PROMPT
 )
 from backend.services.llm_instance import get_provider
 from backend.services.ollama_service import OllamaError
@@ -24,8 +20,6 @@ from backend.schemas import (
     WerkgeversvraagProfiel,
     KernMatchResult,
     VerdiepingMatchResult,
-    QuickScanMatchResult,
-    StandaardMatchResult
 )
 
 logger = logging.getLogger("matchflix.agents")
@@ -302,7 +296,7 @@ async def optimaliseer_systeem_gewichten():
             if not breakdown:
                 continue
 
-            kunnen_score = breakdown.get("skills_overlap", 0)
+            kunnen_score = breakdown.get("vaardigheden_en_leervermogen", 0)
             willen_score = breakdown.get("motivatie_alignment", 0)
             zijn_score = (
                 breakdown.get("persoonlijkheid_fit", 0)
@@ -351,7 +345,7 @@ async def optimaliseer_systeem_gewichten():
                 breakdown = resultaat.get("score_breakdown", {})
                 if not breakdown:
                     continue
-                neg_scores["kunnen"].append(breakdown.get("skills_overlap", 0))
+                neg_scores["kunnen"].append(breakdown.get("vaardigheden_en_leervermogen", 0))
                 neg_scores["willen"].append(breakdown.get("motivatie_alignment", 0))
                 neg_scores["zijn"].append(
                     (breakdown.get("persoonlijkheid_fit", 0)

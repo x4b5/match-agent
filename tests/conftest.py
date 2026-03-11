@@ -13,10 +13,7 @@ def temp_data_dir(monkeypatch, tmp_path):
     monkeypatch.setattr("backend.config.ICLOUD_BASE", str(tmp_path))
     monkeypatch.setattr("backend.config.KANDIDATEN_DIR", kandidaten)
     monkeypatch.setattr("backend.config.WERKGEVERSVRAGEN_DIR", werkgevers)
-    monkeypatch.setattr("backend.config.CV_DIR", kandidaten)
-    monkeypatch.setattr("backend.config.VACATURE_DIR", werkgevers)
     monkeypatch.setattr("backend.config.RAPPORT_DIR", str(tmp_path / "rapporten"))
-    monkeypatch.setattr("backend.config.CACHE_DIR", str(tmp_path / ".cache"))
     monkeypatch.setattr("backend.database.DB_PATH", str(tmp_path / "test.db"))
     
     os.makedirs(kandidaten, exist_ok=True)

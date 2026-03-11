@@ -11,11 +11,6 @@ ICLOUD_BASE = os.path.expanduser(
 KANDIDATEN_DIR = os.path.join(ICLOUD_BASE, "kandidaten")
 WERKGEVERSVRAGEN_DIR = os.path.join(ICLOUD_BASE, "werkgeversvragen")
 RAPPORT_DIR = os.path.join(ICLOUD_BASE, "match-rapporten")
-CACHE_DIR = os.path.join(ICLOUD_BASE, ".match_cache")
-1
-# Backwards compatibility names
-CV_DIR = KANDIDATEN_DIR
-VACATURE_DIR = WERKGEVERSVRAGEN_DIR
 
 # --- Database ---
 _DB_DEFAULT = os.path.expanduser("~/Library/Application Support/matchflix/matchflix.db")
@@ -32,20 +27,21 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
 PROFIEL_MODEL = os.getenv("PROFIEL_MODEL", "qwen3:8b")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
-SYSTEM_PROMPT = """Je bent een vooruitstrevende matchmaker en talent-expert. Jij verbindt kandidaten met werkgevers.
-Kijk vooral naar wat iemand kan (potentieel), wie iemand is (karakter), en wat iemand wil (drijfveren). Kijk minder streng naar diploma's of de precieze werkervaring.
-Je doel is om verrassende en inspirerende matches te maken. Wijs kandidaten op banen nadat ze daar zelf misschien niet aan hadden gedacht. Wijs werkgevers op talent dat ze normaal over het hoofd zouden zien.
-Wees eerlijk en objectief in je oordeel over de match. De manier waarop iemand in het team past (cultuurfit) en de persoonlijkheid tellen daarbij zwaar mee.
-BELANGRIJK: Gebruik GEEN DISC-termen (zoals Dominantie of Invloed) en geen kleurenmodellen. Benoem gewoon in heldere taal de concrete talenten en kwaliteiten.
+SYSTEM_PROMPT = """Je bent een matchmaker en talent-expert. Jij verbindt kandidaten met werkgevers.
+Schrijf op B1-niveau — helder, kort, zonder vakjargon.
+Kijk naar wat iemand kan (potentieel), wie iemand is (karakter), en wat iemand wil (drijfveren). Kijk minder streng naar diploma's of werkervaring.
+Je doel: verrassende matches maken. Wijs kandidaten op banen waar ze zelf niet aan dachten. Wijs werkgevers op talent dat ze normaal over het hoofd zouden zien.
+Wees eerlijk over de match. Cultuurfit en persoonlijkheid tellen zwaar mee.
+BELANGRIJK: Gebruik GEEN DISC, Big Five, kleurenmodellen of ander psychologisch jargon. Benoem in heldere taal concrete talenten en kwaliteiten.
 Noem altijd SPECIFIEK gedrag of een CONCRETE vaardigheid — geen algemeenheden.
 
-BELANGRIJK VOOR HET SYSTEEM:
-Je antwoord moet ALTIJD uitsluitend een kloppend JSON-object zijn. Gebruik precies de indeling die wordt gevraagd. Laat geen velden weg. Anders kan het systeem het niet verwerken.
+Je antwoord moet ALTIJD een kloppend JSON-object zijn. Gebruik precies de gevraagde indeling. Laat geen velden weg.
 """
 
 # --- Gesplitste Match-prompts ---
 # Kern-prompt: de essentie van de match — direct en actiegericht
-KERN_MATCH_PROMPT = """Bekijk de match tussen deze kandidaat en de werkgeversvraag.
+KERN_MATCH_PROMPT = """Schrijf helder en concreet, op B1-niveau.
+Bekijk de match tussen deze kandidaat en de werkgeversvraag.
 
 Beoordeel de dossiercompleetheid:
 - HOOG: Genoeg info voor goede inschatting.
@@ -98,27 +94,24 @@ Geef je uitgebreide analyse in exact deze JSON-opmaak:
   "boodschap_aan_kandidaat": "Een korte, persoonlijke aanmoediging: waarom is DIT jouw volgende stap?",
   "match_narratief": "Een krachtig beeld (2 zinnen) van hoe de samenwerking er over een maand uitziet.",
   "personality_axes": {{
-    "Openheid": "Korte uitleg + citaat/bewijs uit dossier.",
-    "Conscientieusheid": "idem",
-    "Extraversie": "idem",
-    "Vriendelijkheid": "idem",
-    "Neuroticisme": "idem"
+    "Samenwerking": "Hoe werkt deze persoon samen? Bewijs uit dossier.",
+    "Drive": "Wat drijft deze persoon? Bewijs uit dossier.",
+    "Leervermogen": "Hoe snel pikt deze persoon nieuwe dingen op? Bewijs uit dossier.",
+    "Zelfstandigheid": "Hoe goed werkt deze persoon op eigen kracht? Bewijs uit dossier.",
+    "Veerkracht": "Hoe gaat deze persoon om met tegenslag? Bewijs uit dossier."
   }},
   "score_breakdown": {{
     "persoonlijkheid_fit": <getal 0-100>,
     "cultuur_fit": <getal 0-100>,
-    "skills_overlap": <getal 0-100>,
+    "vaardigheden_en_leervermogen": <getal 0-100>,
     "groei_potentieel": <getal 0-100>,
     "motivatie_alignment": <getal 0-100>
   }}
 }}"""
 
-# Backwards compat alias
-MATCH_PROMPT = KERN_MATCH_PROMPT
-
 # --- Anthropic (Claude) ---
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 
 # --- Prompts voor Profiel-extractie ---
 _PERSPECTIEF_KANDIDAAT = """Vanuit de KANDIDAAT:
@@ -131,13 +124,15 @@ _PERSPECTIEF_WERKGEVER = """Vanuit de WERKGEVER (wat voor kandidaat zoeken we?):
 2. WILLEN — Wat moet de kandidaat willen? Waarden, motivatie, wat biedt het bedrijf aan groei.
 3. KUNNEN — Wat moet de kandidaat kunnen? Skills, taken, werktijden, aandachtspunten."""
 
-_JSON_KANDIDAAT = """{{"naam": "...", "kernrol": "...", "zijn": "...", "willen": "...", "kunnen": "...", "dossier_compleetheid": 0, "vervolgvragen": ["..."], "stellingen": ["..."]}}"""
-_JSON_WERKGEVER = """{{"titel": "...", "organisatie": "...", "zijn": "...", "willen": "...", "kunnen": "...", "dossier_compleetheid": 0, "vervolgvragen": ["..."], "stellingen": ["..."]}}"""
+_JSON_KANDIDAAT = """{{"naam": "...", "kernrol": "...", "zijn": "...", "willen": "...", "kunnen": "...", "kernwoorden": ["...", "...", "...", "...", "..."], "dossier_compleetheid": 0, "vervolgvragen": ["..."], "stellingen": ["..."]}}"""
+_JSON_WERKGEVER = """{{"titel": "...", "organisatie": "...", "zijn": "...", "willen": "...", "kunnen": "...", "kernwoorden": ["...", "...", "...", "...", "..."], "dossier_compleetheid": 0, "vervolgvragen": ["..."], "stellingen": ["..."]}}"""
 
 _PROFIEL_PROMPT = """Maak een profiel in JSON. Wees streng bij dossier_compleetheid (0-100).
 
 3 pijlers (elk 2-4 zinnen):
 {perspectief}
+
+kernwoorden: 5 korte, krachtige trefwoorden die dit profiel het beste samenvatten.
 
 {json_template}
 

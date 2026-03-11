@@ -8,6 +8,7 @@ class KandidaatProfiel(BaseModel):
     zijn: str = Field(description="Wie IS deze persoon? Werkstijl, persoonlijkheid, karakter, samenwerking, communicatie, omgang met druk")
     willen: str = Field(description="Wat WILT deze persoon? Drijfveren, motivatie, ambities, wat zoekt iemand in werk")
     kunnen: str = Field(description="Wat KAN deze persoon? Hard/soft skills, leervermogen, opleiding, ervaring, beschikbaarheid/locatie, én wat iemand nog NIET kan.")
+    kernwoorden: List[str] = Field(max_length=5, description="5 korte, krachtige trefwoorden die dit profiel het beste samenvatten")
     dossier_compleetheid: int = Field(ge=0, le=100, validation_alias=AliasChoices("dossier_compleetheid", "profiel_betrouwbaarheid"), description="Hoe compleet is dit dossier?")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
     stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 stellingen met een 4-punts schaal die helpen gaten te vullen")
@@ -19,6 +20,7 @@ class WerkgeversvraagProfiel(BaseModel):
     zijn: str = Field(description="Wat voor PERSOON moet de kandidaat zijn? Persoonlijkheid, karakter, teamfit, cultuur, werksfeer, verborgen behoeften.")
     willen: str = Field(description="Wat moet de kandidaat WILLEN? Waarden, drijfveren, ambitie, ontwikkeling, wat biedt het bedrijf aan groei en begeleiding.")
     kunnen: str = Field(description="Wat moet de kandidaat KUNNEN? Must-have en nice-to-have skills, taken, verantwoordelijkheden, werktijden, praktische zaken, én aandachtspunten.")
+    kernwoorden: List[str] = Field(max_length=5, description="5 korte, krachtige trefwoorden die dit profiel het beste samenvatten")
     dossier_compleetheid: int = Field(ge=0, le=100, validation_alias=AliasChoices("dossier_compleetheid", "profiel_betrouwbaarheid"), description="Hoe compleet is dit dossier?")
     vervolgvragen: List[str] = Field(max_length=5, description="Concrete vragen over essentiële info die mist")
     stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 stellingen met een 4-punts schaal die helpen gaten te vullen")
@@ -30,16 +32,16 @@ class EvalueerProfielResult(BaseModel):
     stellingen: List[str] = Field(default_factory=list, max_length=5, description="5 stellingen over missende info")
 
 class PersonalityAxes(BaseModel):
-    Openheid: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Conscientieusheid: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Extraversie: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Vriendelijkheid: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
-    Neuroticisme: str = Field(description="Kwalitatieve beschrijving mét citaat uit CV als bewijs. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Samenwerking: str = Field(description="Hoe werkt deze persoon samen? Bewijs uit dossier. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Drive: str = Field(description="Wat drijft deze persoon? Bewijs uit dossier. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Leervermogen: str = Field(description="Hoe snel pikt deze persoon nieuwe dingen op? Bewijs uit dossier. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Zelfstandigheid: str = Field(description="Hoe goed werkt deze persoon op eigen kracht? Bewijs uit dossier. Indien onbekend: 'Niet af te leiden uit dossier'.")
+    Veerkracht: str = Field(description="Hoe gaat deze persoon om met tegenslag? Bewijs uit dossier. Indien onbekend: 'Niet af te leiden uit dossier'.")
 
 class ScoreBreakdown(BaseModel):
     persoonlijkheid_fit: int = Field(ge=0, le=100, description="Hoe goed passen de karaktereigenschappen?")
     cultuur_fit: int = Field(ge=0, le=100, description="Hoe goed past de bedrijfscultuur?")
-    skills_overlap: int = Field(ge=0, le=100, description="In hoeverre zijn vereiste skills aanwezig?")
+    vaardigheden_en_leervermogen: int = Field(ge=0, le=100, description="In hoeverre zijn vaardigheden aanwezig of aanleerbaar?")
     groei_potentieel: int = Field(ge=0, le=100, description="Hoeveel groeipotentieel is er?")
     motivatie_alignment: int = Field(ge=0, le=100, description="Hoe goed sluiten drijfveren aan?")
 
@@ -95,7 +97,6 @@ class StandaardMatchResult(BaseModel):
     aandachtspunten: List[str] = Field(default_factory=list)
     boodschap_aan_kandidaat: str = Field(default="")
     match_narratief: str = Field(default="", description="Kort, inspirerend verhaal dat de match tot leven brengt")
-    onderbouwing: str = Field(default="") # kept for backward compatibility if needed, but not in prompt
     personality_axes: PersonalityAxes = Field(default=None)
     score_breakdown: ScoreBreakdown = Field(default=None, description="Transparante sub-scores per dimensie")
     dossier_compleetheid: str = Field(pattern="^(Laag|Gemiddeld|Hoog)$")

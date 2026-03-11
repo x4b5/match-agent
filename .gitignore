@@ -38,5 +38,17 @@ Thumbs.db
 # Match-agent output
 match-rapporten/
 
+# Data (kandidaten, werkgeversvragen, match-rapporten — privacygevoelig)
+data/
+
+# Linter / test caches
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Logs
+*.log
+
 # Time tracking temp file
 .day-start

@@ -1,6 +1,5 @@
 """Task status tracking API — persistente taakstatus via database."""
 import uuid
-import time
 import asyncio
 from fastapi import APIRouter, HTTPException
 

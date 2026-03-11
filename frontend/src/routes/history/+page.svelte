@@ -64,7 +64,7 @@
   <h1 style="color: var(--neon-pink);">
     <span class="material-icons" style="font-size: 2.2rem; margin-right: 15px; color: var(--neon-pink);"
       >history</span
-    > Match Historie
+    > Historie
   </h1>
   <p>Overzicht van alle eerdere match-resultaten.</p>
 </div>
@@ -172,18 +172,6 @@
             <div style="margin-bottom: 0.5rem;">
               <strong>Kernrol:</strong>
               {match.resultaat.kernrol}
-            </div>
-          {/if}
-          {#if match.resultaat.onderbouwing}
-            <div style="margin-bottom: 0.5rem;">
-              <strong>Onderbouwing:</strong>
-              {match.resultaat.onderbouwing}
-            </div>
-          {/if}
-          {#if match.resultaat.verrassende_match}
-            <div style="margin-bottom: 0.5rem;">
-              <strong>Verrassende match:</strong>
-              {match.resultaat.verrassende_match}
             </div>
           {/if}
           {#if match.resultaat.risicos?.length}

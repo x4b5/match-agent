@@ -179,7 +179,6 @@ async def semantic_search(req: SemanticSearchRequest):
     kunnen_tekst = f"{vac_profiel.get('kunnen', '')} {vac_profiel.get('titel', '')}".strip()
 
     # Parallelle embedding generatie
-    from backend.services.agents import genereer_embeddings_batch
     vector_zijn, vector_willen, vector_kunnen = await genereer_embeddings_batch([zijn_tekst, willen_tekst, kunnen_tekst])
 
     if not vector_zijn:
@@ -393,6 +392,8 @@ async def batch_match(req: BatchMatchRequest):
                 kandidaten_lijst = kandidaten_lijst[:req.limit]
 
         # Stap 2: Match elke kandidaat (Parallel met Semaphore)
+        total = len(kandidaten_lijst)
+        alle_resultaten = []
         sem = asyncio.Semaphore(3) # Max 3 parallelle matches voor Ollama
 
         async def worker(naam, idx):

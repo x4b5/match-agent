@@ -65,13 +65,13 @@ class TestWerkgeversvraagProfiel:
 class TestPersonalityAxes:
     def test_geldige_axes(self):
         axes = PersonalityAxes(
-            Openheid="Zeer sterk, blijkt uit '10 jaar data-analyse'",
-            Conscientieusheid="Niet af te leiden uit dossier",
-            Extraversie="Hoog - ontwerpt eigen oplossingen",
-            Vriendelijkheid="Redelijk",
-            Neuroticisme="Niet af te leiden uit dossier"
+            Samenwerking="Werkt graag in teamverband, blijkt uit '10 jaar samenwerken'",
+            Drive="Niet af te leiden uit dossier",
+            Leervermogen="Hoog - pikt snel nieuwe dingen op",
+            Zelfstandigheid="Redelijk",
+            Veerkracht="Niet af te leiden uit dossier"
         )
-        assert axes.Openheid == "Zeer sterk, blijkt uit '10 jaar data-analyse'"
+        assert axes.Samenwerking == "Werkt graag in teamverband, blijkt uit '10 jaar samenwerken'"
 
 
 class TestQuickScanMatchResult:
@@ -82,8 +82,8 @@ class TestQuickScanMatchResult:
             ontbrekende_punten=["Geen VCA"],
             succes_plan={"actie_kandidaat": ["A"], "actie_werkgever": ["B"]},
             personality_axes=PersonalityAxes(
-                Openheid="Beschrijving A", Conscientieusheid="Beschrijving B", Extraversie="Beschrijving C",
-                Vriendelijkheid="Beschrijving D", Neuroticisme="Beschrijving E"
+                Samenwerking="Beschrijving A", Drive="Beschrijving B", Leervermogen="Beschrijving C",
+                Zelfstandigheid="Beschrijving D", Veerkracht="Beschrijving E"
             ),
             dossier_compleetheid="Hoog"
         )
@@ -131,12 +131,12 @@ class TestStandaardMatchResult:
             boodschap_aan_kandidaat="Deze rol is perfect voor jou!",
             match_narratief="Een verrassende match die inspireert.",
             personality_axes=PersonalityAxes(
-                Openheid="Beschrijving A", Conscientieusheid="Beschrijving B", Extraversie="Beschrijving C",
-                Vriendelijkheid="Beschrijving D", Neuroticisme="Beschrijving E"
+                Samenwerking="Beschrijving A", Drive="Beschrijving B", Leervermogen="Beschrijving C",
+                Zelfstandigheid="Beschrijving D", Veerkracht="Beschrijving E"
             ),
             score_breakdown=ScoreBreakdown(
                 persoonlijkheid_fit=85, cultuur_fit=78,
-                skills_overlap=60, groei_potentieel=90,
+                vaardigheden_en_leervermogen=60, groei_potentieel=90,
                 motivatie_alignment=80
             ),
             dossier_compleetheid="Hoog",
